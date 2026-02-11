@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Coherence</title>
+  <style>
+    body { font-family: -apple-system, system-ui, Segoe UI, Roboto, Arial; margin: 24px; max-width: 860px; }
+    h1 { margin: 0 0 8px; }
+    .muted { color: #666; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; margin: 12px 0; }
+    label { font-weight: 600; }
+    select, input, button, textarea { font-size: 16px; padding: 10px; border-radius: 10px; border: 1px solid #ccc; }
+    button { cursor: pointer; }
+    button.primary { border-color: #111; }
+    .big { font-size: 28px; font-weight: 700; letter-spacing: 0.2px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+    .logs { max-height: 280px; overflow: auto; background: #fafafa; }
+    .pill { display: inline-block; padding: 6px 10px; border: 1px solid #ddd; border-radius: 999px; margin-right: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Coherence</h1>
+  <div class="muted">Reset • Steer • Reflect (v1: local-only)</div>
+
+  <div class="card">
+    <div class="row">
+      <div>
+        <label for="stream">Stream</label><br/>
+        <select id="stream">
+          <option value="Equanimity">Equanimity</option>
+          <option value="Joy">Joy</option>
+          <option value="Reverence">Reverence</option>
+          <option value="Metta">Metta</option>
+          <option value="Radiance">Radiance</option>
+          <option value="Custom">Custom</option>
+        </select>
+      </div>
+
+      <div style="flex: 1; min-width: 240px;">
+        <label for="customStream">Custom label</label><br/>
+        <input id="customStream" placeholder="e.g., Steady / Match this" />
+      </div>
+    </div>
+
+    <div style="height: 12px;"></div>
+
+    <div class="grid2">
+      <div>
+        <label>Breath cadence (seconds)</label>
+        <div class="row">
+          <div>
+            <div class="muted">In</div>
+            <input id="inSec" type="number" min="1" max="20" value="4" style="width: 90px;" />
+          </div>
+          <div>
+            <div class="muted">Hold</div>
+            <input id="holdSec" type="number" min="0" max="20" value="0" style="width: 90px;" />
+          </div>
+          <div>
+            <div class="muted">Out</div>
+            <input id="outSec" type="number" min="1" max="30" value="6" style="width: 90px;" />
+          </div>
+        </div>
+
+        <div style="height: 10px;"></div>
+
+        <div class="row">
+          <button class="primary" id="startStop">Start</button>
+          <button id="reset">Reset</button>
+          <span class="pill mono" id="timer">00:00</span>
+          <span class="pill" id="phase">Ready</span>
+        </div>
+
+        <div style="height: 10px;"></div>
+
+        <div class="big" id="cueLine">Steady</div>
+        <div class="muted">Tap “New cue” to rotate phrases.</div>
+        <div style="height: 10px;"></div>
+        <button id="newCue">New cue</button>
+      </div>
+
+      <div>
+        <label for="gauge">Gauge (contraction ↔ expansion)</label><br/>
+        <input id="gauge" type="range" min="-5" max="5" value="0" style="width: 100%;" />
+        <div class="row">
+          <span class="mono" id="gaugeVal">0</span>
+          <span class="muted" id="gaugeLabel">Neutral</span>
+        </div>
+
+        <div style="height: 10px;"></div>
+
+        <label for="note">Note (optional)</label><br/>
+        <textarea id="note" rows="5" style="width: 100%;" placeholder="One line. Tone-first."></textarea>
+
+        <div style="height: 10px;"></div>
+        <div class="row">
+          <button class="primary" id="saveLog">Log this moment</button>
+          <button id="clearAll">Clear all logs</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="justify-content: space-between;">
+      <div>
+        <label>Logs</label>
+        <div class="muted">Stored locally in your browser.</div>
+      </div>
+      <div class="row">
+        <button id="exportJson">Export JSON</button>
+      </div>
+    </div>
+
+    <div class="card logs" id="logList"></div>
+  </div>
+
+<script>
+(() => {
+  const CUES = [
+    "Steady",
+    "Equanimity and awareness",
+    "Match this",
+    "Soft eyes, wide field",
+    "Upper-lip breath",
+    "Release the grasp",
+    "Let it pass through",
+    "Tone first",
+    "Gentle attention",
+    "Reverence",
+    "Joy",
+    "Metta"
+  ];
+
+  const els = {
+    stream: document.getElementById("stream"),
+    customStream: document.getElementById("customStream"),
+    inSec: document.getElementById("inSec"),
+    holdSec: document.getElementById("holdSec"),
+    outSec: document.getElementById("outSec"),
+    startStop: document.getElementById("startStop"),
+    reset: document.getElementById("reset"),
+    timer: document.getElementById("timer"),
+    phase: document.getElementById("phase"),
+    cueLine: document.getElementById("cueLine"),
+    newCue: document.getElementById("newCue"),
+    gauge: document.getElementById("gauge"),
+    gaugeVal: document.getElementById("gaugeVal"),
+    gaugeLabel: document.getElementById("gaugeLabel"),
+    note: document.getElementById("note"),
+    saveLog: document.getElementById("saveLog"),
+    clearAll: document.getElementById("clearAll"),
+    logList: document.getElementById("logList"),
+    exportJson: document.getElementById("exportJson")
+  };
+
+  const STORAGE_KEY = "coherence_logs_v1";
+
+  let running = false;
+  let tickHandle = null;
+  let startEpochMs = null;
+  let phasePlan = [];
+  let phaseIndex = 0;
+  let phaseRemaining = 0;
+
+  function nowIso() { return new Date().toISOString(); }
+  function pad2(n) { return String(n).padStart(2, "0"); }
+  function fmtMMSS(totalSec) {
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return `${pad2(m)}:${pad2(s)}`;
+  }
+
+  function currentStreamLabel() {
+    const s = els.stream.value;
+    if (s === "Custom") {
+      const c = (els.customStream.value || "").trim();
+      return c.length ? c : "Custom";
+    }
+    return s;
+  }
+
+  function gaugeText(v) {
+    if (v <= -3) return "Contracted";
+    if (v < 0) return "Tight";
+    if (v === 0) return "Neutral";
+    if (v < 3) return "Open";
+    return "Expanded";
+  }
+
+  function loadLogs() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveLogs(logs) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
+  }
+
+  function renderLogs() {
+    const logs = loadLogs().slice().reverse();
+    if (!logs.length) {
+      els.logList.innerHTML = `<div class="muted">No logs yet.</div>`;
+      return;
+    }
+    els.logList.innerHTML = logs.map(x => {
+      const note = (x.note || "").replaceAll("<","&lt;").replaceAll(">","&gt;");
+      return `
+        <div style="padding: 10px; border-bottom: 1px solid #eee;">
+          <div><span class="pill">${x.stream}</span><span class="pill mono">${x.gauge}</span><span class="pill">${x.gaugeLabel}</span></div>
+          <div class="muted mono" style="margin-top: 6px;">${x.time}</div>
+          ${note ? `<div style="margin-top: 6px;">${note}</div>` : ""}
+        </div>
+      `;
+    }).join("");
+  }
+
+  function pickCue() {
+    const idx = Math.floor(Math.random() * CUES.length);
+    els.cueLine.textContent = CUES[idx];
+  }
+
+  function beep() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = "sine";
+      o.frequency.value = 660;
+      g.gain.value = 0.03;
+      o.start();
+      setTimeout(() => { o.stop(); ctx.close(); }, 80);
+    } catch {}
+  }
+
+  function buildPhasePlan() {
+    const inS = Math.max(1, Math.min(20, Number(els.inSec.value) || 4));
+    const holdS = Math.max(0, Math.min(20, Number(els.holdSec.value) || 0));
+    const outS = Math.max(1, Math.min(30, Number(els.outSec.value) || 6));
+    return [
+      { name: "In", sec: inS },
+      ...(holdS > 0 ? [{ name: "Hold", sec: holdS }] : []),
+      { name: "Out", sec: outS }
+    ];
+  }
+
+  function setPhase(i) {
+    phaseIndex = i % phasePlan.length;
+    phaseRemaining = phasePlan[phaseIndex].sec;
+    els.phase.textContent = phasePlan[phaseIndex].name;
+    beep();
+  }
+
+  function start() {
+    if (running) return;
+    running = true;
+    els.startStop.textContent = "Stop";
+    phasePlan = buildPhasePlan();
+    startEpochMs = Date.now();
+    setPhase(0);
+
+    tickHandle = setInterval(() => {
+      const elapsedSec = Math.floor((Date.now() - startEpochMs) / 1000);
+      els.timer.textContent = fmtMMSS(elapsedSec);
+
+      phaseRemaining -= 1;
+      if (phaseRemaining <= 0) setPhase(phaseIndex + 1);
+    }, 1000);
+  }
+
+  function stop() {
+    running = false;
+    els.startStop.textContent = "Start";
+    if (tickHandle) clearInterval(tickHandle);
+    tickHandle = null;
+    els.phase.textContent = "Stopped";
+  }
+
+  function resetTimer() {
+    stop();
+    startEpochMs = null;
+    els.timer.textContent = "00:00";
+    els.phase.textContent = "Ready";
+  }
+
+  els.newCue.addEventListener("click", pickCue);
+
+  els.gauge.addEventListener("input", () => {
+    const v = Number(els.gauge.value);
+    els.gaugeVal.textContent = String(v);
+    els.gaugeLabel.textContent = gaugeText(v);
+  });
+
+  els.startStop.addEventListener("click", () => (!running ? start() : stop()));
+  els.reset.addEventListener("click", resetTimer);
+
+  els.saveLog.addEventListener("click", () => {
+    const logs = loadLogs();
+    const v = Number(els.gauge.value);
+    logs.push({
+      time: nowIso(),
+      stream: currentStreamLabel(),
+      cue: els.cueLine.textContent,
+      gauge: v,
+      gaugeLabel: gaugeText(v),
+      note: (els.note.value || "").trim(),
+      cadence: {
+        in: Number(els.inSec.value) || 4,
+        hold: Number(els.holdSec.value) || 0,
+        out: Number(els.outSec.value) || 6
+      }
+    });
+    saveLogs(logs);
+    els.note.value = "";
+    renderLogs();
+  });
+
+  els.clearAll.addEventListener("click", () => {
+    localStorage.removeItem(STORAGE_KEY);
+    renderLogs();
+  });
+
+  els.exportJson.addEventListener("click", () => {
+    const logs = loadLogs();
+    const blob = new Blob([JSON.stringify(logs, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "coherence_logs.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+
+  pickCue();
+  els.gauge.dispatchEvent(new Event("input"));
+  renderLogs();
+})();
+</script>
+</body>
+</html>
