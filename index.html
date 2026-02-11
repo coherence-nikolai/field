@@ -3,485 +3,508 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
 <title>Coherence</title>
 <meta name="theme-color" content="#8fb9ff">
 
 <style>
-body {
-  font-family: -apple-system, system-ui, Arial;
-  margin: 24px;
-  max-width: 860px;
-  background: #f5f7fb;
-  transition: background .3s, color .3s;
-}
+  body{
+    font-family:-apple-system,system-ui,Arial;
+    margin:24px; max-width:860px;
+    background:#f5f7fb; color:#111;
+    transition:background .25s,color .25s;
+  }
+  body.dark{ background:#111; color:#eee; }
 
-body.dark {
-  background: #111;
-  color: #eee;
-}
+  .card{
+    background:#fff; border:1px solid #ddd;
+    border-radius:12px; padding:16px; margin:12px 0;
+  }
+  body.dark .card{ background:#1c1c1c; border-color:#333; }
 
-.card {
-  background: white;
-  padding: 16px;
-  border-radius: 12px;
-  border: 1px solid #ddd;
-  margin: 12px 0;
-}
+  .row{ display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+  button,select,input,textarea{
+    padding:10px; border-radius:10px; border:1px solid #ccc; font-size:16px;
+  }
+  button{ cursor:pointer; }
+  button:disabled{ opacity:.55; cursor:not-allowed; }
 
-body.dark .card {
-  background: #1c1c1c;
-  border-color: #333;
-}
+  .pill{
+    padding:6px 10px; border:1px solid #ddd; border-radius:999px;
+  }
+  body.dark .pill{ border-color:#444; }
 
-.row {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  align-items: center;
-}
+  .big{ font-size:26px; font-weight:750; }
+  .logs{
+    max-height:220px; overflow:auto;
+    border:1px solid #eee; border-radius:8px;
+    padding:8px; background:#fafafa; font-size:14px;
+  }
+  body.dark .logs{ background:#222; border-color:#444; }
 
-button, select, input, textarea {
-  padding: 10px;
-  border-radius: 10px;
-  border: 1px solid #ccc;
-  font-size: 16px;
-}
+  #breathCircle{
+    width:150px; height:150px; border-radius:50%;
+    margin:18px auto;
+    transition: transform linear, background .35s;
+    box-shadow:0 0 25px rgba(120,160,255,.35);
+    cursor:pointer;
+    transform:scale(1);
+    user-select:none;
+  }
 
-button { cursor: pointer; }
+  .muted{ color:#666; }
+  body.dark .muted{ color:#aaa; }
 
-.big {
-  font-size: 26px;
-  font-weight: 700;
-}
-
-.pill {
-  padding: 6px 10px;
-  border: 1px solid #ddd;
-  border-radius: 999px;
-}
-
-#breathCircle {
-  width: 150px;
-  height: 150px;
-  border-radius: 50%;
-  margin: 20px auto;
-  transition: transform linear, background .4s;
-  box-shadow: 0 0 25px rgba(120,160,255,0.4);
-  cursor: pointer;
-}
-
-.logs {
-  max-height: 220px;
-  overflow-y: auto;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  padding: 8px;
-  background: #fafafa;
-  font-size: 14px;
-}
-
-body.dark .logs {
-  background: #222;
-  border-color: #444;
-}
+  hr{ border:none; border-top:1px solid #eee; margin:14px 0; }
+  body.dark hr{ border-top-color:#333; }
 </style>
 </head>
 
 <body>
+  <h1 style="margin:0 0 6px;">Coherence</h1>
+  <div class="muted">Reset • Steer • Reflect</div>
 
-<h1>Coherence</h1>
-<div>Reset • Steer • Reflect</div>
+  <div class="card">
+    <div id="breathCircle" title="Tap to change colour"></div>
 
-<div class="card">
+    <div class="row">
+      <select id="preset">
+        <option value="calm">Calm (4–6)</option>
+        <option value="focus">Focus (4–4)</option>
+        <option value="sleep">Sleep (4–8)</option>
+        <option value="energise">Energise (6–2)</option>
+        <option value="downshift">Downshift fast (3–6)</option>
+        <option value="custom">Custom</option>
+      </select>
 
-<div id="breathCircle"></div>
+      <input id="inSecInput" type="number" value="4" min="1" max="20" style="width:78px;">
+      <input id="outSecInput" type="number" value="6" min="1" max="30" style="width:78px;">
 
-<!-- Controls -->
-<div class="row">
+      <select id="durationMin">
+        <option value="1">1m</option>
+        <option value="3">3m</option>
+        <option value="5" selected>5m</option>
+        <option value="10">10m</option>
+        <option value="15">15m</option>
+      </select>
+    </div>
 
-<select id="preset">
-  <option value="calm">Calm (4–6)</option>
-  <option value="focus">Focus (4–4)</option>
-  <option value="sleep">Sleep (4–8)</option>
-  <option value="energise">Energise (6–2)</option>
-  <option value="custom">Custom</option>
-</select>
+    <div class="row" style="margin-top:12px;">
+      <button id="startStopBtn">Start</button>
+      <span class="pill" id="phasePill">Ready</span>
+      <span class="pill" id="timerPill">05:00</span>
+      <span class="pill muted" id="joinState">Field: joining…</span>
+    </div>
 
-<input id="inSec" type="number" value="4" style="width:70px;">
-<input id="outSec" type="number" value="6" style="width:70px;">
+    <div class="big" id="cueLine" style="margin-top:14px;">Equanimity and awareness</div>
 
-<select id="duration">
-  <option value="1">1m</option>
-  <option value="3">3m</option>
-  <option value="5" selected>5m</option>
-  <option value="10">10m</option>
-</select>
+    <div class="row" style="margin-top:10px;">
+      <button id="newCueBtn">New cue</button>
+      <button id="darkBtn">Dark</button>
+      <button id="joinBtn">Join Field</button>
+      <button id="leaveBtn">Leave Field</button>
+      <span class="pill" id="presenceCountPill">🌐 —</span>
+    </div>
 
-</div>
+    <hr>
 
-<div class="row" style="margin-top:12px;">
+    <label style="font-weight:700;">Gauge</label>
+    <input id="gaugeInput" type="range" min="-5" max="5" value="0">
 
-<button id="startStop">Start</button>
+    <div class="row">
+      <span id="gaugeVal">0</span>
+      <span class="muted" id="gaugeLabel">Neutral</span>
+    </div>
 
-<span class="pill" id="phase">Ready</span>
-<span class="pill" id="timer">05:00</span>
+    <textarea id="noteInput" rows="2" placeholder="One line note..."></textarea>
 
-</div>
+    <div class="row">
+      <button id="logBtn">Log</button>
+      <button id="clearLogsBtn">Clear</button>
+    </div>
 
-<!-- Cue -->
-<div class="big" id="cue" style="margin-top:15px;">
-Equanimity and awareness
-</div>
-
-<div class="row" style="margin-top:10px;">
-<button id="newCue">New cue</button>
-<button id="darkToggle">Dark</button>
-</div>
-
-<hr>
-
-<!-- Gauge -->
-<label>Gauge</label>
-<input id="gauge" type="range" min="-5" max="5" value="0">
-
-<div class="row">
-<span id="gaugeVal">0</span>
-<span id="gaugeLabel">Neutral</span>
-</div>
-
-<textarea id="note" rows="2" placeholder="One line note..."></textarea>
-
-<div class="row">
-<button id="saveLog">Log</button>
-<button id="clearLogs">Clear</button>
-</div>
-
-<div class="logs" id="logsBox"></div>
-
-<hr>
-
-<!-- Presence -->
-<div>
-🌐 Shared Field:
-<strong id="presenceCount">—</strong>
-</div>
-
-</div>
-
+    <div class="logs" id="logsBox"></div>
+  </div>
 
 <script>
+(() => {
+  "use strict";
 
-/* CONFIG */
+  // ====== CONFIG ======
+  const PRESENCE_BASE = "https://coherence-presence-2.lucolly999.workers.dev";
+  const LOG_KEY = "coh_logs_v4";
+  const PRESENCE_ID_KEY = "coh_presence_id_v1";
 
-const PRESENCE_BASE =
-"https://coherence-presence-2.lucolly999.workers.dev";
+  const CUES = [
+    "Equanimity and awareness",
+    "Steady",
+    "Soft eyes",
+    "Release",
+    "Match this",
+    "Tone first",
+    "Gentle",
+    "Joy",
+    "Metta"
+  ];
 
-const LOG_KEY = "coh_logs_v3";
+  const COLORS = [
+    "radial-gradient(circle at 30% 30%, #a9c7ff, #6fa0ff)",
+    "radial-gradient(circle at 30% 30%, #a8ffd6, #4ccf99)",
+    "radial-gradient(circle at 30% 30%, #ffd6a8, #ff9f4c)",
+    "radial-gradient(circle at 30% 30%, #e0b3ff, #9c6cff)",
+    "radial-gradient(circle at 30% 30%, #ffb3c6, #ff5f87)"
+  ];
 
+  // ====== DOM ======
+  const el = {
+    circle: document.getElementById("breathCircle"),
+    preset: document.getElementById("preset"),
+    inSec: document.getElementById("inSecInput"),
+    outSec: document.getElementById("outSecInput"),
+    duration: document.getElementById("durationMin"),
+    startStop: document.getElementById("startStopBtn"),
+    phase: document.getElementById("phasePill"),
+    timer: document.getElementById("timerPill"),
+    cue: document.getElementById("cueLine"),
+    newCue: document.getElementById("newCueBtn"),
+    dark: document.getElementById("darkBtn"),
+    join: document.getElementById("joinBtn"),
+    leave: document.getElementById("leaveBtn"),
+    joinState: document.getElementById("joinState"),
+    presencePill: document.getElementById("presenceCountPill"),
+    gauge: document.getElementById("gaugeInput"),
+    gaugeVal: document.getElementById("gaugeVal"),
+    gaugeLabel: document.getElementById("gaugeLabel"),
+    note: document.getElementById("noteInput"),
+    log: document.getElementById("logBtn"),
+    clearLogs: document.getElementById("clearLogsBtn"),
+    logsBox: document.getElementById("logsBox")
+  };
 
-/* STATE */
+  // ====== STATE ======
+  let running = false;
+  let startMs = 0;
+  let sessionSec = 5 * 60;
+  let phase = "Ready"; // Ready | In | Out
+  let breathTimeout = null;
+  let tickInterval = null;
 
-let running=false;
-let startTime=0;
-let breathTimer=null;
-let tick=null;
-let phase="Ready";
-let sessionSec=300;
-let presenceId=null;
-let colorIndex=0;
+  let colorIndex = 0;
 
+  let presenceId = localStorage.getItem(PRESENCE_ID_KEY) || "";
+  let presenceInterval = null;
+  let presencePingInterval = null;
 
-/* CUES */
-
-const CUES = [
-  "Equanimity and awareness",
-  "Steady",
-  "Soft eyes",
-  "Release",
-  "Match this",
-  "Joy",
-  "Metta"
-];
-
-
-/* CIRCLE COLOURS */
-
-const COLORS = [
-  "radial-gradient(circle at 30% 30%, #a9c7ff, #6fa0ff)",
-  "radial-gradient(circle at 30% 30%, #a8ffd6, #4ccf99)",
-  "radial-gradient(circle at 30% 30%, #ffd6a8, #ff9f4c)",
-  "radial-gradient(circle at 30% 30%, #e0b3ff, #9c6cff)",
-  "radial-gradient(circle at 30% 30%, #ffb3c6, #ff5f87)"
-];
-
-
-/* UTIL */
-
-function mmss(s){
-  const m=Math.floor(s/60);
-  const r=s%60;
-  return String(m).padStart(2,"0")+":"+String(r).padStart(2,"0");
-}
-
-function haptic(ms=15){
-  if(navigator.vibrate){
-    navigator.vibrate(ms);
-  }
-}
-
-function gaugeText(v){
-  if(v<-2) return "Tight";
-  if(v>2) return "Open";
-  return "Neutral";
-}
-
-
-/* LOGS */
-
-function loadLogs(){
-  try{
-    return JSON.parse(localStorage.getItem(LOG_KEY))||[];
-  }catch{
-    return [];
-  }
-}
-
-function saveLogs(l){
-  localStorage.setItem(LOG_KEY,JSON.stringify(l));
-}
-
-function renderLogs(){
-  const box=logsBox;
-  const logs=loadLogs().slice().reverse();
-
-  if(!logs.length){
-    box.innerHTML="<em>No logs yet</em>";
-    return;
+  // ====== HELPERS ======
+  function mmss(total) {
+    total = Math.max(0, Math.floor(total));
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
   }
 
-  box.innerHTML=logs.map(e=>`
-    <div style="margin-bottom:6px;">
-      <strong>${e.cue}</strong> (${e.g})<br>
-      <span>${e.n||""}</span>
-    </div>
-  `).join("");
-}
+  function safeNum(inputEl, min, max, fallback) {
+    const v = parseInt(inputEl.value, 10);
+    if (Number.isFinite(v) && v >= min && v <= max) return v;
+    inputEl.value = String(fallback);
+    return fallback;
+  }
 
+  function haptic(ms) {
+    try { if (navigator.vibrate) navigator.vibrate(ms); } catch {}
+  }
 
-/* PRESENCE */
+  function gaugeText(v) {
+    if (v < -2) return "Tight";
+    if (v > 2) return "Open";
+    return "Neutral";
+  }
 
-function updatePresence(){
-  fetch(PRESENCE_BASE+"/presence/count")
-  .then(r=>r.json())
-  .then(j=>{
-    presenceCount.textContent=j.count;
-  }).catch(()=>{});
-}
+  function setPhase(p) {
+    phase = p;
+    el.phase.textContent = (p === "Ready") ? "Ready" : (p === "In" ? "Inhale" : "Exhale");
+  }
 
-function joinPresence(){
-  fetch(PRESENCE_BASE+"/presence/join")
-  .then(r=>r.json())
-  .then(j=>{
-    presenceId=j.id;
-    updatePresence();
+  function bell() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = "sine";
+      o.frequency.value = 432;
+      o.connect(g);
+      g.connect(ctx.destination);
+      o.start();
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1);
+      o.stop(ctx.currentTime + 1);
+    } catch {}
+  }
+
+  // ====== LOGS ======
+  function loadLogs() {
+    try { return JSON.parse(localStorage.getItem(LOG_KEY)) || []; }
+    catch { return []; }
+  }
+
+  function saveLogs(arr) {
+    localStorage.setItem(LOG_KEY, JSON.stringify(arr));
+  }
+
+  function renderLogs() {
+    const logs = loadLogs().slice().reverse();
+    if (!logs.length) {
+      el.logsBox.innerHTML = "<em>No logs yet</em>";
+      return;
+    }
+    el.logsBox.innerHTML = logs.map(x => {
+      const when = new Date(x.t).toLocaleString();
+      const note = (x.n || "").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+      const cue = (x.cue || "").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+      return `
+        <div style="margin-bottom:10px;">
+          <div class="muted" style="font-size:12px;">${when}</div>
+          <div><strong>${cue}</strong> <span class="muted">(gauge ${x.g})</span></div>
+          ${note ? `<div style="margin-top:2px;">${note}</div>` : ``}
+        </div>
+      `;
+    }).join("");
+  }
+
+  // ====== PRESENCE API ======
+  async function presenceFetch(path) {
+    const res = await fetch(PRESENCE_BASE + path, { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return await res.json();
+  }
+
+  async function refreshPresenceCount() {
+    try {
+      const j = await presenceFetch("/presence/count");
+      el.presencePill.textContent = "🌐 " + j.count;
+    } catch {
+      el.presencePill.textContent = "🌐 —";
+    }
+  }
+
+  async function joinPresence() {
+    try {
+      el.joinState.textContent = "Field: joining…";
+      const q = presenceId ? ("?id=" + encodeURIComponent(presenceId)) : "";
+      const j = await presenceFetch("/presence/join" + q);
+      presenceId = j.id || presenceId || "";
+      if (presenceId) localStorage.setItem(PRESENCE_ID_KEY, presenceId);
+      el.joinState.textContent = "Field: joined";
+      await refreshPresenceCount();
+      startPresenceLoops();
+    } catch (e) {
+      el.joinState.textContent = "Field: offline";
+    }
+  }
+
+  async function leavePresence() {
+    try {
+      if (!presenceId) {
+        el.joinState.textContent = "Field: not joined";
+        return;
+      }
+      // sendBeacon is best-effort; we also do fetch on button click for reliability
+      await presenceFetch("/presence/leave?id=" + encodeURIComponent(presenceId));
+      localStorage.removeItem(PRESENCE_ID_KEY);
+      presenceId = "";
+      el.joinState.textContent = "Field: left";
+      await refreshPresenceCount();
+      stopPresenceLoops();
+    } catch {
+      el.joinState.textContent = "Field: leave failed";
+    }
+  }
+
+  function startPresenceLoops() {
+    stopPresenceLoops();
+
+    presenceInterval = setInterval(refreshPresenceCount, 10000);
+
+    // keep TTL alive while you’re in the app
+    presencePingInterval = setInterval(async () => {
+      if (!presenceId) return;
+      try {
+        const j = await presenceFetch("/presence/ping?id=" + encodeURIComponent(presenceId));
+        if (typeof j.count === "number") el.presencePill.textContent = "🌐 " + j.count;
+      } catch {}
+    }, 60000);
+  }
+
+  function stopPresenceLoops() {
+    if (presenceInterval) clearInterval(presenceInterval);
+    if (presencePingInterval) clearInterval(presencePingInterval);
+    presenceInterval = null;
+    presencePingInterval = null;
+  }
+
+  // Leave best-effort when closing
+  window.addEventListener("beforeunload", () => {
+    try {
+      if (!presenceId) return;
+      navigator.sendBeacon(
+        PRESENCE_BASE + "/presence/leave?id=" + encodeURIComponent(presenceId)
+      );
+    } catch {}
   });
-}
 
-function leavePresence(){
-  if(!presenceId) return;
-  navigator.sendBeacon(
-    PRESENCE_BASE+"/presence/leave?id="+presenceId
-  );
-}
+  // ====== BREATH LOOP ======
+  function scheduleBreathNext() {
+    const inS = safeNum(el.inSec, 1, 20, 4);
+    const outS = safeNum(el.outSec, 1, 30, 6);
 
-
-/* BREATHING */
-
-function scheduleBreath(){
-
-  const inSec=+inSec.value;
-  const outSec=+outSec.value;
-  const circle=breathCircle;
-
-  if(phase==="Ready"||phase==="Out"){
-
-    phase="In";
-    phaseEl.textContent="Inhale";
-
-    circle.style.transition=
-      `transform ${inSec}s linear`;
-
-    circle.style.transform="scale(1.4)";
-
-    haptic(15);
-
-    breathTimer=setTimeout(
-      scheduleBreath,inSec*1000
-    );
-
-  }else{
-
-    phase="Out";
-    phaseEl.textContent="Exhale";
-
-    circle.style.transition=
-      `transform ${outSec}s linear`;
-
-    circle.style.transform="scale(1)";
-
-    haptic(30);
-
-    breathTimer=setTimeout(
-      scheduleBreath,outSec*1000
-    );
-  }
-}
-
-
-/* SESSION */
-
-function start(){
-
-  if(running) return;
-
-  running=true;
-  startTime=Date.now();
-
-  sessionSec=+duration.value*60;
-
-  scheduleBreath();
-
-  tick=setInterval(()=>{
-
-    const elapsed=
-      Math.floor((Date.now()-startTime)/1000);
-
-    const remain=
-      Math.max(0,sessionSec-elapsed);
-
-    timer.textContent=mmss(remain);
-
-    if(remain<=0){
-      stop();
-      bell();
+    // toggle phase
+    if (phase === "Ready" || phase === "Out") {
+      setPhase("In");
+      el.circle.style.transition = "transform " + inS + "s linear";
+      el.circle.style.transform = "scale(1.4)";
+      haptic(15);
+      breathTimeout = setTimeout(scheduleBreathNext, inS * 1000);
+      return;
     }
 
-  },500);
-}
+    setPhase("Out");
+    el.circle.style.transition = "transform " + outS + "s linear";
+    el.circle.style.transform = "scale(1)";
+    haptic(30);
+    breathTimeout = setTimeout(scheduleBreathNext, outS * 1000);
+  }
 
-function stop(){
+  function startSession() {
+    if (running) return;
 
-  running=false;
+    sessionSec = parseInt(el.duration.value, 10) * 60;
+    if (!Number.isFinite(sessionSec) || sessionSec <= 0) sessionSec = 5 * 60;
 
-  clearTimeout(breathTimer);
-  clearInterval(tick);
+    running = true;
+    startMs = Date.now();
 
-  phase="Ready";
-  phaseEl.textContent="Ready";
+    // show correct initial countdown immediately
+    el.timer.textContent = mmss(sessionSec);
 
-  breathCircle.style.transform="scale(1)";
-}
+    // start breath
+    setPhase("Ready");
+    if (breathTimeout) clearTimeout(breathTimeout);
+    scheduleBreathNext();
 
+    // countdown
+    if (tickInterval) clearInterval(tickInterval);
+    tickInterval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startMs) / 1000);
+      const remaining = Math.max(0, sessionSec - elapsed);
+      el.timer.textContent = mmss(remaining);
 
-/* BELL */
+      if (remaining <= 0) {
+        stopSession(true);
+      }
+    }, 250);
 
-function bell(){
+    el.startStop.textContent = "Stop";
+  }
 
-  const ctx=new (window.AudioContext||
-    window.webkitAudioContext)();
+  function stopSession(endedNaturally) {
+    running = false;
 
-  const o=ctx.createOscillator();
-  const g=ctx.createGain();
+    if (breathTimeout) clearTimeout(breathTimeout);
+    if (tickInterval) clearInterval(tickInterval);
+    breathTimeout = null;
+    tickInterval = null;
 
-  o.frequency.value=432;
-  o.connect(g);
-  g.connect(ctx.destination);
+    setPhase("Ready");
+    el.circle.style.transition = "transform .2s linear";
+    el.circle.style.transform = "scale(1)";
 
-  o.start();
+    el.startStop.textContent = "Start";
 
-  g.gain.exponentialRampToValueAtTime(
-    0.0001,ctx.currentTime+1
-  );
+    if (endedNaturally) bell();
+  }
 
-  o.stop(ctx.currentTime+1);
-}
-
-
-/* UI */
-
-startStop.onclick=()=>{
-  running?stop():start();
-};
-
-newCue.onclick=()=>{
-  cue.textContent=
-    CUES[Math.floor(Math.random()*CUES.length)];
-};
-
-preset.onchange=e=>{
-  const v=e.target.value;
-
-  if(v==="calm"){inSec.value=4;outSec.value=6;}
-  if(v==="focus"){inSec.value=4;outSec.value=4;}
-  if(v==="sleep"){inSec.value=4;outSec.value=8;}
-  if(v==="energise"){inSec.value=6;outSec.value=2;}
-};
-
-darkToggle.onclick=()=>{
-  document.body.classList.toggle("dark");
-};
-
-gauge.oninput=e=>{
-  gaugeVal.textContent=e.target.value;
-  gaugeLabel.textContent=gaugeText(+e.target.value);
-};
-
-saveLog.onclick=()=>{
-
-  const l=loadLogs();
-
-  l.push({
-    t:new Date().toISOString(),
-    cue:cue.textContent,
-    g:gauge.value,
-    n:note.value
+  // ====== UI EVENTS ======
+  el.startStop.addEventListener("click", () => {
+    if (!running) startSession();
+    else stopSession(false);
   });
 
-  saveLogs(l);
-  note.value="";
+  el.newCue.addEventListener("click", () => {
+    el.cue.textContent = CUES[Math.floor(Math.random() * CUES.length)];
+  });
+
+  el.dark.addEventListener("click", () => {
+    document.body.classList.toggle("dark");
+  });
+
+  el.preset.addEventListener("change", (e) => {
+    const v = e.target.value;
+    if (v === "calm") { el.inSec.value = 4; el.outSec.value = 6; }
+    if (v === "focus") { el.inSec.value = 4; el.outSec.value = 4; }
+    if (v === "sleep") { el.inSec.value = 4; el.outSec.value = 8; }
+    if (v === "energise") { el.inSec.value = 6; el.outSec.value = 2; }
+    if (v === "downshift") { el.inSec.value = 3; el.outSec.value = 6; }
+
+    // keep timer display aligned when not running
+    if (!running) {
+      const mins = parseInt(el.duration.value, 10) || 5;
+      el.timer.textContent = mmss(mins * 60);
+    }
+  });
+
+  el.duration.addEventListener("change", () => {
+    if (!running) {
+      const mins = parseInt(el.duration.value, 10) || 5;
+      el.timer.textContent = mmss(mins * 60);
+    }
+  });
+
+  el.gauge.addEventListener("input", (e) => {
+    el.gaugeVal.textContent = e.target.value;
+    el.gaugeLabel.textContent = gaugeText(parseInt(e.target.value, 10));
+  });
+
+  el.log.addEventListener("click", () => {
+    const arr = loadLogs();
+    arr.push({
+      t: new Date().toISOString(),
+      cue: el.cue.textContent,
+      g: el.gauge.value,
+      n: el.note.value
+    });
+    saveLogs(arr);
+    el.note.value = "";
+    renderLogs();
+  });
+
+  el.clearLogs.addEventListener("click", () => {
+    localStorage.removeItem(LOG_KEY);
+    renderLogs();
+  });
+
+  el.join.addEventListener("click", joinPresence);
+  el.leave.addEventListener("click", leavePresence);
+
+  // Tap circle: cycle colours
+  el.circle.addEventListener("click", () => {
+    colorIndex = (colorIndex + 1) % COLORS.length;
+    el.circle.style.background = COLORS[colorIndex];
+  });
+
+  // ====== INIT ======
+  el.circle.style.background = COLORS[0];
+  el.gaugeVal.textContent = el.gauge.value;
+  el.gaugeLabel.textContent = gaugeText(parseInt(el.gauge.value, 10));
   renderLogs();
-};
 
-clearLogs.onclick=()=>{
-  localStorage.removeItem(LOG_KEY);
-  renderLogs();
-};
+  // initial timer display
+  el.timer.textContent = mmss((parseInt(el.duration.value, 10) || 5) * 60);
 
+  // presence
+  refreshPresenceCount();
+  joinPresence(); // auto-join by default; you can disable this if you want
 
-/* CIRCLE COLOUR */
-
-breathCircle.onclick=()=>{
-
-  colorIndex=(colorIndex+1)%COLORS.length;
-
-  breathCircle.style.background=
-    COLORS[colorIndex];
-};
-
-
-/* STARTUP */
-
-breathCircle.style.background=COLORS[0];
-
-renderLogs();
-joinPresence();
-updatePresence();
-
-setInterval(updatePresence,10000);
-
-window.addEventListener("beforeunload",leavePresence);
-
+})();
 </script>
 </body>
 </html>
