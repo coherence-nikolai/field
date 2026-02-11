@@ -4,12 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Coherence</title>
-  <link rel="icon" type="image/png" sizes="32x32" href="icon-512.png">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-512.png">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-<meta name="theme-color" content="#8fb9ff">
+
+  <!-- Icons (optional) -->
+  <link rel="icon" href="icon-512.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="theme-color" content="#8fb9ff">
+
   <style>
-    body { font-family: -apple-system, system-ui, Segoe UI, Roboto, Arial; margin: 24px; max-width: 860px; }
+    body { font-family: -apple-system, system-ui, Segoe UI, Roboto, Arial; margin: 24px; max-width: 920px; }
     h1 { margin: 0 0 8px; }
     .muted { color: #666; }
     .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
@@ -18,13 +20,15 @@
     select, input, button, textarea { font-size: 16px; padding: 10px; border-radius: 10px; border: 1px solid #ccc; }
     button { cursor: pointer; }
     button.primary { border-color: #111; }
+    button.ghost { background: transparent; }
     .big { font-size: 28px; font-weight: 700; letter-spacing: 0.2px; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
     .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
-    .logs { max-height: 280px; overflow: auto; background: #fafafa; }
+    @media (max-width: 780px) { .grid2 { grid-template-columns: 1fr; } }
     .pill { display: inline-block; padding: 6px 10px; border: 1px solid #ddd; border-radius: 999px; margin-right: 8px; }
+    .logs { max-height: 320px; overflow: auto; background: #fafafa; padding: 0; }
 
+    /* Overlays */
     .overlay {
       position: fixed; inset: 0;
       background: rgba(0,0,0,0.55);
@@ -37,13 +41,57 @@
     .overlay .panel {
       background: #fff;
       border-radius: 14px;
-      max-width: 520px;
+      max-width: 560px;
       width: 100%;
       padding: 18px;
       border: 1px solid #ddd;
     }
     .overlay h2 { margin: 0 0 8px; }
     .overlay p { margin: 8px 0; line-height: 1.35; }
+
+    /* Breath visual */
+    .orbWrap{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      height: 220px;
+      margin-top: 8px;
+      margin-bottom: 8px;
+    }
+    .orb{
+      width: 140px;
+      height: 140px;
+      border-radius: 999px;
+      border: 1px solid #d7d7d7;
+      background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.95), rgba(180,205,255,0.8), rgba(120,160,255,0.75));
+      transform: scale(0.82);
+      transition: transform linear;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+    }
+    .minihelp{ font-size: 14px; color:#666; line-height:1.35; }
+    .sectionTitle{ font-weight:700; margin: 2px 0 10px; }
+    .danger { border-color: #e2b1b1; }
+    .linkBtn {
+      border: none;
+      background: transparent;
+      padding: 0;
+      color: #2b66d9;
+      text-decoration: underline;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    .logItem{
+      padding: 12px 12px;
+      border-bottom: 1px solid #eee;
+      display:flex;
+      gap: 10px;
+      align-items:flex-start;
+      justify-content: space-between;
+    }
+    .logLeft{ flex:1; min-width: 0; }
+    .logTime{ color:#666; font-size: 13px; }
+    .logNote{ margin-top: 6px; white-space: pre-wrap; word-break: break-word; }
+    .tiny { font-size: 13px; color:#666; }
   </style>
 </head>
 <body>
@@ -80,176 +128,610 @@
   </div>
 
   <div class="card">
-    <div class="row">
-      <div>
-        <label>Stream</label><br/>
-        <select id="stream">
-          <option>Equanimity</option>
-          <option>Joy</option>
-          <option>Reverence</option>
-          <option>Metta</option>
-          <option>Radiance</option>
-          <option>Custom</option>
-        </select>
-      </div>
-
-      <div style="flex:1; min-width:240px;">
-        <label>Custom label</label><br/>
-        <input id="customStream" />
-      </div>
-    </div>
-
     <div class="grid2">
 
+      <!-- LEFT: RESET (breath + visual) -->
       <div>
-        <label>Breath (4–6 calming)</label>
+        <div class="sectionTitle">Reset</div>
 
         <div class="row">
-          <input id="inSec" type="number" value="4" style="width:80px;">
-          <input id="outSec" type="number" value="6" style="width:80px;">
+          <div>
+            <label>Breath</label><br/>
+            <span class="tiny">In</span>
+            <input id="inSec" type="number" min="1" max="20" value="4" style="width:84px;">
+          </div>
+          <div>
+            <label>&nbsp;</label><br/>
+            <span class="tiny">Out</span>
+            <input id="outSec" type="number" min="1" max="30" value="6" style="width:84px;">
+          </div>
+          <div style="margin-top: 18px;">
+            <button class="ghost" id="whyBtn">Why this works</button>
+          </div>
         </div>
 
-        <div class="row" style="margin-top:6px;">
-          <button id="whyBtn">Why this works</button>
-        </div>
-
-        <div class="row" style="margin-top:10px;">
+        <div class="row" style="margin-top: 10px;">
           <button class="primary" id="startStop">Start</button>
+          <button id="resetBtn">Reset</button>
           <span class="pill mono" id="timer">00:00</span>
           <span class="pill" id="phase">Ready</span>
         </div>
 
-        <div style="margin-top:10px;">
-          <div class="big" id="cueLine"></div>
-          <button id="newCue">New cue</button>
+        <div class="row" style="margin-top: 10px;">
+          <label>Auto-stop</label>
+          <button id="s2">2 min</button>
+          <button id="s5">5 min</button>
+          <button id="s10">10 min</button>
+          <input id="customMin" type="number" min="1" max="60" value="2" style="width:88px;">
+          <button id="setCustom">Set</button>
+          <span class="pill mono" id="target">∞</span>
+        </div>
+
+        <div class="orbWrap" aria-label="Breath visual">
+          <div class="orb" id="orb"></div>
+        </div>
+
+        <div class="row" style="justify-content: space-between;">
+          <div>
+            <div class="big" id="cueLine"></div>
+            <div class="minihelp">Tap “New cue” to rotate phrases.</div>
+          </div>
+          <div class="row">
+            <button id="newCue">New cue</button>
+          </div>
+        </div>
+
+        <div class="minihelp" style="margin-top: 10px;">
+          <span class="pill">Haptics</span>
+          <span class="tiny">Phase taps work on some devices. iOS Safari usually won’t vibrate.</span>
         </div>
       </div>
 
+      <!-- RIGHT: STEER + REFLECT -->
       <div>
-        <label>Gauge</label>
-        <input id="gauge" type="range" min="-5" max="5" value="0">
+        <div class="sectionTitle">Steer</div>
 
         <div class="row">
-          <span id="gaugeVal">0</span>
-          <span class="muted" id="gaugeLabel">Neutral</span>
+          <div style="flex:1; min-width: 220px;">
+            <label>I’m here</label><br/>
+            <select id="fromState" style="width: 100%;">
+              <option value="Agitated">Agitated</option>
+              <option value="Scattered">Scattered</option>
+              <option value="Heavy">Heavy</option>
+              <option value="Flat">Flat</option>
+              <option value="Overwhelmed">Overwhelmed</option>
+              <option value="Tense">Tense</option>
+            </select>
+          </div>
+          <div style="flex:1; min-width: 220px;">
+            <label>I want to be</label><br/>
+            <select id="toState" style="width: 100%;">
+              <option value="Grounded">Grounded</option>
+              <option value="Clear">Clear</option>
+              <option value="Steady">Steady</option>
+              <option value="Open">Open</option>
+              <option value="Kind">Kind</option>
+            </select>
+          </div>
         </div>
 
-        <textarea id="note" rows="4" placeholder="One line..."></textarea>
+        <div class="row" style="margin-top: 10px;">
+          <button class="primary" id="applySteer">Apply</button>
+          <span class="pill" id="steerTag">Protocol</span>
+        </div>
+
+        <div class="card" style="margin-top: 10px;">
+          <div class="tiny">Suggested protocol</div>
+          <div style="margin-top: 6px; font-weight: 700;" id="protoTitle">—</div>
+          <div style="margin-top: 6px;" id="protoSteps" class="minihelp">Choose your states, then Apply.</div>
+        </div>
+
+        <div class="sectionTitle" style="margin-top: 14px;">Reflect</div>
 
         <div class="row">
-          <button class="primary" id="saveLog">Log</button>
-          <button id="clearAll">Clear</button>
+          <div style="flex: 1;">
+            <label>Stream</label><br/>
+            <select id="stream" style="width: 100%;">
+              <option value="Equanimity">Equanimity</option>
+              <option value="Joy">Joy</option>
+              <option value="Reverence">Reverence</option>
+              <option value="Metta">Metta</option>
+              <option value="Radiance">Radiance</option>
+              <option value="Custom">Custom</option>
+            </select>
+          </div>
+          <div style="flex: 1;">
+            <label>Custom label</label><br/>
+            <input id="customStream" placeholder="e.g., Match this" style="width: 100%;">
+          </div>
+        </div>
+
+        <div style="margin-top: 10px;">
+          <label>Gauge (contraction ↔ expansion)</label><br/>
+          <input id="gauge" type="range" min="-5" max="5" value="0" style="width: 100%;">
+          <div class="row">
+            <span class="mono" id="gaugeVal">0</span>
+            <span class="muted" id="gaugeLabel">Neutral</span>
+          </div>
+        </div>
+
+        <div style="margin-top: 10px;">
+          <label>Note (one line)</label><br/>
+          <textarea id="note" rows="3" style="width: 100%;" placeholder="Tone-first."></textarea>
+        </div>
+
+        <div class="row" style="margin-top: 10px;">
+          <button class="primary" id="saveLog">Log this moment</button>
+          <button class="danger" id="clearAll">Clear all</button>
+          <button id="exportJson">Export JSON</button>
         </div>
       </div>
 
     </div>
   </div>
 
+  <div class="card">
+    <div class="row" style="justify-content: space-between;">
+      <div>
+        <div class="sectionTitle">Logs</div>
+        <div class="muted">Stored locally on this device.</div>
+      </div>
+      <div class="row">
+        <button id="refreshLogs">Refresh</button>
+      </div>
+    </div>
+    <div class="logs" id="logList"></div>
+  </div>
+
 <script>
 (() => {
+  // ===== Constants =====
+  const DEFAULT_CUE = "Equanimity and awareness";
+  const INTRO_KEY = "coh_intro_v1_3";
+  const LOG_KEY = "coh_logs_v1_3";
+  const SESSION_KEY = "coh_session_target_sec";
+  const CUE_KEY = "coh_last_cue";
 
-const DEFAULT_CUE = "Equanimity and awareness";
-const INTRO_KEY = "coh_intro_v1";
-const LOG_KEY = "coh_logs";
+  const CUES = [
+    "Equanimity and awareness",
+    "Steady",
+    "Match this",
+    "Soft eyes, wide field",
+    "Upper-lip breath",
+    "Release the grasp",
+    "Let it pass through",
+    "Tone first",
+    "Gentle attention",
+    "Reverence",
+    "Joy",
+    "Metta"
+  ];
 
-const CUES = [
-  DEFAULT_CUE,"Steady","Match this","Soft eyes","Release","Tone first","Gentle","Reverence","Joy","Metta"
-];
+  // Steer mapping: choose a short protocol that updates cue + session target + breath
+  const STEER_PROTOCOLS = {
+    "Agitated->Grounded": { title: "Downshift", in: 4, out: 7, min: 2, cue: "Steady", steps: [
+      "Exhale longer than inhale.",
+      "Relax jaw and shoulders.",
+      "Feel feet or seat for 10 seconds."
+    ]},
+    "Agitated->Clear": { title: "Settle then widen", in: 4, out: 7, min: 3, cue: "Soft eyes, wide field", steps: [
+      "3 minutes 4–7 breathing.",
+      "Let attention widen to the whole visual field.",
+      "Then read or think after the body settles."
+    ]},
+    "Scattered->Steady": { title: "Single point", in: 4, out: 6, min: 2, cue: "Upper-lip breath", steps: [
+      "Use the upper-lip breath as anchor.",
+      "Count 6 exhales.",
+      "Return gently each time you drift."
+    ]},
+    "Overwhelmed->Grounded": { title: "Reduce input", in: 4, out: 8, min: 2, cue: "Let it pass through", steps: [
+      "2 minutes 4–8 breathing.",
+      "Name: ‘too much’ (silently).",
+      "Choose one next action only."
+    ]},
+    "Heavy->Open": { title: "Lift without forcing", in: 4, out: 6, min: 5, cue: "Gentle attention", steps: [
+      "5 minutes 4–6.",
+      "Sit tall, soften belly.",
+      "Invite a small sense of space around the chest."
+    ]},
+    "Flat->Kind": { title: "Warmth cue", in: 4, out: 6, min: 2, cue: "Metta", steps: [
+      "2 minutes 4–6.",
+      "Bring one kind phrase to mind.",
+      "Feel it in the body (not the story)."
+    ]},
+    "Tense->Steady": { title: "Unclench", in: 4, out: 7, min: 2, cue: "Release the grasp", steps: [
+      "Exhale longer.",
+      "Unclench hands, tongue, eyes.",
+      "Let shoulders drop on each out-breath."
+    ]},
+  };
 
-const $ = id => document.getElementById(id);
+  // ===== DOM =====
+  const $ = (id) => document.getElementById(id);
 
-let running=false, timer=null, start=0, phase="In";
+  const els = {
+    introOverlay: $("introOverlay"),
+    introStart: $("introStart"),
 
-function mmss(s){
-  const m=Math.floor(s/60), r=s%60;
-  return String(m).padStart(2,"0")+":"+String(r).padStart(2,"0");
-}
+    whyOverlay: $("whyOverlay"),
+    whyBtn: $("whyBtn"),
+    whyClose: $("whyClose"),
 
-function gaugeText(v){
-  if(v<-2) return "Tight";
-  if(v>2) return "Open";
-  return "Neutral";
-}
+    inSec: $("inSec"),
+    outSec: $("outSec"),
+    startStop: $("startStop"),
+    resetBtn: $("resetBtn"),
+    timer: $("timer"),
+    phase: $("phase"),
+    orb: $("orb"),
 
-function load(){
-  try{ return JSON.parse(localStorage.getItem(LOG_KEY))||[] }
-  catch{ return [] }
-}
+    target: $("target"),
+    s2: $("s2"),
+    s5: $("s5"),
+    s10: $("s10"),
+    customMin: $("customMin"),
+    setCustom: $("setCustom"),
 
-function save(x){
-  localStorage.setItem(LOG_KEY,JSON.stringify(x));
-}
+    cueLine: $("cueLine"),
+    newCue: $("newCue"),
 
-function startTimer(){
-  if(running) return;
-  running=true;
-  start=Date.now();
-  phase="In";
-  $("startStop").textContent="Stop";
+    fromState: $("fromState"),
+    toState: $("toState"),
+    applySteer: $("applySteer"),
+    steerTag: $("steerTag"),
+    protoTitle: $("protoTitle"),
+    protoSteps: $("protoSteps"),
 
-  timer=setInterval(()=>{
-    const s=Math.floor((Date.now()-start)/1000);
-    $("timer").textContent=mmss(s);
-  },1000);
-}
+    stream: $("stream"),
+    customStream: $("customStream"),
+    gauge: $("gauge"),
+    gaugeVal: $("gaugeVal"),
+    gaugeLabel: $("gaugeLabel"),
+    note: $("note"),
+    saveLog: $("saveLog"),
+    clearAll: $("clearAll"),
+    exportJson: $("exportJson"),
 
-function stopTimer(){
-  running=false;
-  clearInterval(timer);
-  $("startStop").textContent="Start";
-}
+    logList: $("logList"),
+    refreshLogs: $("refreshLogs"),
+  };
 
-$("startStop").onclick=()=>running?stopTimer():startTimer();
+  // ===== State =====
+  let running = false;
+  let tick = null;
+  let startEpoch = 0;
+  let totalElapsedSec = 0;
 
-$("newCue").onclick=()=>{
-  $("cueLine").textContent=CUES[Math.floor(Math.random()*CUES.length)];
-};
+  // Breath phase machine
+  let phaseName = "Ready";      // "In" / "Out"
+  let phaseRemaining = 0;
+  let targetSessionSec = null;  // null = infinity
 
-$("gauge").oninput=e=>{
-  $("gaugeVal").textContent=e.target.value;
-  $("gaugeLabel").textContent=gaugeText(+e.target.value);
-};
-
-$("saveLog").onclick=()=>{
-  const l=load();
-  l.push({
-    t:new Date().toISOString(),
-    cue:$("cueLine").textContent,
-    g:$("gauge").value,
-    n:$("note").value
-  });
-  save(l);
-  $("note").value="";
-};
-
-$("clearAll").onclick=()=>{
-  localStorage.removeItem(LOG_KEY);
-};
-
-$("whyBtn").onclick=()=>{
-  $("whyOverlay").style.display="flex";
-};
-
-$("whyClose").onclick=()=>{
-  $("whyOverlay").style.display="none";
-};
-
-$("introStart").onclick=()=>{
-  localStorage.setItem(INTRO_KEY,"1");
-  $("introOverlay").style.display="none";
-};
-
-function init(){
-  $("cueLine").textContent=DEFAULT_CUE;
-  $("gauge").dispatchEvent(new Event("input"));
-
-  if(!localStorage.getItem(INTRO_KEY)){
-    $("introOverlay").style.display="flex";
+  // ===== Helpers =====
+  function pad2(n){ return String(n).padStart(2,"0"); }
+  function mmss(sec){
+    const m = Math.floor(sec/60);
+    const s = sec % 60;
+    return `${pad2(m)}:${pad2(s)}`;
   }
-}
 
-init();
+  function vibrate(ms){
+    // Works on some browsers/devices; iOS Safari usually does nothing.
+    try{
+      if (navigator.vibrate) navigator.vibrate(ms);
+    }catch{}
+  }
 
+  function gaugeText(v){
+    if (v <= -3) return "Contracted";
+    if (v < 0) return "Tight";
+    if (v === 0) return "Neutral";
+    if (v < 3) return "Open";
+    return "Expanded";
+  }
+
+  function currentStreamLabel(){
+    const s = els.stream.value;
+    if (s === "Custom"){
+      const c = (els.customStream.value || "").trim();
+      return c.length ? c : "Custom";
+    }
+    return s;
+  }
+
+  function loadLogs(){
+    try{
+      const raw = localStorage.getItem(LOG_KEY);
+      if(!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    }catch{
+      return [];
+    }
+  }
+
+  function saveLogs(logs){
+    localStorage.setItem(LOG_KEY, JSON.stringify(logs));
+  }
+
+  function renderLogs(){
+    const logs = loadLogs().slice().reverse();
+    if(!logs.length){
+      els.logList.innerHTML = `<div style="padding:12px;" class="muted">No logs yet.</div>`;
+      return;
+    }
+
+    els.logList.innerHTML = logs.map((x, i) => {
+      const note = (x.note || "").replaceAll("<","&lt;").replaceAll(">","&gt;");
+      const idxFromEnd = logs.length - 1 - i; // original index in stored order
+      return `
+        <div class="logItem">
+          <div class="logLeft">
+            <div>
+              <span class="pill">${x.stream}</span>
+              <span class="pill mono">${x.gauge}</span>
+              <span class="pill">${x.gaugeLabel}</span>
+              <span class="pill">${x.cue}</span>
+            </div>
+            <div class="logTime mono">${x.time}</div>
+            ${note ? `<div class="logNote">${note}</div>` : ""}
+          </div>
+          <div>
+            <button class="danger" data-del="${idxFromEnd}">Delete</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    // wire delete buttons
+    els.logList.querySelectorAll("button[data-del]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const idx = Number(btn.getAttribute("data-del"));
+        const stored = loadLogs();
+        if(idx >= 0 && idx < stored.length){
+          stored.splice(idx, 1);
+          saveLogs(stored);
+          renderLogs();
+        }
+      });
+    });
+  }
+
+  function setCue(text){
+    els.cueLine.textContent = text;
+    localStorage.setItem(CUE_KEY, text);
+  }
+
+  function pickCue(){
+    const idx = Math.floor(Math.random() * CUES.length);
+    setCue(CUES[idx]);
+  }
+
+  function setTargetMinutes(min){
+    const m = Number(min);
+    if(!m || m <= 0){
+      targetSessionSec = null;
+      localStorage.removeItem(SESSION_KEY);
+      els.target.textContent = "∞";
+      return;
+    }
+    targetSessionSec = Math.round(m * 60);
+    localStorage.setItem(SESSION_KEY, String(targetSessionSec));
+    els.target.textContent = mmss(targetSessionSec);
+  }
+
+  function restoreTarget(){
+    const raw = localStorage.getItem(SESSION_KEY);
+    if(!raw){
+      targetSessionSec = null;
+      els.target.textContent = "∞";
+      return;
+    }
+    const sec = Number(raw);
+    if(!sec || sec <= 0){
+      targetSessionSec = null;
+      els.target.textContent = "∞";
+      return;
+    }
+    targetSessionSec = sec;
+    els.target.textContent = mmss(targetSessionSec);
+  }
+
+  function restoreCue(){
+    const last = localStorage.getItem(CUE_KEY);
+    setCue(last || DEFAULT_CUE);
+  }
+
+  // Breath visual and phase transition
+  function setPhase(name, sec){
+    phaseName = name;
+    phaseRemaining = sec;
+    els.phase.textContent = name;
+
+    // Haptic tick on phase boundary
+    vibrate(20);
+
+    // Visual: scale orb with linear timing synced to duration
+    const orb = els.orb;
+    orb.style.transitionDuration = `${sec}s`;
+    if(name === "In"){
+      orb.style.transform = "scale(1.06)";
+    }else if(name === "Out"){
+      orb.style.transform = "scale(0.80)";
+    }else{
+      orb.style.transform = "scale(0.82)";
+    }
+  }
+
+  function start(){
+    if(running) return;
+    running = true;
+    els.startStop.textContent = "Stop";
+
+    const inS = Math.max(1, Math.min(20, Number(els.inSec.value) || 4));
+    const outS = Math.max(1, Math.min(30, Number(els.outSec.value) || 6));
+
+    startEpoch = Date.now();
+    totalElapsedSec = 0;
+
+    setPhase("In", inS);
+
+    tick = setInterval(() => {
+      totalElapsedSec = Math.floor((Date.now() - startEpoch) / 1000);
+      els.timer.textContent = mmss(totalElapsedSec);
+
+      phaseRemaining -= 1;
+      if(phaseRemaining <= 0){
+        // switch phase
+        if(phaseName === "In"){
+          setPhase("Out", outS);
+        }else{
+          setPhase("In", inS);
+        }
+      }
+
+      // auto-stop
+      if(targetSessionSec !== null && totalElapsedSec >= targetSessionSec){
+        stop(true);
+      }
+    }, 1000);
+  }
+
+  function stop(auto=false){
+    running = false;
+    if(tick) clearInterval(tick);
+    tick = null;
+    els.startStop.textContent = "Start";
+    els.phase.textContent = auto ? "Complete" : "Stopped";
+    // settle orb
+    els.orb.style.transitionDuration = "0.6s";
+    els.orb.style.transform = "scale(0.82)";
+    if(auto) vibrate(60);
+  }
+
+  function reset(){
+    stop(false);
+    totalElapsedSec = 0;
+    els.timer.textContent = "00:00";
+    els.phase.textContent = "Ready";
+  }
+
+  function showIntroIfNeeded(){
+    if(localStorage.getItem(INTRO_KEY) === "1") return;
+    els.introOverlay.style.display = "flex";
+  }
+
+  function hideIntro(){
+    localStorage.setItem(INTRO_KEY, "1");
+    els.introOverlay.style.display = "none";
+  }
+
+  function showWhy(){ els.whyOverlay.style.display = "flex"; }
+  function hideWhy(){ els.whyOverlay.style.display = "none"; }
+
+  function applySteer(){
+    const from = els.fromState.value;
+    const to = els.toState.value;
+    const key = `${from}->${to}`;
+
+    const proto = STEER_PROTOCOLS[key] || {
+      title: "Simple return",
+      in: 4,
+      out: 6,
+      min: 2,
+      cue: DEFAULT_CUE,
+      steps: [
+        "2 minutes 4–6 breathing.",
+        "Let shoulders drop on the exhale.",
+        "Return to one small next step."
+      ]
+    };
+
+    els.protoTitle.textContent = proto.title;
+    els.protoSteps.innerHTML = `<ol style="margin:8px 0 0; padding-left: 18px;">
+      ${proto.steps.map(s => `<li>${s}</li>`).join("")}
+    </ol>`;
+
+    // Apply settings
+    els.inSec.value = proto.in;
+    els.outSec.value = proto.out;
+    setTargetMinutes(proto.min);
+    setCue(proto.cue);
+
+    els.steerTag.textContent = `${from} → ${to}`;
+  }
+
+  // ===== Wire events =====
+  els.introStart.addEventListener("click", hideIntro);
+  els.whyBtn.addEventListener("click", showWhy);
+  els.whyClose.addEventListener("click", hideWhy);
+
+  els.startStop.addEventListener("click", () => running ? stop(false) : start());
+  els.resetBtn.addEventListener("click", reset);
+
+  els.s2.addEventListener("click", () => setTargetMinutes(2));
+  els.s5.addEventListener("click", () => setTargetMinutes(5));
+  els.s10.addEventListener("click", () => setTargetMinutes(10));
+  els.setCustom.addEventListener("click", () => setTargetMinutes(els.customMin.value));
+
+  els.newCue.addEventListener("click", pickCue);
+
+  els.applySteer.addEventListener("click", applySteer);
+
+  els.gauge.addEventListener("input", () => {
+    const v = Number(els.gauge.value);
+    els.gaugeVal.textContent = String(v);
+    els.gaugeLabel.textContent = gaugeText(v);
+  });
+
+  els.saveLog.addEventListener("click", () => {
+    const logs = loadLogs();
+    const v = Number(els.gauge.value);
+    logs.push({
+      time: new Date().toISOString(),
+      stream: currentStreamLabel(),
+      cue: els.cueLine.textContent,
+      gauge: v,
+      gaugeLabel: gaugeText(v),
+      note: (els.note.value || "").trim(),
+      breath: { in: Number(els.inSec.value)||4, out: Number(els.outSec.value)||6 },
+      targetSec: targetSessionSec
+    });
+    saveLogs(logs);
+    els.note.value = "";
+    renderLogs();
+  });
+
+  els.clearAll.addEventListener("click", () => {
+    localStorage.removeItem(LOG_KEY);
+    renderLogs();
+  });
+
+  els.exportJson.addEventListener("click", () => {
+    const logs = loadLogs();
+    const blob = new Blob([JSON.stringify(logs, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "coherence_logs.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+
+  els.refreshLogs.addEventListener("click", renderLogs);
+
+  // ===== Init =====
+  restoreCue();
+  restoreTarget();
+  els.gauge.dispatchEvent(new Event("input"));
+  renderLogs();
+  showIntroIfNeeded();
+
+  // Default protocol display (optional)
+  els.protoTitle.textContent = "—";
+  els.protoSteps.textContent = "Choose your states, then Apply.";
 })();
 </script>
 </body>
