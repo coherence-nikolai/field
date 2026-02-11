@@ -1,382 +1,254 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Coherence</title>
-  <style>
-    body { font-family: -apple-system, system-ui, Segoe UI, Roboto, Arial; margin: 24px; max-width: 860px; }
-    h1 { margin: 0 0 8px; }
-    .muted { color: #666; }
-    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
-    .card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; margin: 12px 0; }
-    label { font-weight: 600; }
-    select, input, button, textarea { font-size: 16px; padding: 10px; border-radius: 10px; border: 1px solid #ccc; }
-    button { cursor: pointer; }
-    button.primary { border-color: #111; }
-    .big { font-size: 28px; font-weight: 700; letter-spacing: 0.2px; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
-    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
-    .logs { max-height: 280px; overflow: auto; background: #fafafa; }
-    .pill { display: inline-block; padding: 6px 10px; border: 1px solid #ddd; border-radius: 999px; margin-right: 8px; }
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coherence</title>
+<meta name="theme-color" content="#8fb9ff">
 
-    .overlay {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.55);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 18px;
-      z-index: 9999;
-    }
-    .overlay .panel {
-      background: #fff;
-      border-radius: 14px;
-      max-width: 520px;
-      width: 100%;
-      padding: 18px;
-      border: 1px solid #ddd;
-    }
-    .overlay h2 { margin: 0 0 8px; }
-    .overlay p { margin: 8px 0; line-height: 1.35; }
-
-    /* Shared Field */
-    .presenceCount {
-      font-size: 36px;
-      font-weight: 800;
-      letter-spacing: 0.5px;
-      margin: 6px 0 2px;
-    }
-  </style>
+<style>
+body {
+  font-family: -apple-system, system-ui, Arial;
+  margin: 24px;
+  max-width: 860px;
+  background: #f5f7fb;
+  transition: background .3s, color .3s;
+}
+body.dark {
+  background: #111;
+  color: #eee;
+}
+.card {
+  background: white;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #ddd;
+  margin: 12px 0;
+}
+body.dark .card {
+  background: #1c1c1c;
+  border-color: #333;
+}
+.row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+button, select, input, textarea {
+  padding:10px;
+  border-radius:10px;
+  border:1px solid #ccc;
+  font-size:16px;
+}
+button { cursor:pointer; }
+.big { font-size:28px; font-weight:700; }
+.pill {
+  padding:6px 10px;
+  border:1px solid #ddd;
+  border-radius:999px;
+}
+#breathCircle {
+  width:150px;
+  height:150px;
+  border-radius:50%;
+  margin:20px auto;
+  background: radial-gradient(circle at 30% 30%, #a9c7ff, #6fa0ff);
+  transition: transform linear;
+}
+body.dark #breathCircle {
+  background: radial-gradient(circle at 30% 30%, #557cff, #334b99);
+}
+</style>
 </head>
 <body>
-  <h1>Coherence</h1>
-  <div class="muted">Reset • Steer • Reflect</div>
 
-  <!-- Shared Field (ADDED) -->
-  <div class="card" id="presenceCard">
-    <div class="row" style="justify-content: space-between;">
-      <div>
-        <div style="font-weight:700;">🌐 Shared Field</div>
-        <div class="muted" style="margin-top:4px;">Quiet presence with others, no chat.</div>
-      </div>
-      <div style="text-align:right;">
-        <div class="muted">Online now</div>
-        <div class="presenceCount mono" id="presenceCount">—</div>
-      </div>
-    </div>
+<h1>Coherence</h1>
 
-    <div class="row" style="margin-top:10px;">
-      <button class="primary" id="joinField">Join Field</button>
-      <button id="leaveField">Leave Field</button>
-      <span class="pill" id="fieldStatus">Not joined</span>
-    </div>
+<div class="card">
 
-    <div class="muted" style="margin-top:10px; font-size: 14px;">
-      Tip: if you close the tab, you’ll drop off automatically after a short time.
-    </div>
-  </div>
+<div id="breathCircle"></div>
 
-  <!-- Intro -->
-  <div class="overlay" id="introOverlay">
-    <div class="panel">
-      <h2>Coherence</h2>
-      <p><strong>A place to return to coherence.</strong></p>
-      <p>Coherence is a settled body and a clear mind.</p>
-      <div class="row" style="justify-content: flex-end; margin-top: 12px;">
-        <button class="primary" id="introStart">Start</button>
-      </div>
-    </div>
-  </div>
+<div class="row">
+<select id="preset">
+<option value="calm">Calm (4–6)</option>
+<option value="focus">Focus (4–4)</option>
+<option value="sleep">Sleep (4–8)</option>
+<option value="energise">Energise (6–2)</option>
+<option value="custom">Custom</option>
+</select>
 
-  <!-- Why -->
-  <div class="overlay" id="whyOverlay">
-    <div class="panel">
-      <h2>Why this works</h2>
-      <p>
-        Breathing out longer than you breathe in activates the vagal nerve — the part
-        of your nervous system that helps you feel safe and settled.
-      </p>
-      <p>
-        This allows your body to relax and your mind to become clearer.
-      </p>
-      <div class="row" style="justify-content: flex-end; margin-top: 12px;">
-        <button class="primary" id="whyClose">Close</button>
-      </div>
-    </div>
-  </div>
+<input id="inSec" type="number" value="4" style="width:80px;">
+<input id="outSec" type="number" value="6" style="width:80px;">
 
-  <div class="card">
-    <div class="row">
-      <div>
-        <label>Stream</label><br/>
-        <select id="stream">
-          <option>Equanimity</option>
-          <option>Joy</option>
-          <option>Reverence</option>
-          <option>Metta</option>
-          <option>Radiance</option>
-          <option>Custom</option>
-        </select>
-      </div>
+<select id="duration">
+<option value="1">1m</option>
+<option value="3">3m</option>
+<option value="5" selected>5m</option>
+<option value="10">10m</option>
+</select>
+</div>
 
-      <div style="flex:1; min-width:240px;">
-        <label>Custom label</label><br/>
-        <input id="customStream" />
-      </div>
-    </div>
+<div class="row" style="margin-top:12px;">
+<button id="startStop">Start</button>
+<span class="pill" id="phase">Ready</span>
+<span class="pill" id="timer">00:00</span>
+</div>
 
-    <div class="grid2">
+<div class="big" id="cue" style="margin-top:15px;">
+Equanimity and awareness
+</div>
 
-      <div>
-        <label>Breath (4–6 calming)</label>
+<div class="row" style="margin-top:10px;">
+<button id="newCue">New cue</button>
+<button id="darkToggle">Dark mode</button>
+</div>
 
-        <div class="row">
-          <input id="inSec" type="number" value="4" style="width:80px;">
-          <input id="outSec" type="number" value="6" style="width:80px;">
-        </div>
+<hr>
 
-        <div class="row" style="margin-top:6px;">
-          <button id="whyBtn">Why this works</button>
-        </div>
+<div>
+🌐 Shared Field:
+<span id="presenceCount">—</span>
+</div>
 
-        <div class="row" style="margin-top:10px;">
-          <button class="primary" id="startStop">Start</button>
-          <span class="pill mono" id="timer">00:00</span>
-          <span class="pill" id="phase">Ready</span>
-        </div>
-
-        <div style="margin-top:10px;">
-          <div class="big" id="cueLine"></div>
-          <button id="newCue">New cue</button>
-        </div>
-      </div>
-
-      <div>
-        <label>Gauge</label>
-        <input id="gauge" type="range" min="-5" max="5" value="0">
-
-        <div class="row">
-          <span id="gaugeVal">0</span>
-          <span class="muted" id="gaugeLabel">Neutral</span>
-        </div>
-
-        <textarea id="note" rows="4" placeholder="One line..."></textarea>
-
-        <div class="row">
-          <button class="primary" id="saveLog">Log</button>
-          <button id="clearAll">Clear</button>
-        </div>
-      </div>
-
-    </div>
-  </div>
+</div>
 
 <script>
-(() => {
 
-const DEFAULT_CUE = "Equanimity and awareness";
-const INTRO_KEY = "coh_intro_v1";
-const LOG_KEY = "coh_logs";
+const PRESENCE_BASE = "https://YOUR-WORKER-URL.workers.dev";
 
-/* Shared Field config (EDIT THIS if your worker URL changes) */
-const PRESENCE_BASE = "https://coherence-presence-2.lucolly999.workers.dev";
-const PRESENCE_ID_KEY = "coh_presence_id";
+let running=false;
+let startTime=0;
+let breathTimer=null;
+let tick=null;
+let phase="Ready";
+let sessionSec=300;
+let presenceId=null;
 
 const CUES = [
-  DEFAULT_CUE,"Steady","Match this","Soft eyes","Release","Tone first","Gentle","Reverence","Joy","Metta"
+"Equanimity and awareness",
+"Steady",
+"Soft eyes",
+"Release",
+"Match this",
+"Joy",
+"Metta"
 ];
 
-const $ = id => document.getElementById(id);
-
-let running=false, timer=null, start=0;
-let presencePingTimer = null;
+function haptic(type="light"){
+  if(navigator.vibrate){
+    navigator.vibrate(type==="strong"?40:15);
+  }
+}
 
 function mmss(s){
-  const m=Math.floor(s/60), r=s%60;
+  const m=Math.floor(s/60);
+  const r=s%60;
   return String(m).padStart(2,"0")+":"+String(r).padStart(2,"0");
 }
 
-function gaugeText(v){
-  if(v<-2) return "Tight";
-  if(v>2) return "Open";
-  return "Neutral";
+function updatePresence(){
+  fetch(PRESENCE_BASE+"/presence/count")
+  .then(r=>r.json())
+  .then(j=>{
+    document.getElementById("presenceCount").textContent=j.count;
+  }).catch(()=>{});
 }
 
-function load(){
-  try{ return JSON.parse(localStorage.getItem(LOG_KEY))||[] }
-  catch{ return [] }
+function joinPresence(){
+  fetch(PRESENCE_BASE+"/presence/join")
+  .then(r=>r.json())
+  .then(j=>{
+    presenceId=j.id;
+    updatePresence();
+  });
 }
 
-function save(x){
-  localStorage.setItem(LOG_KEY,JSON.stringify(x));
+function leavePresence(){
+  if(!presenceId) return;
+  navigator.sendBeacon(PRESENCE_BASE+"/presence/leave?id="+presenceId);
 }
 
-function startTimer(){
+function scheduleBreath(){
+  const inSec=parseInt(document.getElementById("inSec").value);
+  const outSec=parseInt(document.getElementById("outSec").value);
+  const circle=document.getElementById("breathCircle");
+
+  if(phase==="Ready"||phase==="Out"){
+    phase="In";
+    document.getElementById("phase").textContent="Inhale";
+    circle.style.transition=`transform ${inSec}s linear`;
+    circle.style.transform="scale(1.4)";
+    haptic("light");
+    breathTimer=setTimeout(scheduleBreath,inSec*1000);
+  } else {
+    phase="Out";
+    document.getElementById("phase").textContent="Exhale";
+    circle.style.transition=`transform ${outSec}s linear`;
+    circle.style.transform="scale(1)";
+    haptic("strong");
+    breathTimer=setTimeout(scheduleBreath,outSec*1000);
+  }
+}
+
+function start(){
   if(running) return;
   running=true;
-  start=Date.now();
-  $("startStop").textContent="Stop";
-
-  timer=setInterval(()=>{
-    const s=Math.floor((Date.now()-start)/1000);
-    $("timer").textContent=mmss(s);
-  },1000);
+  startTime=Date.now();
+  sessionSec=parseInt(document.getElementById("duration").value)*60;
+  scheduleBreath();
+  tick=setInterval(()=>{
+    const elapsed=Math.floor((Date.now()-startTime)/1000);
+    document.getElementById("timer").textContent=mmss(elapsed);
+    if(elapsed>=sessionSec){
+      stop();
+      bell();
+    }
+  },500);
 }
 
-function stopTimer(){
+function stop(){
   running=false;
-  clearInterval(timer);
-  $("startStop").textContent="Start";
+  clearTimeout(breathTimer);
+  clearInterval(tick);
+  document.getElementById("phase").textContent="Ready";
+  document.getElementById("breathCircle").style.transform="scale(1)";
 }
 
-$("startStop").onclick=()=>running?stopTimer():startTimer();
+function bell(){
+  const ctx=new (window.AudioContext||window.webkitAudioContext)();
+  const o=ctx.createOscillator();
+  const g=ctx.createGain();
+  o.type="sine";
+  o.frequency.value=432;
+  o.connect(g);
+  g.connect(ctx.destination);
+  o.start();
+  g.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+1);
+  o.stop(ctx.currentTime+1);
+}
 
-$("newCue").onclick=()=>{
-  $("cueLine").textContent=CUES[Math.floor(Math.random()*CUES.length)];
+document.getElementById("startStop").onclick=()=>{
+  running?stop():start();
 };
 
-$("gauge").oninput=e=>{
-  $("gaugeVal").textContent=e.target.value;
-  $("gaugeLabel").textContent=gaugeText(+e.target.value);
+document.getElementById("newCue").onclick=()=>{
+  document.getElementById("cue").textContent=
+  CUES[Math.floor(Math.random()*CUES.length)];
 };
 
-$("saveLog").onclick=()=>{
-  const l=load();
-  l.push({
-    t:new Date().toISOString(),
-    cue:$("cueLine").textContent,
-    g:$("gauge").value,
-    n:$("note").value
-  });
-  save(l);
-  $("note").value="";
+document.getElementById("preset").onchange=(e)=>{
+  const v=e.target.value;
+  if(v==="calm"){inSec.value=4;outSec.value=6;}
+  if(v==="focus"){inSec.value=4;outSec.value=4;}
+  if(v==="sleep"){inSec.value=4;outSec.value=8;}
+  if(v==="energise"){inSec.value=6;outSec.value=2;}
 };
 
-$("clearAll").onclick=()=>{
-  localStorage.removeItem(LOG_KEY);
+document.getElementById("darkToggle").onclick=()=>{
+  document.body.classList.toggle("dark");
 };
 
-$("whyBtn").onclick=()=>{
-  $("whyOverlay").style.display="flex";
-};
+joinPresence();
+updatePresence();
+setInterval(updatePresence,10000);
+window.addEventListener("beforeunload",leavePresence);
 
-$("whyClose").onclick=()=>{
-  $("whyOverlay").style.display="none";
-};
-
-$("introStart").onclick=()=>{
-  localStorage.setItem(INTRO_KEY,"1");
-  $("introOverlay").style.display="none";
-};
-
-/* ---------------- Shared Field logic ---------------- */
-
-function setJoinedUI(joined){
-  $("fieldStatus").textContent = joined ? "Joined" : "Not joined";
-  $("joinField").disabled = joined;
-  $("leaveField").disabled = !joined;
-}
-
-function getPresenceId(){
-  return localStorage.getItem(PRESENCE_ID_KEY);
-}
-
-function setPresenceId(id){
-  localStorage.setItem(PRESENCE_ID_KEY, id);
-}
-
-function clearPresenceId(){
-  localStorage.removeItem(PRESENCE_ID_KEY);
-}
-
-async function api(path){
-  const res = await fetch(PRESENCE_BASE + path, { method: "GET" });
-  if(!res.ok) throw new Error("HTTP " + res.status);
-  return res.json();
-}
-
-async function refreshCount(){
-  try{
-    const data = await api("/presence/count");
-    $("presenceCount").textContent = String(data.count);
-  }catch(e){
-    $("presenceCount").textContent = "—";
-  }
-}
-
-function startPinging(){
-  stopPinging();
-  presencePingTimer = setInterval(async () => {
-    const id = getPresenceId();
-    if(!id) return;
-    try{
-      const data = await api("/presence/ping?id=" + encodeURIComponent(id));
-      $("presenceCount").textContent = String(data.count);
-    }catch(e){
-      // ignore
-    }
-  }, 60_000);
-}
-
-function stopPinging(){
-  if(presencePingTimer){
-    clearInterval(presencePingTimer);
-    presencePingTimer = null;
-  }
-}
-
-$("joinField").onclick = async () => {
-  try{
-    const existing = getPresenceId();
-    const q = existing ? ("?id=" + encodeURIComponent(existing)) : "";
-    const data = await api("/presence/join" + q);
-    if(data.id) setPresenceId(data.id);
-    $("presenceCount").textContent = String(data.count);
-    setJoinedUI(true);
-    startPinging();
-  }catch(e){
-    $("fieldStatus").textContent = "Join failed";
-  }
-};
-
-$("leaveField").onclick = async () => {
-  try{
-    const id = getPresenceId();
-    if(!id){
-      setJoinedUI(false);
-      return;
-    }
-    const data = await api("/presence/leave?id=" + encodeURIComponent(id));
-    clearPresenceId();
-    $("presenceCount").textContent = String(data.count);
-    setJoinedUI(false);
-    stopPinging();
-  }catch(e){
-    $("fieldStatus").textContent = "Leave failed";
-  }
-};
-
-/* ---------------- init ---------------- */
-
-function init(){
-  $("cueLine").textContent=DEFAULT_CUE;
-  $("gauge").dispatchEvent(new Event("input"));
-
-  if(!localStorage.getItem(INTRO_KEY)){
-    $("introOverlay").style.display="flex";
-  }
-
-  const joined = !!getPresenceId();
-  setJoinedUI(joined);
-  refreshCount();
-  if(joined) startPinging();
-}
-
-init();
-
-})();
 </script>
 </body>
 </html>
