@@ -1,149 +1,351 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Coherence</title>
 
-<title>Coherence</title>
+  <link rel="icon" href="icon-512.png">
+  <link rel="apple-touch-icon" href="icon-512.png">
+  <meta name="theme-color" content="#8fb9ff">
 
-<style>
-body {
-  font-family: -apple-system, system-ui, Arial;
-  background: #f5f7fb;
-  margin: 0;
-  padding: 20px;
-  text-align: center;
-}
+  <style>
+    body { font-family: -apple-system, system-ui, Segoe UI, Roboto, Arial; margin: 24px; max-width: 860px; }
+    h1 { margin: 0 0 8px; }
+    .muted { color: #666; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; margin: 12px 0; background: #fff; }
+    label { font-weight: 600; }
+    select, input, button, textarea { font-size: 16px; padding: 10px; border-radius: 10px; border: 1px solid #ccc; }
+    button { cursor: pointer; }
+    button.primary { border-color: #111; }
+    .big { font-size: 28px; font-weight: 700; letter-spacing: 0.2px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+    .logs { max-height: 280px; overflow: auto; background: #fafafa; }
+    .pill { display: inline-block; padding: 6px 10px; border: 1px solid #ddd; border-radius: 999px; margin-right: 8px; }
 
-h1 {
-  margin-top: 20px;
-}
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 9999;
+    }
+    .overlay .panel {
+      background: #fff;
+      border-radius: 14px;
+      max-width: 520px;
+      width: 100%;
+      padding: 18px;
+      border: 1px solid #ddd;
+    }
+    .overlay h2 { margin: 0 0 8px; }
+    .overlay p { margin: 8px 0; line-height: 1.35; }
 
-button {
-  font-size: 18px;
-  padding: 12px 20px;
-  border-radius: 12px;
-  border: none;
-  cursor: pointer;
-  background: #6fa8ff;
-  color: white;
-  margin: 10px;
-}
-
-button.off {
-  background: #888;
-}
-
-.card {
-  background: white;
-  max-width: 420px;
-  margin: 30px auto;
-  padding: 25px;
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0,0,0,.1);
-}
-
-.count {
-  font-size: 42px;
-  font-weight: bold;
-  margin: 20px 0;
-}
-</style>
+    /* Shared field styles */
+    .sharedRow { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .countBig { font-size: 34px; font-weight: 800; }
+    .btnOn { background:#6fa8ff; color:#fff; border:1px solid #6fa8ff; }
+    .btnOff { background:#888; color:#fff; border:1px solid #888; }
+    .btnGhost { background:#fff; color:#111; border:1px solid #ccc; }
+  </style>
 </head>
 
 <body>
+  <h1>Coherence</h1>
+  <div class="muted">Reset • Steer • Reflect</div>
 
-<h1>Coherence</h1>
-<p>Reset • Steer • Reflect</p>
+  <!-- Intro -->
+  <div class="overlay" id="introOverlay">
+    <div class="panel">
+      <h2>Coherence</h2>
+      <p><strong>A place to return to coherence.</strong></p>
+      <p>Coherence is a settled body and a clear mind.</p>
+      <div class="row" style="justify-content: flex-end; margin-top: 12px;">
+        <button class="primary" id="introStart">Start</button>
+      </div>
+    </div>
+  </div>
 
-<div class="card">
+  <!-- Why -->
+  <div class="overlay" id="whyOverlay">
+    <div class="panel">
+      <h2>Why this works</h2>
+      <p>
+        Breathing out longer than you breathe in activates the vagal nerve — the part
+        of your nervous system that helps you feel safe and settled.
+      </p>
+      <p>
+        This allows your body to relax and your mind to become clearer.
+      </p>
+      <div class="row" style="justify-content: flex-end; margin-top: 12px;">
+        <button class="primary" id="whyClose">Close</button>
+      </div>
+    </div>
+  </div>
 
-  <div class="count" id="count">—</div>
-  <div>🌐 Shared Field</div>
+  <!-- NEW: Shared Field -->
+  <div class="card" id="sharedCard">
+    <div class="sharedRow">
+      <div>
+        <div style="font-weight:700;">🌐 Shared Field</div>
+        <div class="muted" style="margin-top:4px;">Quiet presence with others. No chat. Just “here”.</div>
+      </div>
 
-  <br>
+      <div style="text-align:right;">
+        <div class="countBig mono" id="sharedCount">—</div>
+        <div class="muted" style="margin-top:2px;">active now</div>
+      </div>
+    </div>
 
-  <button id="joinBtn">Join Field</button>
-  <button id="leaveBtn" class="off">Leave Field</button>
+    <div class="row" style="margin-top:12px;">
+      <button id="joinBtn" class="btnOn">Join</button>
+      <button id="leaveBtn" class="btnOff">Leave</button>
+      <span class="muted" id="sharedStatus"></span>
+    </div>
+  </div>
 
-  <p id="status"></p>
+  <!-- Main Coherence card -->
+  <div class="card">
+    <div class="row">
+      <div>
+        <label>Stream</label><br/>
+        <select id="stream">
+          <option>Equanimity</option>
+          <option>Joy</option>
+          <option>Reverence</option>
+          <option>Metta</option>
+          <option>Radiance</option>
+          <option>Custom</option>
+        </select>
+      </div>
 
-</div>
+      <div style="flex:1; min-width:240px;">
+        <label>Custom label</label><br/>
+        <input id="customStream" />
+      </div>
+    </div>
 
+    <div class="grid2">
+
+      <div>
+        <label>Breath (4–6 calming)</label>
+
+        <div class="row">
+          <input id="inSec" type="number" value="4" style="width:80px;">
+          <input id="outSec" type="number" value="6" style="width:80px;">
+        </div>
+
+        <div class="row" style="margin-top:6px;">
+          <button id="whyBtn">Why this works</button>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <button class="primary" id="startStop">Start</button>
+          <span class="pill mono" id="timer">00:00</span>
+          <span class="pill" id="phase">Ready</span>
+        </div>
+
+        <div style="margin-top:10px;">
+          <div class="big" id="cueLine"></div>
+          <button id="newCue">New cue</button>
+        </div>
+      </div>
+
+      <div>
+        <label>Gauge</label>
+        <input id="gauge" type="range" min="-5" max="5" value="0">
+
+        <div class="row">
+          <span id="gaugeVal">0</span>
+          <span class="muted" id="gaugeLabel">Neutral</span>
+        </div>
+
+        <textarea id="note" rows="4" placeholder="One line..."></textarea>
+
+        <div class="row">
+          <button class="primary" id="saveLog">Log</button>
+          <button id="clearAll">Clear</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
 
 <script>
+(() => {
 
-// ================================
-// YOUR WORKER URL (already added)
-// ================================
+  // ===============================
+  // Coherence app (original)
+  // ===============================
 
-const PRESENCE_BASE =
-  "https://coherence-presence-2.lucolly999.workers.dev";
+  const DEFAULT_CUE = "Equanimity and awareness";
+  const INTRO_KEY = "coh_intro_v1";
+  const LOG_KEY = "coh_logs";
+
+  const CUES = [
+    DEFAULT_CUE,"Steady","Match this","Soft eyes","Release","Tone first","Gentle","Reverence","Joy","Metta"
+  ];
+
+  const $ = id => document.getElementById(id);
+
+  let running=false, timer=null, start=0;
+
+  function mmss(s){
+    const m=Math.floor(s/60), r=s%60;
+    return String(m).padStart(2,"0")+":"+String(r).padStart(2,"0");
+  }
+
+  function gaugeText(v){
+    if(v<-2) return "Tight";
+    if(v>2) return "Open";
+    return "Neutral";
+  }
+
+  function load(){
+    try{ return JSON.parse(localStorage.getItem(LOG_KEY))||[] }
+    catch{ return [] }
+  }
+
+  function save(x){
+    localStorage.setItem(LOG_KEY,JSON.stringify(x));
+  }
+
+  function startTimer(){
+    if(running) return;
+    running=true;
+    start=Date.now();
+    $("startStop").textContent="Stop";
+
+    timer=setInterval(()=>{
+      const s=Math.floor((Date.now()-start)/1000);
+      $("timer").textContent=mmss(s);
+    },1000);
+  }
+
+  function stopTimer(){
+    running=false;
+    clearInterval(timer);
+    $("startStop").textContent="Start";
+  }
+
+  $("startStop").onclick=()=>running?stopTimer():startTimer();
+
+  $("newCue").onclick=()=>{
+    $("cueLine").textContent=CUES[Math.floor(Math.random()*CUES.length)];
+  };
+
+  $("gauge").oninput=e=>{
+    $("gaugeVal").textContent=e.target.value;
+    $("gaugeLabel").textContent=gaugeText(+e.target.value);
+  };
+
+  $("saveLog").onclick=()=>{
+    const l=load();
+    l.push({
+      t:new Date().toISOString(),
+      cue:$("cueLine").textContent,
+      g:$("gauge").value,
+      n:$("note").value
+    });
+    save(l);
+    $("note").value="";
+  };
+
+  $("clearAll").onclick=()=>{
+    localStorage.removeItem(LOG_KEY);
+  };
+
+  $("whyBtn").onclick=()=>{
+    $("whyOverlay").style.display="flex";
+  };
+
+  $("whyClose").onclick=()=>{
+    $("whyOverlay").style.display="none";
+  };
+
+  $("introStart").onclick=()=>{
+    localStorage.setItem(INTRO_KEY,"1");
+    $("introOverlay").style.display="none";
+  };
+
+  function init(){
+    $("cueLine").textContent=DEFAULT_CUE;
+    $("gauge").dispatchEvent(new Event("input"));
+
+    if(!localStorage.getItem(INTRO_KEY)){
+      $("introOverlay").style.display="flex";
+    }
+  }
+
+  init();
 
 
-// ================================
+  // ===============================
+  // Shared Field (added)
+  // ===============================
 
-let joined = false;
-let sessionId = null;
+  // Put your Worker base URL here:
+  const PRESENCE_BASE = "https://coherence-presence-2.lucolly999.workers.dev";
 
+  const SHARED_KEY = "coh_shared_session_id_v1";
+  let sessionId = localStorage.getItem(SHARED_KEY) || "";
 
-// Fetch helper
-async function api(path) {
-  const res = await fetch(PRESENCE_BASE + path);
-  return res.json();
-}
+  async function api(path){
+    const res = await fetch(PRESENCE_BASE + path, { cache: "no-store" });
+    return res.json();
+  }
 
+  async function refreshShared(){
+    try{
+      const data = await api("/count");
+      $("sharedCount").textContent = data.count;
+    }catch(e){
+      $("sharedCount").textContent = "—";
+      $("sharedStatus").textContent = "Shared field offline";
+    }
+  }
 
-// Update display
-async function refresh() {
-  const data = await api("/count");
-  document.getElementById("count").textContent = data.count;
-}
+  async function joinShared(){
+    try{
+      const data = await api("/join");
+      sessionId = data.id || "";
+      if(sessionId) localStorage.setItem(SHARED_KEY, sessionId);
+      $("sharedStatus").textContent = "Joined";
+      await refreshShared();
+    }catch(e){
+      $("sharedStatus").textContent = "Join failed";
+    }
+  }
 
+  async function leaveShared(){
+    try{
+      if(!sessionId){
+        $("sharedStatus").textContent = "Not joined";
+        return;
+      }
+      await api("/leave?id=" + encodeURIComponent(sessionId));
+      sessionId = "";
+      localStorage.removeItem(SHARED_KEY);
+      $("sharedStatus").textContent = "Left";
+      await refreshShared();
+    }catch(e){
+      $("sharedStatus").textContent = "Leave failed";
+    }
+  }
 
-// Join
-async function join() {
+  $("joinBtn").onclick = joinShared;
+  $("leaveBtn").onclick = leaveShared;
 
-  if (joined) return;
+  // refresh count every 5s
+  setInterval(refreshShared, 5000);
+  refreshShared();
 
-  const data = await api("/join");
-
-  joined = true;
-  sessionId = data.id;
-
-  document.getElementById("status").textContent =
-    "Connected to field";
-
-  refresh();
-}
-
-
-// Leave
-async function leave() {
-
-  if (!joined || !sessionId) return;
-
-  await api("/leave?id=" + sessionId);
-
-  joined = false;
-  sessionId = null;
-
-  document.getElementById("status").textContent =
-    "Disconnected";
-
-  refresh();
-}
-
-
-// Buttons
-document.getElementById("joinBtn").onclick = join;
-document.getElementById("leaveBtn").onclick = leave;
-
-
-// Auto refresh
-setInterval(refresh, 5000);
-refresh();
-
+})();
 </script>
 
 </body>
