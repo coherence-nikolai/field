@@ -2,1241 +2,1144 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Coherence</title>
-
-  <link rel="icon" href="icon-512.png">
-  <link rel="apple-touch-icon" href="icon-512.png">
-  <meta name="theme-color" content="#8fb9ff">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%2378f0b1'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+  <meta name="theme-color" content="#0d1117">
 
   <style>
-    :root{
-      --bg:#f6f7fb;
-      --card:#ffffff;
-      --text:#111;
-      --muted:#666;
-      --line:#ddd;
-      --accent:#4a90ff;
-      --pill:#f2f2f2;
-      --shadow: 0 10px 30px rgba(0,0,0,.10);
+    /* ─── TOKENS ─── */
+    :root {
+      --bg: #0d1117;
+      --surface: #131920;
+      --surface2: #1a2332;
+      --border: rgba(255,255,255,.07);
+      --border-hover: rgba(255,255,255,.15);
+      --text: #e8edf3;
+      --text-dim: #6b7c94;
+      --text-muted: #3d4f63;
+      --accent: #78f0b1;
+      --accent-dim: rgba(120,240,177,.12);
+      --accent-glow: rgba(120,240,177,.3);
+      --warm: #ffd36b;
+      --rose: #ff8ec5;
+      --violet: #b493ff;
+      --sky: #7ab8ff;
+      --font-display: 'DM Serif Display', Georgia, serif;
+      --font-body: 'DM Sans', system-ui, sans-serif;
+      --r: 20px;
+      --r-sm: 12px;
     }
-    [data-theme="dark"]{
-      --bg:#0f1117;
-      --card:#151a22;
-      --text:#f3f4f6;
-      --muted:#aab0bb;
-      --line:#2a3240;
-      --accent:#7aa9ff;
-      --pill:#1a2230;
-      --shadow: 0 10px 30px rgba(0,0,0,.35);
-    }
-    body{
-      margin:0;
-      font-family:-apple-system, system-ui, Segoe UI, Roboto, Arial;
-      background:var(--bg);
-      color:var(--text);
-    }
-    .wrap{
-      max-width:860px;
-      padding:20px;
-      margin:0 auto;
-    }
-    h1{ margin:0; font-size:44px; letter-spacing:-1px; }
-    .sub{ color:var(--muted); margin-top:6px; font-size:18px; }
-
-    .card{
-      background:var(--card);
-      border:1px solid var(--line);
-      border-radius:18px;
-      padding:16px;
-      margin-top:16px;
-      box-shadow: var(--shadow);
+    .light {
+      --bg: #f0f4f8;
+      --surface: #ffffff;
+      --surface2: #e8eef5;
+      --border: rgba(0,0,0,.07);
+      --border-hover: rgba(0,0,0,.15);
+      --text: #0d1117;
+      --text-dim: #4a5e72;
+      --text-muted: #a0b4c8;
+      --accent: #1a9e6c;
+      --accent-dim: rgba(26,158,108,.1);
+      --accent-glow: rgba(26,158,108,.25);
     }
 
-    .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-    .row.tight{ gap:8px; }
-    .spacer{ height:6px; }
+    /* ─── RESET ─── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 15px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
 
-    label{ font-weight:700; }
-    select,input,button,textarea{
-      font-size:16px;
-      padding:10px;
-      border-radius:12px;
-      border:1px solid var(--line);
-      background:var(--card);
-      color:var(--text);
-      outline:none;
+    /* ─── BACKGROUND GLOW ─── */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -30%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80vw;
+      height: 60vw;
+      background: radial-gradient(ellipse, rgba(120,240,177,.04) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
     }
-    textarea{ width:100%; box-sizing:border-box; }
-    button{
-      cursor:pointer;
-      background:var(--pill);
-    }
-    button.primary{
-      background:var(--accent);
-      color:#fff;
-      border-color:transparent;
-      font-weight:700;
-    }
-    .pill{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:8px 12px;
-      border-radius:999px;
-      border:1px solid var(--line);
-      background:var(--pill);
-      color:var(--text);
-      font-weight:600;
-    }
-    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
-    .divider{ height:1px; background:var(--line); margin:14px 0; }
 
-    /* Breathing circle */
-    .circleWrap{
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      padding:18px 0 10px;
+    /* ─── LAYOUT ─── */
+    .page {
+      position: relative;
+      z-index: 1;
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 32px 20px 60px;
     }
-    .circle{
-      width:170px; height:170px;
-      border-radius:999px;
-      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.35), rgba(255,255,255,0) 55%),
-                  var(--circleColor, #78f0b1);
-      box-shadow: 0 0 40px rgba(122,169,255,.18);
-      transform: scale(.92);
-      transition: transform 800ms ease-in-out, filter 600ms ease-in-out, background 350ms ease;
-      filter: saturate(1.05);
-      user-select:none;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .circle.pulseIn{ transform: scale(1.08); }
-    .circle.pulseHold{ transform: scale(1.08); }
-    .circle.pulseOut{ transform: scale(.90); }
 
-    /* What this does */
-    .what{
-      background:rgba(0,0,0,.05);
-      border:1px solid var(--line);
-      border-radius:999px;
-      padding:10px 12px;
-      color:var(--text);
-      font-size:14px;
-      line-height: 1.35;
+    /* ─── HEADER ─── */
+    .header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 32px;
     }
-    [data-theme="dark"] .what{ background: rgba(255,255,255,.06); }
+    .logo {
+      font-family: var(--font-display);
+      font-size: 36px;
+      letter-spacing: -.5px;
+      color: var(--text);
+    }
+    .logo em {
+      font-style: italic;
+      color: var(--accent);
+    }
+    .tagline {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .theme-toggle {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-family: var(--font-body);
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .theme-toggle:hover {
+      border-color: var(--border-hover);
+      color: var(--text);
+    }
 
-    /* Improved timing area */
-    .controls{ margin-top:12px; }
-    .grid4{
-      display:grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap:10px;
+    /* ─── CARDS ─── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 24px;
+      margin-bottom: 12px;
     }
-    @media (max-width:520px){
-      .grid4{ grid-template-columns: repeat(2, 1fr); }
+    .card-title {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 16px;
     }
-    .field .lbl{
-      font-size:12px;
-      color:var(--muted);
-      margin-bottom:6px;
-      font-weight:700;
-    }
-    .field input{
-      width:100%;
-      box-sizing:border-box;
-      text-align:center;
-      font-weight:700;
-    }
-    .chips{
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-      margin-top:10px;
-    }
-    .chip{
-      padding:8px 12px;
-      border-radius:999px;
-      border:1px solid var(--line);
-      background:var(--pill);
-      font-weight:700;
-    }
-    .chip.active{
-      background:var(--accent);
-      color:#fff;
-      border-color:transparent;
-    }
-    .sliderRow{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      margin-top:12px;
-    }
-    .sliderRow .lbl2{
-      width:70px;
-      font-size:12px;
-      color:var(--muted);
-      font-weight:800;
-    }
-    #durationSlider{ flex:1; }
 
-    /* Sound area */
-    .soundBox{
-      border:1px solid var(--line);
-      border-radius:14px;
-      padding:12px;
-      background: rgba(0,0,0,.02);
+    /* ─── BREATHING CIRCLE ─── */
+    .breath-card {
+      text-align: center;
+      padding: 32px 24px;
+      overflow: hidden;
+      position: relative;
     }
-    [data-theme="dark"] .soundBox{ background: rgba(255,255,255,.03); }
-    .soundGrid{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:10px;
-      align-items:center;
+    .circle-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
     }
-    @media (max-width:520px){
-      .soundGrid{ grid-template-columns: 1fr; }
+    .circle-ring {
+      position: absolute;
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      border: 1px solid var(--accent-dim);
+      animation: ring-pulse 4s ease-in-out infinite;
     }
-    .miniLbl{
-      font-size:12px;
-      color:var(--muted);
-      font-weight:800;
-      margin-bottom:6px;
+    .circle-ring:nth-child(2) {
+      width: 200px; height: 200px;
+      border-color: rgba(120,240,177,.06);
+      animation-delay: .5s;
     }
-    .toggleBtn{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      border-radius:999px;
-      padding:10px 14px;
-      border:1px solid var(--line);
-      background:var(--pill);
-      font-weight:800;
-      cursor:pointer;
-      user-select:none;
+    @keyframes ring-pulse {
+      0%, 100% { transform: scale(1); opacity: .5; }
+      50% { transform: scale(1.04); opacity: 1; }
     }
-    .toggleBtn.on{
+    .circle {
+      position: relative;
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%,
+        rgba(255,255,255,.2) 0%,
+        rgba(255,255,255,.0) 50%),
+        var(--c, #78f0b1);
+      box-shadow:
+        0 0 60px var(--cg, rgba(120,240,177,.25)),
+        inset 0 1px 0 rgba(255,255,255,.3);
+      transition:
+        transform 800ms cubic-bezier(.4,0,.2,1),
+        filter 600ms ease,
+        --c 400ms ease,
+        --cg 400ms ease;
+      cursor: pointer;
+      user-select: none;
+      z-index: 1;
+    }
+    .circle.inhale  { transform: scale(1.15); filter: brightness(1.1); }
+    .circle.hold    { transform: scale(1.15); filter: brightness(1.05) saturate(1.2); }
+    .circle.exhale  { transform: scale(.85);  filter: brightness(.95); }
+    .circle.idle    { transform: scale(1);    filter: brightness(1); }
+
+    .phase-label {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-body);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: rgba(10,20,15,.7);
+      pointer-events: none;
+    }
+    .phase-countdown {
+      font-family: var(--font-display);
+      font-size: 26px;
+      letter-spacing: -.5px;
+      color: rgba(10,20,15,.8);
+      line-height: 1;
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-dim);
+    }
+    .pill.active {
+      background: var(--accent-dim);
+      border-color: rgba(120,240,177,.2);
+      color: var(--accent);
+    }
+    .pill .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .btn-start {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
       background: var(--accent);
-      color: #fff;
-      border-color: transparent;
+      color: #0a180f;
+      border: none;
+      border-radius: 999px;
+      padding: 12px 32px;
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .2s;
+      box-shadow: 0 4px 20px var(--accent-glow);
     }
-    .rangeInline{
-      display:flex;
-      gap:10px;
-      align-items:center;
+    .btn-start:hover { transform: translateY(-1px); box-shadow: 0 6px 24px var(--accent-glow); }
+    .btn-start:active { transform: translateY(0); }
+    .btn-start.running {
+      background: var(--surface2);
+      color: var(--text-dim);
+      box-shadow: none;
     }
-    input[type="range"]{ width:100%; }
+    .btn-start svg { transition: transform .3s; }
+    .btn-start:hover svg { transform: scale(1.1); }
 
-    /* Logs */
-    .logList{
-      margin-top:10px;
-      border-top:1px solid var(--line);
-      padding-top:10px;
+    .what-banner {
+      background: var(--accent-dim);
+      border: 1px solid rgba(120,240,177,.12);
+      border-radius: var(--r-sm);
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.5;
+      margin-top: 16px;
+      text-align: left;
     }
-    .logItem{
-      border:1px solid var(--line);
-      border-radius:14px;
-      padding:10px 12px;
-      margin-top:10px;
-      background: rgba(0,0,0,.02);
+    .what-banner strong { color: var(--text); font-weight: 600; }
+
+    /* ─── PRESET SELECT ─── */
+    .select-wrap { position: relative; }
+    .select-wrap::after {
+      content: '▾';
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      color: var(--text-dim);
+      font-size: 12px;
     }
-    [data-theme="dark"] .logItem{ background: rgba(255,255,255,.03); }
-    .logTime{ color:var(--muted); font-size:12px; margin-bottom:4px; }
-    .logCue{ font-weight:800; }
-    .logNote{ margin-top:6px; white-space:pre-wrap; }
+    select {
+      width: 100%;
+      appearance: none;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 10px 36px 10px 14px;
+      font-family: var(--font-body);
+      font-size: 14px;
+      color: var(--text);
+      cursor: pointer;
+      transition: border-color .2s;
+    }
+    select:hover, select:focus { border-color: var(--border-hover); outline: none; }
+
+    /* ─── TIMING GRID ─── */
+    .timing-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-top: 12px;
+    }
+    @media (max-width: 400px) {
+      .timing-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    .timing-field label {
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+    }
+    .timing-field input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 8px;
+      font-family: var(--font-display);
+      font-size: 22px;
+      text-align: center;
+      color: var(--text);
+      transition: border-color .2s;
+    }
+    .timing-field input:focus { outline: none; border-color: var(--accent); }
+
+    /* ─── DURATION ─── */
+    .dur-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 12px;
+    }
+    .chip {
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .chip:hover { border-color: var(--border-hover); color: var(--text); }
+    .chip.active {
+      background: var(--accent-dim);
+      border-color: rgba(120,240,177,.25);
+      color: var(--accent);
+    }
+    .range-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .range-row span { font-size: 11px; color: var(--text-muted); font-weight: 700; min-width: 32px; }
+    input[type=range] { flex: 1; accent-color: var(--accent); cursor: pointer; }
+    .dur-badge {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 4px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      min-width: 42px;
+      text-align: center;
+    }
+
+    /* ─── SOUND CARD ─── */
+    .sound-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .sound-option { position: relative; }
+    .sound-option input[type=radio] { position: absolute; opacity: 0; width: 0; height: 0; }
+    .sound-option label {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 12px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .sound-option input:checked + label {
+      background: var(--accent-dim);
+      border-color: rgba(120,240,177,.3);
+    }
+    .sound-option label:hover { border-color: var(--border-hover); }
+    .sound-name { font-size: 13px; font-weight: 600; color: var(--text); }
+    .sound-hz { font-size: 11px; font-weight: 700; color: var(--accent); letter-spacing: .05em; }
+    .sound-desc { font-size: 11px; color: var(--text-dim); line-height: 1.3; margin-top: 2px; }
+    .sound-none label { flex-direction: row; align-items: center; gap: 8px; }
+
+    .vol-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 6px;
+    }
+    .vol-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .vol-badge { font-size: 12px; font-weight: 700; color: var(--text-dim); min-width: 48px; text-align: right; }
+
+    .sound-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .04em;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      margin-left: auto;
+    }
+    .sound-status.playing {
+      background: rgba(120,240,177,.08);
+      border-color: rgba(120,240,177,.2);
+      color: var(--accent);
+    }
+    .sound-status .pulse-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+    .sound-status.playing .pulse-dot { animation: pulse-dot 1s ease-in-out infinite; }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .4; transform: scale(.7); }
+    }
+    .card-title-row { display: flex; align-items: center; margin-bottom: 16px; }
+    .card-title-row .card-title { margin-bottom: 0; }
+    .headphones-tip {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .headphones-tip svg { flex-shrink: 0; }
+
+    /* ─── STREAM / CUE ─── */
+    .cue-display {
+      font-family: var(--font-display);
+      font-size: 28px;
+      line-height: 1.2;
+      color: var(--text);
+      margin: 12px 0 16px;
+      min-height: 36px;
+      transition: opacity .3s;
+    }
+    .cue-display.fade { opacity: 0; }
+    .stream-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .stream-row .select-wrap { flex: 1; min-width: 120px; }
+    input[type=text].custom-stream {
+      flex: 1;
+      min-width: 120px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 10px 14px;
+      font-family: var(--font-body);
+      font-size: 14px;
+      color: var(--text);
+      transition: border-color .2s;
+    }
+    input[type=text].custom-stream:focus { outline: none; border-color: var(--accent); }
+
+    .btn-ghost {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 8px 14px;
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all .2s;
+      white-space: nowrap;
+    }
+    .btn-ghost:hover { border-color: var(--border-hover); color: var(--text); }
+
+    /* ─── FIELD PRESENCE ─── */
+    .field-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .field-count { display: flex; align-items: center; gap: 6px; margin-left: auto; font-size: 12px; color: var(--text-dim); }
+    .field-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); transition: background .3s; }
+    .field-dot.online { background: var(--accent); box-shadow: 0 0 6px var(--accent-glow); }
+    #fieldStatus { font-size: 12px; color: var(--text-dim); font-weight: 500; }
+
+    /* ─── GAUGE ─── */
+    .gauge-wrap { display: flex; align-items: center; gap: 12px; }
+    .gauge-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-top: 4px; }
+    .gauge-value { font-family: var(--font-display); font-size: 28px; color: var(--text); min-width: 28px; text-align: center; line-height: 1; }
+    .gauge-word { font-size: 11px; color: var(--text-dim); text-align: center; font-weight: 600; letter-spacing: .05em; min-width: 50px; }
+
+    /* ─── TEXTAREA ─── */
+    textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 12px 14px;
+      font-family: var(--font-body);
+      font-size: 14px;
+      color: var(--text);
+      resize: vertical;
+      transition: border-color .2s;
+      min-height: 80px;
+    }
+    textarea:focus { outline: none; border-color: var(--accent); }
+    textarea::placeholder { color: var(--text-muted); }
+    .log-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .btn-log {
+      background: var(--accent);
+      color: #0a180f;
+      border: none;
+      border-radius: var(--r-sm);
+      padding: 10px 22px;
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .btn-log:hover { filter: brightness(1.05); }
+
+    /* ─── LOG ENTRIES ─── */
+    .log-entries { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+    .log-entry { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 12px 14px; }
+    .log-ts { font-size: 10px; color: var(--text-muted); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 4px; }
+    .log-cue { font-family: var(--font-display); font-size: 15px; color: var(--text); line-height: 1.3; }
+    .log-gauge { font-family: var(--font-body); font-size: 11px; color: var(--text-dim); margin-left: 8px; }
+    .log-note { font-size: 13px; color: var(--text-dim); margin-top: 4px; font-style: italic; }
+    .empty-state { font-size: 13px; color: var(--text-muted); text-align: center; padding: 16px 0; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   </style>
 </head>
-
 <body>
-<div class="wrap">
-  <h1>Coherence</h1>
-  <div class="sub">Reset • Steer • Reflect</div>
+<div class="page">
 
-  <div class="card">
-
-    <div class="circleWrap">
-      <div class="circle" id="circle" title="Tap to change colour"></div>
+  <!-- HEADER -->
+  <div class="header">
+    <div>
+      <div class="logo">Co<em>here</em>nce</div>
+      <div class="tagline">Heart · Breath · Field</div>
     </div>
-
-    <div class="row">
-      <div class="what" id="whatBox"><strong>What this does:</strong> —</div>
-    </div>
-
-    <div class="spacer"></div>
-
-    <div class="row">
-      <label for="preset">Breath</label>
-      <select id="preset"></select>
-    </div>
-
-    <div class="controls">
-      <div class="grid4">
-        <div class="field">
-          <div class="lbl">In</div>
-          <input id="inSec" type="number" value="4" min="1" inputmode="numeric">
-        </div>
-        <div class="field">
-          <div class="lbl">Hold</div>
-          <input id="holdSec" type="number" value="0" min="0" inputmode="numeric">
-        </div>
-        <div class="field">
-          <div class="lbl">Out</div>
-          <input id="outSec" type="number" value="6" min="1" inputmode="numeric">
-        </div>
-        <div class="field">
-          <div class="lbl">Minutes</div>
-          <input id="durationMin" type="number" value="1" min="1" max="60" inputmode="numeric">
-        </div>
-      </div>
-
-      <div class="chips" aria-label="Quick minutes">
-        <button class="chip" data-min="1" type="button">1m</button>
-        <button class="chip" data-min="2" type="button">2m</button>
-        <button class="chip" data-min="3" type="button">3m</button>
-        <button class="chip" data-min="5" type="button">5m</button>
-        <button class="chip" data-min="10" type="button">10m</button>
-        <button class="chip" data-min="15" type="button">15m</button>
-      </div>
-
-      <div class="sliderRow">
-        <div class="lbl2">Duration</div>
-        <input id="durationSlider" type="range" min="1" max="20" value="1">
-        <span class="pill" id="durationReadout">1m</span>
-      </div>
-    </div>
-
-    <div class="divider"></div>
-
-    <!-- SOUND -->
-    <div class="soundBox">
-      <div class="row" style="justify-content:space-between;">
-        <label>Sound</label>
-        <div class="toggleBtn" id="soundToggle" role="button" aria-pressed="false">🔇 Off</div>
-      </div>
-
-      <div class="soundGrid" style="margin-top:10px;">
-        <div>
-          <div class="miniLbl">Tone</div>
-          <select id="soundTone">
-            <option value="432">432 Hz (Ground)</option>
-            <option value="528">528 Hz (Heart)</option>
-            <option value="174">174 Hz (Deep)</option>
-            <option value="40">40 Hz (Focus)</option>
-            <option value="396">396 Hz (Release)</option>
-            <option value="639">639 Hz (Connection)</option>
-            <option value="852">852 Hz (Clarity)</option>
-          </select>
-        </div>
-
-        <div>
-          <div class="miniLbl">Volume</div>
-          <div class="rangeInline">
-            <input id="soundVol" type="range" min="0" max="100" value="25">
-            <span class="pill mono" id="soundVolLabel">25%</span>
-          </div>
-        </div>
-
-        <div>
-          <div class="miniLbl">Binaural</div>
-          <div class="toggleBtn" id="binauralToggle" role="button" aria-pressed="true">✅ On</div>
-        </div>
-
-        <div>
-          <div class="miniLbl">Breath-sync</div>
-          <div class="toggleBtn" id="syncToggle" role="button" aria-pressed="true">✅ On</div>
-        </div>
-
-        <div>
-          <div class="miniLbl">Air texture</div>
-          <div class="toggleBtn" id="noiseToggle" role="button" aria-pressed="false">➕ Off</div>
-        </div>
-
-        <div>
-          <div class="miniLbl">Notes</div>
-          <div class="what" style="border-radius:14px;">
-            Gentle tone + optional binaural beat + breath-synced swell. (No claims, just calm design.)
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="divider"></div>
-
-    <div class="row tight">
-      <button class="primary" id="startBtn">Start</button>
-      <span class="pill" id="phasePill">Ready</span>
-      <span class="pill mono" id="timerPill">00:00</span>
-      <span class="pill" id="fieldStatus">Field: —</span>
-    </div>
-
-    <div class="divider"></div>
-
-    <div class="row">
-      <label>Stream</label>
-      <select id="stream">
-        <option>Gentle</option>
-        <option>Equanimity</option>
-        <option>Joy</option>
-        <option>Reverence</option>
-        <option>Metta</option>
-        <option>Radiance</option>
-        <option>Custom</option>
-      </select>
-      <input id="customStream" placeholder="Custom label" style="flex:1; min-width:200px;">
-      <button id="newCueBtn">New cue</button>
-      <button id="darkBtn">Dark</button>
-    </div>
-
-    <div class="row tight" style="margin-top:10px;">
-      <button id="joinBtn">Join Field</button>
-      <button id="leaveBtn">Leave Field</button>
-      <span class="pill">🌐 <span id="countPill">0</span></span>
-    </div>
-
-    <div class="row" style="margin-top:10px;">
-      <div id="cueLine" style="font-size:28px; font-weight:900; color:var(--text);">Equanimity and awareness</div>
-    </div>
-
-    <div class="divider"></div>
-
-    <div class="row">
-      <label>Gauge</label>
-      <input id="gauge" type="range" min="-5" max="5" value="0" style="flex:1; min-width:220px;">
-      <span class="pill"><span id="gaugeVal">0</span> <span id="gaugeLabel" style="color:var(--muted);">Neutral</span></span>
-    </div>
-
-    <div class="spacer"></div>
-
-    <textarea id="note" rows="3" placeholder="One line note..."></textarea>
-
-    <div class="row" style="margin-top:10px;">
-      <button class="primary" id="logBtn">Log</button>
-      <button id="clearBtn">Clear</button>
-    </div>
-
-    <div class="logList" id="logList"></div>
-
+    <button class="theme-toggle" id="themeBtn">☀ Light</button>
   </div>
+
+  <!-- BREATH CARD -->
+  <div class="card breath-card">
+    <div class="circle-wrap">
+      <div class="circle-ring"></div>
+      <div class="circle-ring"></div>
+      <div class="circle" id="circle">
+        <div class="phase-label" id="phaseLabel">
+          <span class="phase-countdown" id="phaseCountdown">·</span>
+          <span id="phaseText">Tap to begin</span>
+        </div>
+      </div>
+    </div>
+    <div class="status-row">
+      <div class="pill" id="phasePill"><span class="dot"></span> Ready</div>
+      <div class="pill" id="timerPill">00:00</div>
+    </div>
+    <button class="btn-start" id="startBtn">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M3 2l9 5-9 5V2z"/></svg>
+      Start
+    </button>
+    <div class="what-banner" id="whatBanner"><strong>What this does:</strong> —</div>
+  </div>
+
+  <!-- BREATH SETTINGS -->
+  <div class="card">
+    <div class="card-title">Breath Pattern</div>
+    <div class="select-wrap"><select id="preset"></select></div>
+    <div class="timing-grid">
+      <div class="timing-field">
+        <label for="inSec">In</label>
+        <input id="inSec" type="number" value="4" min="1" inputmode="numeric">
+      </div>
+      <div class="timing-field">
+        <label for="holdSec">Hold</label>
+        <input id="holdSec" type="number" value="0" min="0" inputmode="numeric">
+      </div>
+      <div class="timing-field">
+        <label for="outSec">Out</label>
+        <input id="outSec" type="number" value="6" min="1" inputmode="numeric">
+      </div>
+      <div class="timing-field">
+        <label for="durationMin">Mins</label>
+        <input id="durationMin" type="number" value="1" min="1" max="60" inputmode="numeric">
+      </div>
+    </div>
+    <div class="dur-chips" id="durationChips">
+      <button class="chip" data-min="1">1m</button>
+      <button class="chip" data-min="2">2m</button>
+      <button class="chip" data-min="3">3m</button>
+      <button class="chip" data-min="5">5m</button>
+      <button class="chip" data-min="10">10m</button>
+      <button class="chip" data-min="15">15m</button>
+    </div>
+    <div class="range-row">
+      <span>Dur</span>
+      <input type="range" id="durationSlider" min="1" max="20" value="1">
+      <div class="dur-badge" id="durBadge">1m</div>
+    </div>
+  </div>
+
+  <!-- SOUND / BINAURAL BEATS -->
+  <div class="card">
+    <div class="card-title-row">
+      <div class="card-title">Sound &amp; Binaural Beats</div>
+      <div class="sound-status" id="soundStatus"><span class="pulse-dot"></span> Off</div>
+    </div>
+    <div class="sound-grid">
+      <div class="sound-option sound-none">
+        <input type="radio" name="sound" id="snd-off" value="off" checked>
+        <label for="snd-off">
+          <span class="sound-name">🔇 Silent</span>
+          <span class="sound-desc">No audio — breathe in quiet</span>
+        </label>
+      </div>
+      <div class="sound-option">
+        <input type="radio" name="sound" id="snd-delta" value="delta">
+        <label for="snd-delta">
+          <span class="sound-name">Delta</span>
+          <span class="sound-hz">2 Hz</span>
+          <span class="sound-desc">Deep sleep, restoration, healing</span>
+        </label>
+      </div>
+      <div class="sound-option">
+        <input type="radio" name="sound" id="snd-theta" value="theta">
+        <label for="snd-theta">
+          <span class="sound-name">Theta</span>
+          <span class="sound-hz">6 Hz</span>
+          <span class="sound-desc">Meditation, creativity, intuition</span>
+        </label>
+      </div>
+      <div class="sound-option">
+        <input type="radio" name="sound" id="snd-alpha" value="alpha">
+        <label for="snd-alpha">
+          <span class="sound-name">Alpha</span>
+          <span class="sound-hz">10 Hz</span>
+          <span class="sound-desc">Calm focus, relaxed awareness</span>
+        </label>
+      </div>
+      <div class="sound-option">
+        <input type="radio" name="sound" id="snd-coherence" value="coherence">
+        <label for="snd-coherence">
+          <span class="sound-name">Coherence</span>
+          <span class="sound-hz">0.1 Hz</span>
+          <span class="sound-desc">HRV coherence — heart rhythm sync</span>
+        </label>
+      </div>
+      <div class="sound-option">
+        <input type="radio" name="sound" id="snd-gamma" value="gamma">
+        <label for="snd-gamma">
+          <span class="sound-name">Gamma</span>
+          <span class="sound-hz">40 Hz</span>
+          <span class="sound-desc">Focus, cognition, high alertness</span>
+        </label>
+      </div>
+      <div class="sound-option">
+        <input type="radio" name="sound" id="snd-schumann" value="schumann">
+        <label for="snd-schumann">
+          <span class="sound-name">Schumann</span>
+          <span class="sound-hz">7.83 Hz</span>
+          <span class="sound-desc">Earth resonance, grounding, balance</span>
+        </label>
+      </div>
+    </div>
+    <div class="vol-row">
+      <span class="vol-label">Volume</span>
+      <input type="range" id="volSlider" min="0" max="100" value="40" style="flex:1">
+      <span class="vol-badge" id="volBadge">40%</span>
+    </div>
+    <div class="vol-row" style="margin-top:10px">
+      <span class="vol-label">Carrier</span>
+      <input type="range" id="carrierSlider" min="80" max="280" value="180" style="flex:1">
+      <span class="vol-badge" id="carrierBadge">180 Hz</span>
+    </div>
+    <div class="headphones-tip">
+      <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M3 13a7 7 0 0114 0"/>
+        <rect x="1" y="13" width="4" height="5" rx="1.5"/>
+        <rect x="15" y="13" width="4" height="5" rx="1.5"/>
+      </svg>
+      Binaural beats require stereo headphones to work properly
+    </div>
+  </div>
+
+  <!-- STREAM / CUE -->
+  <div class="card">
+    <div class="card-title">Intention Stream</div>
+    <div class="cue-display" id="cueLine">Equanimity and awareness</div>
+    <div class="stream-row">
+      <div class="select-wrap">
+        <select id="stream">
+          <option>Gentle</option>
+          <option>Equanimity</option>
+          <option>Joy</option>
+          <option>Reverence</option>
+          <option>Metta</option>
+          <option>Radiance</option>
+          <option>Custom</option>
+        </select>
+      </div>
+      <input type="text" class="custom-stream" id="customStream" placeholder="Custom label">
+      <button class="btn-ghost" id="newCueBtn">New cue</button>
+    </div>
+  </div>
+
+  <!-- SHARED FIELD -->
+  <div class="card">
+    <div class="card-title">Shared Field</div>
+    <div class="field-row">
+      <button class="btn-ghost" id="joinBtn">Join</button>
+      <button class="btn-ghost" id="leaveBtn">Leave</button>
+      <span id="fieldStatus">Not joined</span>
+      <div class="field-count">
+        <div class="field-dot" id="fieldDot"></div>
+        <span id="countPill">0</span> here
+      </div>
+    </div>
+  </div>
+
+  <!-- GAUGE + LOG -->
+  <div class="card">
+    <div class="card-title">Reflect</div>
+    <div class="gauge-wrap">
+      <div>
+        <div class="gauge-value" id="gaugeVal">0</div>
+        <div class="gauge-word" id="gaugeWord">Neutral</div>
+      </div>
+      <div style="flex:1">
+        <input type="range" id="gauge" min="-5" max="5" value="0" style="width:100%">
+        <div class="gauge-labels"><span>Tight</span><span>Open</span></div>
+      </div>
+    </div>
+    <hr>
+    <textarea id="note" rows="3" placeholder="One line note…"></textarea>
+    <div class="log-actions">
+      <button class="btn-log" id="logBtn">Log Entry</button>
+      <button class="btn-ghost" id="clearBtn">Clear All</button>
+    </div>
+    <div class="log-entries" id="logEntries">
+      <div class="empty-state">No entries yet. Start breathing and log how you feel.</div>
+    </div>
+  </div>
+
 </div>
 
 <script>
 (() => {
-  "use strict";
+  'use strict';
 
-  /***********************
-   * CONFIG / STORAGE
-   ***********************/
-  const WORKER_BASE = "https://coherence-presence-2.lucolly999.workers.dev";
+  const WORKER_BASE = 'https://coherence-presence-2.lucolly999.workers.dev';
+  const KEY_LOGS    = 'coh_logs_v3';
+  const KEY_THEME   = 'coh_theme_v3';
+  const KEY_COLOR   = 'coh_color_v3';
+  const KEY_FIELD   = 'coh_field_id_v3';
+  const KEY_SOUND   = 'coh_sound_v1';
+  const KEY_VOL     = 'coh_vol_v1';
+  const KEY_CARRIER = 'coh_carrier_v1';
 
-  const STORE = {
-    LOGS: "coh_logs_v5",
-    THEME: "coh_theme_v5",
-    COLOR: "coh_circle_color_v5",
-    FIELD_ID: "coh_field_id_v5",
-    // sound
-    S_ON: "coh_sound_on_v1",
-    S_TONE: "coh_sound_tone_v1",
-    S_VOL: "coh_sound_vol_v1",
-    S_BIN: "coh_sound_bin_v1",
-    S_SYNC: "coh_sound_sync_v1",
-    S_NOISE: "coh_sound_noise_v1"
-  };
-
-  const COLORS = ["#78f0b1","#7aa9ff","#ffd36b","#ff8ec5","#b493ff","#9ff0ff","#c6ff7a"];
+  const PALETTES = [
+    { c: '#78f0b1', g: 'rgba(120,240,177,.3)' },
+    { c: '#7ab8ff', g: 'rgba(122,184,255,.3)' },
+    { c: '#ffd36b', g: 'rgba(255,211,107,.3)' },
+    { c: '#ff8ec5', g: 'rgba(255,142,197,.3)' },
+    { c: '#b493ff', g: 'rgba(180,147,255,.3)' },
+    { c: '#9ff0ff', g: 'rgba(159,240,255,.3)' },
+    { c: '#c6ff7a', g: 'rgba(198,255,122,.3)' },
+  ];
 
   const PRESETS = [
-    { name:"Calm (4–0–6)",  in:4, hold:0, out:6, msg:"Longer exhale signals safety and supports vagal tone (parasympathetic settling)." },
-    { name:"Focus (4–0–4)", in:4, hold:0, out:4, msg:"Balanced inhale and exhale supports steady attention and calm focus." },
-    { name:"Downshift (3–0–6)", in:3, hold:0, out:6, msg:"Short in + long out eases urgency and reduces activation gently." },
-    { name:"Ground (4–2–6)", in:4, hold:2, out:6, msg:"Brief hold can increase steadiness; long exhale helps the body land." },
-    { name:"Sleep (4–7–8)", in:4, hold:7, out:8, msg:"Long hold and longer exhale encourages heaviness and sleepiness." },
-    { name:"Reset (2–0–6)", in:2, hold:0, out:6, msg:"Light inhale, long exhale. Pair with soft jaw and dropped shoulders." },
-    { name:"Custom", in:4, hold:0, out:6, msg:"Make your own rhythm. Anxious: lengthen out. Flat: shorten out slightly." },
+    { name: 'Calm (4–0–6)',      in:4, hold:0, out:6, msg:'Longer exhale activates the parasympathetic nervous system and signals safety to the body.' },
+    { name: 'Focus (4–0–4)',     in:4, hold:0, out:4, msg:'Balanced inhale and exhale supports steady, calm attention without over-activation.' },
+    { name: 'Downshift (3–0–6)', in:3, hold:0, out:6, msg:'Short in, long out — reduces arousal gently and softens mental urgency.' },
+    { name: 'Ground (4–2–6)',    in:4, hold:2, out:6, msg:'Brief hold deepens interoceptive awareness; long exhale supports settling.' },
+    { name: 'Energise (4–0–2)', in:4, hold:0, out:2, msg:'Short exhale can feel more activating. Use gently if feeling foggy or low.' },
+    { name: 'Sleep (4–7–8)',     in:4, hold:7, out:8, msg:'Classic sleep pattern: extended hold and long exhale promote heaviness and rest.' },
+    { name: 'Reset (sigh)',      in:2, hold:0, out:6, msg:'Light in, long out. Pair with a soft jaw and dropped shoulders for a full reset.' },
+    { name: 'Custom',            in:4, hold:0, out:6, msg:'Build your own rhythm. If anxious: longer out. If dull: shorten out slightly.' },
   ];
 
   const CUES = [
-    "Equanimity and awareness","Steady","Match this","Soft eyes","Release",
-    "Tone first","Gentle return","Reverence","Joy","Metta","Nothing to fix"
+    'Equanimity and awareness','Steady','Match this breath',
+    'Soft eyes, soft jaw','Release','Tone first','Gentle return',
+    'Reverence','Joy, unearned','Metta','Nothing to fix',
+    'Ground here','Let the exhale land','Presence before response',
   ];
 
-  /***********************
-   * DOM
-   ***********************/
-  const $ = (id) => document.getElementById(id);
-
-  const circle = $("circle");
-  const whatBox = $("whatBox");
-  const presetSel = $("preset");
-
-  const inSec = $("inSec");
-  const holdSec = $("holdSec");
-  const outSec = $("outSec");
-  const durationMin = $("durationMin");
-  const durationSlider = $("durationSlider");
-  const durationReadout = $("durationReadout");
-  const chips = Array.from(document.querySelectorAll(".chip"));
-
-  const startBtn = $("startBtn");
-  const phasePill = $("phasePill");
-  const timerPill = $("timerPill");
-
-  const streamSel = $("stream");
-  const customStream = $("customStream");
-  const cueLine = $("cueLine");
-  const newCueBtn = $("newCueBtn");
-  const darkBtn = $("darkBtn");
-
-  const joinBtn = $("joinBtn");
-  const leaveBtn = $("leaveBtn");
-  const fieldStatus = $("fieldStatus");
-  const countPill = $("countPill");
-
-  const gauge = $("gauge");
-  const gaugeVal = $("gaugeVal");
-  const gaugeLabel = $("gaugeLabel");
-
-  const note = $("note");
-  const logBtn = $("logBtn");
-  const clearBtn = $("clearBtn");
-  const logList = $("logList");
-
-  // sound controls
-  const soundToggle = $("soundToggle");
-  const soundTone = $("soundTone");
-  const soundVol = $("soundVol");
-  const soundVolLabel = $("soundVolLabel");
-  const binauralToggle = $("binauralToggle");
-  const syncToggle = $("syncToggle");
-  const noiseToggle = $("noiseToggle");
-
-  /***********************
-   * HELPERS
-   ***********************/
-  function mmss(totalSeconds){
-    const s = Math.max(0, Math.floor(totalSeconds));
-    const m = Math.floor(s/60);
-    const r = s % 60;
-    return String(m).padStart(2,"0") + ":" + String(r).padStart(2,"0");
-  }
-
-  function gaugeText(v){
-    if(v <= -3) return "Tight";
-    if(v >= 3) return "Open";
-    return "Neutral";
-  }
-
-  function bestEffortHaptic(kind="light"){
-    try{
-      if(!("vibrate" in navigator)) return;
-      if(kind==="light") navigator.vibrate(10);
-      else if(kind==="medium") navigator.vibrate([15,10,15]);
-      else navigator.vibrate([25,10,25]);
-    }catch(e){}
-  }
-
-  function setTheme(dark){
-    document.documentElement.dataset.theme = dark ? "dark" : "";
-    localStorage.setItem(STORE.THEME, dark ? "dark" : "light");
-    darkBtn.textContent = dark ? "Light" : "Dark";
-  }
-
-  function setCircleColor(color){
-    circle.style.setProperty("--circleColor", color);
-    localStorage.setItem(STORE.COLOR, color);
-  }
-
-  function cycleCircleColor(){
-    const cur = localStorage.getItem(STORE.COLOR) || COLORS[0];
-    const idx = Math.max(0, COLORS.indexOf(cur));
-    const next = COLORS[(idx + 1) % COLORS.length];
-    setCircleColor(next);
-    bestEffortHaptic("light");
-  }
-
-  function getStreamLabel(){
-    const s = streamSel.value;
-    if(s === "Custom"){
-      const c = (customStream.value || "").trim();
-      return c || "Custom";
-    }
-    return s;
-  }
-
-  /***********************
-   * PRESETS
-   ***********************/
-  function fillPresets(){
-    presetSel.innerHTML = "";
-    PRESETS.forEach((p, i) => {
-      const opt = document.createElement("option");
-      opt.value = String(i);
-      opt.textContent = p.name;
-      presetSel.appendChild(opt);
-    });
-  }
-
-  function applyPreset(idx){
-    const p = PRESETS[idx] || PRESETS[0];
-    inSec.value = p.in;
-    holdSec.value = p.hold;
-    outSec.value = p.out;
-    whatBox.innerHTML = "<strong>What this does:</strong> " + p.msg;
-  }
-
-  /***********************
-   * DURATION (chips + slider + box)
-   ***********************/
-  function setMinutes(min){
-    const m = Math.max(1, Math.min(60, Number(min) || 1));
-    durationMin.value = m;
-    durationSlider.value = Math.max(Number(durationSlider.min), Math.min(Number(durationSlider.max), m));
-    durationReadout.textContent = m + "m";
-    chips.forEach(b => b.classList.toggle("active", Number(b.dataset.min) === m));
-  }
-  chips.forEach(btn=>{
-    btn.addEventListener("click", ()=>{
-      setMinutes(btn.dataset.min);
-      bestEffortHaptic("light");
-    });
-  });
-  durationSlider.addEventListener("input", ()=> setMinutes(durationSlider.value));
-  durationMin.addEventListener("input", ()=> setMinutes(durationMin.value));
-
-  /***********************
-   * LOGS
-   ***********************/
-  function loadLogs(){
-    try{ return JSON.parse(localStorage.getItem(STORE.LOGS) || "[]"); }
-    catch(e){ return []; }
-  }
-  function saveLogs(logs){ localStorage.setItem(STORE.LOGS, JSON.stringify(logs)); }
-  function renderLogs(){
-    const logs = loadLogs().slice().reverse();
-    if(!logs.length){ logList.innerHTML = ""; return; }
-    logList.innerHTML = logs.map(item=>{
-      const dt = new Date(item.t);
-      const nice = dt.toLocaleString();
-      const safe = (s)=> String(s||"").replace(/[<>]/g,"");
-      const gv = Number(item.g||0);
-      const gdisp = gv>0?("+"+gv):(""+gv);
-      return `
-        <div class="logItem">
-          <div class="logTime">${nice}</div>
-          <div class="logCue">${safe(item.cue)} <span style="color:var(--muted); font-weight:700;">(${gdisp} ${safe(item.gLabel)})</span></div>
-          <div class="logNote">${safe(item.n)}</div>
-        </div>
-      `;
-    }).join("");
-  }
-
-  /***********************
-   * SHARED FIELD (expects Worker endpoints)
-   * /join?id=uuid -> {ok,id,count}
-   * /heartbeat?id=uuid -> {ok,count}
-   * /leave?id=uuid -> {ok,count}
-   * /count -> {ok,count}
-   ***********************/
-  function getFieldId(){
-    return localStorage.getItem(STORE.FIELD_ID) || "";
-  }
-  function setFieldId(id){
-    if(id) localStorage.setItem(STORE.FIELD_ID, id);
-    else localStorage.removeItem(STORE.FIELD_ID);
-  }
-  async function api(path){
-    const res = await fetch(WORKER_BASE + path, { cache:"no-store" });
-    return res.json();
-  }
-  async function refreshCount(){
-    try{
-      const r = await api("/count");
-      if(r && typeof r.count === "number") countPill.textContent = String(r.count);
-    }catch(e){}
-  }
-  async function joinField(){
-    try{
-      let id = getFieldId();
-      if(!id){
-        id = (crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now()+"-"+Math.random().toString(16).slice(2));
-      }
-      const r = await api("/join?id=" + encodeURIComponent(id));
-      if(r && r.ok){
-        setFieldId(r.id || id);
-        fieldStatus.textContent = "Field: joined";
-        countPill.textContent = String(r.count ?? 0);
-        bestEffortHaptic("medium");
-      }else{
-        fieldStatus.textContent = "Field: error";
-      }
-    }catch(e){
-      fieldStatus.textContent = "Field: error";
-    }
-  }
-  async function leaveField(){
-    try{
-      const id = getFieldId();
-      if(!id){
-        fieldStatus.textContent = "Field: —";
-        return;
-      }
-      const r = await api("/leave?id=" + encodeURIComponent(id));
-      setFieldId("");
-      fieldStatus.textContent = "Field: —";
-      countPill.textContent = String(r?.count ?? 0);
-      bestEffortHaptic("light");
-    }catch(e){
-      fieldStatus.textContent = "Field: error";
-    }
-  }
-  async function heartbeat(){
-    try{
-      const id = getFieldId();
-      if(!id) return;
-      const r = await api("/heartbeat?id=" + encodeURIComponent(id));
-      if(r && r.ok && typeof r.count === "number"){
-        countPill.textContent = String(r.count);
-      }
-    }catch(e){}
-  }
-
-  /***********************
-   * SOUND ENGINE (Web Audio API)
-   ***********************/
-  let audio = {
-    ctx: null,
-    master: null,
-    toneGain: null,
-    toneOscL: null,
-    toneOscR: null,
-    panL: null,
-    panR: null,
-    noiseSrc: null,
-    noiseGain: null,
-    noiseFilter: null,
-    on: false,
-    binaural: true,
-    sync: true,
-    noise: false,
-    baseHz: 432,
-    vol: 0.25,
+  const SOUND_PROFILES = {
+    off:       { label: 'Silent',     beat: 0    },
+    delta:     { label: 'Delta 2Hz',  beat: 2    },
+    theta:     { label: 'Theta 6Hz',  beat: 6    },
+    alpha:     { label: 'Alpha 10Hz', beat: 10   },
+    coherence: { label: '0.1 Hz',     beat: 0.1  },
+    gamma:     { label: 'Gamma 40Hz', beat: 40   },
+    schumann:  { label: '7.83 Hz',    beat: 7.83 },
   };
 
-  function loadSoundPrefs(){
-    audio.on = localStorage.getItem(STORE.S_ON) === "1";
-    audio.baseHz = Number(localStorage.getItem(STORE.S_TONE) || "432");
-    audio.vol = Math.max(0, Math.min(1, Number(localStorage.getItem(STORE.S_VOL) || "0.25")));
-    audio.binaural = localStorage.getItem(STORE.S_BIN) !== "0";
-    audio.sync = localStorage.getItem(STORE.S_SYNC) !== "0";
-    audio.noise = localStorage.getItem(STORE.S_NOISE) === "1";
+  const el = (id) => document.getElementById(id);
+  const circle         = el('circle');
+  const phaseText      = el('phaseText');
+  const phaseCountdown = el('phaseCountdown');
+  const phasePill      = el('phasePill');
+  const timerPill      = el('timerPill');
+  const startBtn       = el('startBtn');
+  const whatBanner     = el('whatBanner');
+  const presetSel      = el('preset');
+  const inSec          = el('inSec');
+  const holdSec        = el('holdSec');
+  const outSec         = el('outSec');
+  const durationMin    = el('durationMin');
+  const durationSlider = el('durationSlider');
+  const durBadge       = el('durBadge');
+  const chips          = Array.from(el('durationChips').querySelectorAll('.chip'));
+  const cueLine        = el('cueLine');
+  const newCueBtn      = el('newCueBtn');
+  const joinBtn        = el('joinBtn');
+  const leaveBtn       = el('leaveBtn');
+  const fieldStatus    = el('fieldStatus');
+  const fieldDot       = el('fieldDot');
+  const countPill      = el('countPill');
+  const gauge          = el('gauge');
+  const gaugeVal       = el('gaugeVal');
+  const gaugeWord      = el('gaugeWord');
+  const note           = el('note');
+  const logBtn         = el('logBtn');
+  const clearBtn       = el('clearBtn');
+  const logEntries     = el('logEntries');
+  const themeBtn       = el('themeBtn');
+  const soundStatus    = el('soundStatus');
+  const volSlider      = el('volSlider');
+  const volBadge       = el('volBadge');
+  const carrierSlider  = el('carrierSlider');
+  const carrierBadge   = el('carrierBadge');
 
-    soundTone.value = String(audio.baseHz);
-    soundVol.value = String(Math.round(audio.vol * 100));
-    soundVolLabel.textContent = Math.round(audio.vol * 100) + "%";
+  let running = false, phase = 'idle', phaseRemaining = 0, totalRemaining = 0, tick = null, paletteIdx = 0;
+  let audioCtx = null, leftOsc = null, rightOsc = null, gainNode = null;
+  let merger = null, leftGain = null, rightGain = null, audioRunning = false;
 
-    binauralToggle.classList.toggle("on", audio.binaural);
-    binauralToggle.textContent = audio.binaural ? "✅ On" : "➕ Off";
-    binauralToggle.setAttribute("aria-pressed", audio.binaural ? "true":"false");
+  function haptic(ms = 10) { try { navigator.vibrate && navigator.vibrate(ms); } catch(e) {} }
 
-    syncToggle.classList.toggle("on", audio.sync);
-    syncToggle.textContent = audio.sync ? "✅ On" : "➕ Off";
-    syncToggle.setAttribute("aria-pressed", audio.sync ? "true":"false");
-
-    noiseToggle.classList.toggle("on", audio.noise);
-    noiseToggle.textContent = audio.noise ? "✅ On" : "➕ Off";
-    noiseToggle.setAttribute("aria-pressed", audio.noise ? "true":"false");
-
-    soundToggle.classList.toggle("on", audio.on);
-    soundToggle.textContent = audio.on ? "🔊 On" : "🔇 Off";
-    soundToggle.setAttribute("aria-pressed", audio.on ? "true":"false");
+  function applyTheme(light) {
+    document.body.classList.toggle('light', light);
+    localStorage.setItem(KEY_THEME, light ? 'light' : 'dark');
+    themeBtn.textContent = light ? '☽ Dark' : '☀ Light';
   }
+  themeBtn.addEventListener('click', () => { applyTheme(!document.body.classList.contains('light')); haptic(8); });
 
-  function saveSoundPrefs(){
-    localStorage.setItem(STORE.S_ON, audio.on ? "1":"0");
-    localStorage.setItem(STORE.S_TONE, String(audio.baseHz));
-    localStorage.setItem(STORE.S_VOL, String(audio.vol));
-    localStorage.setItem(STORE.S_BIN, audio.binaural ? "1":"0");
-    localStorage.setItem(STORE.S_SYNC, audio.sync ? "1":"0");
-    localStorage.setItem(STORE.S_NOISE, audio.noise ? "1":"0");
+  function applyPalette(idx) {
+    const p = PALETTES[idx];
+    circle.style.setProperty('--c', p.c);
+    circle.style.setProperty('--cg', p.g);
+    localStorage.setItem(KEY_COLOR, idx);
   }
+  circle.addEventListener('click', () => {
+    if (running) return;
+    paletteIdx = (paletteIdx + 1) % PALETTES.length;
+    applyPalette(paletteIdx);
+    haptic(8);
+  });
 
-  function ensureAudio(){
-    if(audio.ctx) return true;
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if(!AC) return false;
-
-    audio.ctx = new AC();
-    audio.master = audio.ctx.createGain();
-    audio.master.gain.value = 0.0001;
-    audio.master.connect(audio.ctx.destination);
-
-    // tone chain
-    audio.toneGain = audio.ctx.createGain();
-    audio.toneGain.gain.value = 0.6;
-    audio.toneGain.connect(audio.master);
-
-    // stereo panners
-    audio.panL = audio.ctx.createStereoPanner ? audio.ctx.createStereoPanner() : null;
-    audio.panR = audio.ctx.createStereoPanner ? audio.ctx.createStereoPanner() : null;
-
-    if(audio.panL && audio.panR){
-      audio.panL.pan.value = -0.65;
-      audio.panR.pan.value =  0.65;
-    }
-
-    // noise chain (optional)
-    audio.noiseGain = audio.ctx.createGain();
-    audio.noiseGain.gain.value = 0.0;
-
-    audio.noiseFilter = audio.ctx.createBiquadFilter();
-    audio.noiseFilter.type = "lowpass";
-    audio.noiseFilter.frequency.value = 900;
-
-    audio.noiseFilter.connect(audio.noiseGain);
-    audio.noiseGain.connect(audio.master);
-
-    return true;
+  function buildPresets() {
+    PRESETS.forEach((p, i) => {
+      const o = document.createElement('option');
+      o.value = i; o.textContent = p.name;
+      presetSel.appendChild(o);
+    });
   }
-
-  function startTone(){
-    if(!ensureAudio()) return;
-
-    // iOS needs resume on gesture
-    if(audio.ctx.state === "suspended"){
-      audio.ctx.resume().catch(()=>{});
-    }
-
-    // stop old
-    stopTone();
-
-    const base = audio.baseHz;
-    const beat = audio.binaural ? 6 : 0; // gentle default beat
-    const leftHz  = base - (beat/2);
-    const rightHz = base + (beat/2);
-
-    audio.toneOscL = audio.ctx.createOscillator();
-    audio.toneOscR = audio.ctx.createOscillator();
-
-    // sine is clean; triangle is softer; keep sine
-    audio.toneOscL.type = "sine";
-    audio.toneOscR.type = "sine";
-    audio.toneOscL.frequency.value = leftHz;
-    audio.toneOscR.frequency.value = rightHz;
-
-    // routing
-    if(audio.panL && audio.panR){
-      audio.toneOscL.connect(audio.panL);
-      audio.toneOscR.connect(audio.panR);
-      audio.panL.connect(audio.toneGain);
-      audio.panR.connect(audio.toneGain);
-    }else{
-      // fallback mono
-      audio.toneOscL.connect(audio.toneGain);
-      audio.toneOscR.connect(audio.toneGain);
-    }
-
-    audio.toneOscL.start();
-    audio.toneOscR.start();
-
-    // noise if enabled
-    if(audio.noise){
-      startNoise();
-    }
-
-    // ramp master to desired volume
-    setMasterVolume(audio.vol, 0.12);
+  function applyPreset(idx) {
+    const p = PRESETS[idx];
+    inSec.value = p.in; holdSec.value = p.hold; outSec.value = p.out;
+    whatBanner.innerHTML = `<strong>What this does:</strong> ${p.msg}`;
   }
+  presetSel.addEventListener('change', () => { applyPreset(+presetSel.value); haptic(8); });
 
-  function stopTone(){
-    try{ if(audio.toneOscL){ audio.toneOscL.stop(); audio.toneOscL.disconnect(); } }catch(e){}
-    try{ if(audio.toneOscR){ audio.toneOscR.stop(); audio.toneOscR.disconnect(); } }catch(e){}
-    audio.toneOscL = null;
-    audio.toneOscR = null;
-
-    stopNoise();
+  function setDuration(min) {
+    const m = Math.max(1, Math.min(60, +min || 1));
+    durationMin.value = m; durationSlider.value = Math.min(20, m);
+    durBadge.textContent = m + 'm';
+    chips.forEach(c => c.classList.toggle('active', +c.dataset.min === m));
   }
+  chips.forEach(c => c.addEventListener('click', () => { setDuration(c.dataset.min); haptic(6); }));
+  durationSlider.addEventListener('input', () => setDuration(durationSlider.value));
+  durationMin.addEventListener('input',   () => setDuration(durationMin.value));
 
-  function setMasterVolume(v, rampSec=0.08){
-    if(!audio.master || !audio.ctx) return;
-    const t = audio.ctx.currentTime;
-    audio.master.gain.cancelScheduledValues(t);
-    audio.master.gain.setValueAtTime(audio.master.gain.value, t);
-    audio.master.gain.linearRampToValueAtTime(Math.max(0.0001, v), t + rampSec);
+  function getTimings() {
+    return { in: Math.max(1,+inSec.value||1), hold: Math.max(0,+holdSec.value||0), out: Math.max(1,+outSec.value||1) };
   }
-
-  function startNoise(){
-    if(!audio.ctx) return;
-    stopNoise();
-
-    // white noise buffer
-    const bufferSize = 2 * audio.ctx.sampleRate;
-    const buffer = audio.ctx.createBuffer(1, bufferSize, audio.ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for(let i=0;i<bufferSize;i++){
-      data[i] = (Math.random()*2 - 1) * 0.6;
-    }
-
-    const src = audio.ctx.createBufferSource();
-    src.buffer = buffer;
-    src.loop = true;
-
-    src.connect(audio.noiseFilter);
-    audio.noiseSrc = src;
-
-    // subtle noise volume
-    audio.noiseGain.gain.value = 0.03; // baseline
-    src.start();
+  function mmss(s) {
+    s = Math.max(0,Math.floor(s));
+    return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
   }
-
-  function stopNoise(){
-    try{ if(audio.noiseSrc){ audio.noiseSrc.stop(); audio.noiseSrc.disconnect(); } }catch(e){}
-    audio.noiseSrc = null;
-    if(audio.noiseGain) audio.noiseGain.gain.value = 0.0;
+  function setPhase(p, dur) {
+    phase = p; phaseRemaining = dur;
+    circle.classList.remove('inhale','hold','exhale','idle');
+    if (p==='in') circle.classList.add('inhale');
+    if (p==='hold') circle.classList.add('hold');
+    if (p==='out') circle.classList.add('exhale');
+    const labels = { in:'Inhale', hold:'Hold', out:'Exhale', idle:'Ready' };
+    phasePill.innerHTML = `<span class="dot"></span> ${labels[p]||'Ready'}`;
+    phasePill.classList.toggle('active', p !== 'idle');
+    phaseText.textContent = labels[p] || '';
+    haptic(8);
   }
-
-  // breath-sync sound shaping
-  function soundOnPhase(phaseName){
-    if(!audio.on || !audio.ctx || !audio.master) return;
-    if(!audio.sync){
-      // flat volume
-      setMasterVolume(audio.vol, 0.08);
-      return;
-    }
-    // inhale = swell, hold = steady, exhale = soften
-    if(phaseName === "In"){
-      setMasterVolume(Math.min(1, audio.vol * 1.12), 0.18);
-      if(audio.noiseGain) audio.noiseGain.gain.setValueAtTime(audio.noise ? 0.035 : 0.0, audio.ctx.currentTime);
-    } else if(phaseName === "Hold"){
-      setMasterVolume(Math.min(1, audio.vol * 1.00), 0.12);
-      if(audio.noiseGain) audio.noiseGain.gain.setValueAtTime(audio.noise ? 0.03 : 0.0, audio.ctx.currentTime);
-    } else if(phaseName === "Out"){
-      setMasterVolume(Math.max(0.0001, audio.vol * 0.78), 0.22);
-      if(audio.noiseGain) audio.noiseGain.gain.setValueAtTime(audio.noise ? 0.02 : 0.0, audio.ctx.currentTime);
-    } else {
-      // Ready
-      setMasterVolume(audio.vol, 0.15);
-      if(audio.noiseGain) audio.noiseGain.gain.setValueAtTime(audio.noise ? 0.03 : 0.0, audio.ctx.currentTime);
-    }
+  function advancePhase() {
+    const t = getTimings();
+    if (phase==='idle'||phase==='out') setPhase('in',t.in);
+    else if (phase==='in') t.hold>0 ? setPhase('hold',t.hold) : setPhase('out',t.out);
+    else if (phase==='hold') setPhase('out',t.out);
   }
-
-  function updateOscFrequencies(){
-    if(!audio.ctx || !audio.toneOscL || !audio.toneOscR) return;
-    const base = audio.baseHz;
-    const beat = audio.binaural ? 6 : 0;
-    const leftHz  = base - (beat/2);
-    const rightHz = base + (beat/2);
-    const t = audio.ctx.currentTime;
-
-    audio.toneOscL.frequency.cancelScheduledValues(t);
-    audio.toneOscR.frequency.cancelScheduledValues(t);
-    audio.toneOscL.frequency.linearRampToValueAtTime(leftHz, t + 0.08);
-    audio.toneOscR.frequency.linearRampToValueAtTime(rightHz, t + 0.08);
-  }
-
-  function setSoundToggleUI(){
-    soundToggle.classList.toggle("on", audio.on);
-    soundToggle.textContent = audio.on ? "🔊 On" : "🔇 Off";
-    soundToggle.setAttribute("aria-pressed", audio.on ? "true":"false");
-  }
-
-  /***********************
-   * BREATH ENGINE
-   ***********************/
-  let running = false;
-  let tickTimer = null;
-  let remaining = 0;
-
-  let phase = "Ready"; // In | Hold | Out | Ready
-  let phaseRemaining = 0;
-
-  function setPhase(p){
-    phase = p;
-    phasePill.textContent = p;
-
-    circle.classList.remove("pulseIn","pulseHold","pulseOut");
-    if(p === "In") circle.classList.add("pulseIn");
-    if(p === "Hold") circle.classList.add("pulseHold");
-    if(p === "Out") circle.classList.add("pulseOut");
-
-    // sound sync hook
-    soundOnPhase(p);
-
-    // tiny haptic cue
-    bestEffortHaptic("light");
-  }
-
-  function stopAll(){
-    running = false;
-    clearInterval(tickTimer);
-    tickTimer = null;
-    setPhase("Ready");
-    timerPill.textContent = "00:00";
-    startBtn.textContent = "Start";
-    circle.classList.remove("pulseIn","pulseHold","pulseOut");
-
-    // if sound is on, return to neutral (not breath-swell)
-    soundOnPhase("Ready");
-  }
-
-  function stepPhase(){
-    const inT = Math.max(1, Number(inSec.value) || 1);
-    const holdT = Math.max(0, Number(holdSec.value) || 0);
-    const outT = Math.max(1, Number(outSec.value) || 1);
-
-    if(phase === "Ready"){
-      setPhase("In");
-      phaseRemaining = inT;
-      return;
-    }
-
-    if(phase === "In"){
-      if(phaseRemaining <= 0){
-        if(holdT > 0){
-          setPhase("Hold");
-          phaseRemaining = holdT;
-        }else{
-          setPhase("Out");
-          phaseRemaining = outT;
-        }
-      }
-      return;
-    }
-
-    if(phase === "Hold"){
-      if(phaseRemaining <= 0){
-        setPhase("Out");
-        phaseRemaining = outT;
-      }
-      return;
-    }
-
-    if(phase === "Out"){
-      if(phaseRemaining <= 0){
-        setPhase("In");
-        phaseRemaining = inT;
-      }
-      return;
-    }
-  }
-
-  function start(){
-    const mins = Math.max(1, Number(durationMin.value) || 1);
-    remaining = mins * 60;
-
+  function startBreath() {
+    totalRemaining = Math.max(1,+durationMin.value)*60;
     running = true;
-    startBtn.textContent = "Stop";
-    setPhase("Ready");
-    stepPhase(); // kick to In
-
-    // start audio if enabled (user gesture is this click)
-    if(audio.on){
-      startTone();
-      // align to current phase
-      soundOnPhase(phase);
-    }
-
-    tickTimer = setInterval(()=>{
-      if(!running) return;
-
-      remaining -= 1;
-      timerPill.textContent = mmss(remaining);
-
-      phaseRemaining -= 1;
-      stepPhase();
-
-      if(remaining <= 0){
-        bestEffortHaptic("heavy");
-        stopAll();
-      }
+    startBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="1"/></svg> Stop';
+    startBtn.classList.add('running');
+    advancePhase(); startAudio();
+    tick = setInterval(() => {
+      totalRemaining--; timerPill.textContent = mmss(totalRemaining);
+      phaseRemaining--; phaseCountdown.textContent = phaseRemaining > 0 ? phaseRemaining : '';
+      if (phaseRemaining <= 0) advancePhase();
+      if (totalRemaining <= 0) { stopBreath(); haptic(40); }
     }, 1000);
   }
+  function stopBreath() {
+    running = false; clearInterval(tick); tick = null; phase = 'idle';
+    circle.classList.remove('inhale','hold','exhale'); circle.classList.add('idle');
+    phasePill.innerHTML = '<span class="dot"></span> Ready'; phasePill.classList.remove('active');
+    phaseText.textContent = 'Tap to begin'; phaseCountdown.textContent = '·';
+    timerPill.textContent = '00:00';
+    startBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M3 2l9 5-9 5V2z"/></svg> Start';
+    startBtn.classList.remove('running');
+    stopAudio();
+    setTimeout(() => circle.classList.remove('idle'), 800);
+  }
+  startBtn.addEventListener('click', () => { running ? stopBreath() : startBreath(); haptic(12); });
 
-  /***********************
-   * UI EVENTS
-   ***********************/
-  presetSel.addEventListener("change", ()=>{
-    applyPreset(Number(presetSel.value));
-    bestEffortHaptic("light");
-  });
+  function getAudioCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+  function getSelectedSound() {
+    const checked = document.querySelector('input[name="sound"]:checked');
+    return checked ? checked.value : 'off';
+  }
+  function getVolume() { return (+volSlider.value) / 100; }
+  function getCarrierHz() { return +carrierSlider.value; }
 
-  newCueBtn.addEventListener("click", ()=>{
-    cueLine.textContent = CUES[Math.floor(Math.random()*CUES.length)];
-    bestEffortHaptic("light");
-  });
-
-  circle.addEventListener("click", ()=>{
-    if(running) return; // prevent accidental colour flips while breathing
-    cycleCircleColor();
-  });
-
-  darkBtn.addEventListener("click", ()=>{
-    const dark = document.documentElement.dataset.theme === "dark";
-    setTheme(!dark);
-    bestEffortHaptic("light");
-  });
-
-  startBtn.addEventListener("click", ()=>{
-    if(running) stopAll();
-    else start();
-  });
-
-  gauge.addEventListener("input", (e)=>{
-    const v = Number(e.target.value);
-    gaugeVal.textContent = String(v);
-    gaugeLabel.textContent = gaugeText(v);
-  });
-
-  logBtn.addEventListener("click", ()=>{
-    const v = Number(gauge.value);
-    const logs = loadLogs();
-    logs.push({
-      t: new Date().toISOString(),
-      cue: cueLine.textContent + " • " + getStreamLabel(),
-      g: v,
-      gLabel: gaugeText(v),
-      n: (note.value || "").trim()
-    });
-    saveLogs(logs);
-    note.value = "";
-    renderLogs();
-    bestEffortHaptic("light");
-  });
-
-  clearBtn.addEventListener("click", ()=>{
-    localStorage.removeItem(STORE.LOGS);
-    renderLogs();
-    bestEffortHaptic("light");
-  });
-
-  joinBtn.addEventListener("click", joinField);
-  leaveBtn.addEventListener("click", leaveField);
-
-  /***********************
-   * SOUND EVENTS
-   ***********************/
-  function setToggleBtn(btn, on, onLabel="✅ On", offLabel="➕ Off"){
-    btn.classList.toggle("on", !!on);
-    btn.textContent = on ? onLabel : offLabel;
-    btn.setAttribute("aria-pressed", on ? "true":"false");
+  function startAudio() {
+    const soundKey = getSelectedSound();
+    if (soundKey === 'off') return;
+    const profile = SOUND_PROFILES[soundKey];
+    if (!profile || profile.beat === 0) return;
+    const ctx = getAudioCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+    const carrier = getCarrierHz(), beat = profile.beat, vol = getVolume();
+    merger = ctx.createChannelMerger(2);
+    gainNode = ctx.createGain(); gainNode.gain.value = vol;
+    leftGain = ctx.createGain(); leftGain.gain.value = 1;
+    leftOsc = ctx.createOscillator(); leftOsc.type = 'sine'; leftOsc.frequency.value = carrier;
+    leftOsc.connect(leftGain); leftGain.connect(merger, 0, 0);
+    rightGain = ctx.createGain(); rightGain.gain.value = 1;
+    rightOsc = ctx.createOscillator(); rightOsc.type = 'sine'; rightOsc.frequency.value = carrier + beat;
+    rightOsc.connect(rightGain); rightGain.connect(merger, 0, 1);
+    merger.connect(gainNode); gainNode.connect(ctx.destination);
+    leftOsc.start(); rightOsc.start();
+    audioRunning = true;
+    soundStatus.classList.add('playing');
+    soundStatus.innerHTML = `<span class="pulse-dot"></span> ${profile.label}`;
+  }
+  function stopAudio() {
+    if (!audioRunning) return;
+    try {
+      const fadeTime = audioCtx.currentTime + 0.3;
+      if (gainNode) gainNode.gain.linearRampToValueAtTime(0, fadeTime);
+      setTimeout(() => {
+        try { leftOsc && leftOsc.stop(); } catch(e) {}
+        try { rightOsc && rightOsc.stop(); } catch(e) {}
+        leftOsc = rightOsc = gainNode = merger = leftGain = rightGain = null;
+      }, 350);
+    } catch(e) {}
+    audioRunning = false;
+    soundStatus.classList.remove('playing');
+    soundStatus.innerHTML = `<span class="pulse-dot"></span> Off`;
+  }
+  function updateAudioVolume() { if (gainNode) gainNode.gain.value = getVolume(); }
+  function updateAudioCarrier() {
+    if (!audioRunning) return;
+    const carrier = getCarrierHz(), soundKey = getSelectedSound();
+    const beat = SOUND_PROFILES[soundKey]?.beat || 0;
+    if (leftOsc) leftOsc.frequency.value = carrier;
+    if (rightOsc) rightOsc.frequency.value = carrier + beat;
   }
 
-  soundToggle.addEventListener("click", ()=>{
-    audio.on = !audio.on;
-    setSoundToggleUI();
-
-    if(audio.on){
-      // click counts as user gesture
-      startTone();
-      soundOnPhase(phase);
-    }else{
-      // ramp down then stop
-      setMasterVolume(0.0001, 0.12);
-      setTimeout(()=> stopTone(), 160);
-    }
-
-    saveSoundPrefs();
-    bestEffortHaptic("light");
+  document.querySelectorAll('input[name="sound"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      localStorage.setItem(KEY_SOUND, radio.value);
+      if (running) { stopAudio(); startAudio(); }
+    });
+  });
+  volSlider.addEventListener('input', () => {
+    volBadge.textContent = volSlider.value + '%';
+    localStorage.setItem(KEY_VOL, volSlider.value);
+    updateAudioVolume();
+  });
+  carrierSlider.addEventListener('input', () => {
+    carrierBadge.textContent = carrierSlider.value + ' Hz';
+    localStorage.setItem(KEY_CARRIER, carrierSlider.value);
+    updateAudioCarrier();
   });
 
-  soundTone.addEventListener("change", ()=>{
-    audio.baseHz = Number(soundTone.value);
-    saveSoundPrefs();
-    if(audio.on){
-      if(!audio.ctx) startTone();
-      updateOscFrequencies();
-    }
-    bestEffortHaptic("light");
+  function randomCue() {
+    const current = cueLine.textContent;
+    const options = CUES.filter(c => c !== current);
+    return options[Math.floor(Math.random() * options.length)];
+  }
+  newCueBtn.addEventListener('click', () => {
+    cueLine.classList.add('fade');
+    setTimeout(() => { cueLine.textContent = randomCue(); cueLine.classList.remove('fade'); }, 150);
+    haptic(6);
   });
 
-  soundVol.addEventListener("input", ()=>{
-    const p = Number(soundVol.value);
-    soundVolLabel.textContent = p + "%";
-    audio.vol = Math.max(0, Math.min(1, p/100));
-    saveSoundPrefs();
-    if(audio.on){
-      // if sync is on, current phase sets effective level;
-      // still update base volume now
-      soundOnPhase(phase);
-    }
+  function gaugeLabel(v) {
+    if (v <= -3) return 'Tight';
+    if (v >= 3)  return 'Open';
+    return 'Neutral';
+  }
+  gauge.addEventListener('input', () => {
+    const v = +gauge.value;
+    gaugeVal.textContent = v > 0 ? '+' + v : v;
+    gaugeWord.textContent = gaugeLabel(v);
   });
 
-  binauralToggle.addEventListener("click", ()=>{
-    audio.binaural = !audio.binaural;
-    setToggleBtn(binauralToggle, audio.binaural, "✅ On", "➕ Off");
-    saveSoundPrefs();
-    if(audio.on){
-      if(!audio.ctx) startTone();
-      updateOscFrequencies();
-    }
-    bestEffortHaptic("light");
+  async function api(path) {
+    const res = await fetch(WORKER_BASE + path, { cache: 'no-store' });
+    return res.json();
+  }
+  const getFieldId = () => localStorage.getItem(KEY_FIELD) || '';
+  const setFieldId = (id) => id ? localStorage.setItem(KEY_FIELD, id) : localStorage.removeItem(KEY_FIELD);
+  async function refreshCount() {
+    try { const r = await api('/count'); if (r?.count != null) countPill.textContent = r.count; } catch(e) {}
+  }
+  async function joinField() {
+    try {
+      const r = await api('/join');
+      if (r?.ok) { setFieldId(r.id); fieldStatus.textContent='Joined'; fieldDot.classList.add('online'); countPill.textContent=r.count??0; haptic([12,8,12]); }
+    } catch(e) { fieldStatus.textContent = 'Error'; }
+  }
+  async function leaveField() {
+    const id = getFieldId(); if (!id) return;
+    try {
+      const r = await api('/leave?id='+encodeURIComponent(id));
+      if (r?.ok) { setFieldId(''); fieldStatus.textContent='Not joined'; fieldDot.classList.remove('online'); countPill.textContent=r.count??0; haptic(8); }
+    } catch(e) { fieldStatus.textContent = 'Error'; }
+  }
+  joinBtn.addEventListener('click', joinField);
+  leaveBtn.addEventListener('click', leaveField);
+
+  function loadLogs() { try { return JSON.parse(localStorage.getItem(KEY_LOGS)||'[]'); } catch(e) { return []; } }
+  function saveLogs(logs) { localStorage.setItem(KEY_LOGS, JSON.stringify(logs)); }
+  function renderLogs() {
+    const logs = loadLogs().slice().reverse();
+    if (!logs.length) { logEntries.innerHTML='<div class="empty-state">No entries yet. Start breathing and log how you feel.</div>'; return; }
+    logEntries.innerHTML = logs.map(item => {
+      const safeCue  = (item.cue||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+      const safeNote = (item.note||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+      const gv = item.gauge;
+      return `<div class="log-entry">
+        <div class="log-ts">${new Date(item.ts).toLocaleString()}</div>
+        <div class="log-cue">${safeCue}<span class="log-gauge">${gv>0?'+'+gv:gv} · ${gaugeLabel(gv)}</span></div>
+        ${safeNote?`<div class="log-note">${safeNote}</div>`:''}
+      </div>`;
+    }).join('');
+  }
+  logBtn.addEventListener('click', () => {
+    const logs = loadLogs();
+    logs.push({ ts: new Date().toISOString(), cue: cueLine.textContent, gauge: +gauge.value, note: note.value.trim() });
+    saveLogs(logs); note.value = ''; renderLogs(); haptic(8);
+  });
+  clearBtn.addEventListener('click', () => {
+    if (!confirm('Clear all log entries?')) return;
+    localStorage.removeItem(KEY_LOGS); renderLogs();
   });
 
-  syncToggle.addEventListener("click", ()=>{
-    audio.sync = !audio.sync;
-    setToggleBtn(syncToggle, audio.sync, "✅ On", "➕ Off");
-    saveSoundPrefs();
-    if(audio.on){
-      soundOnPhase(phase);
-    }
-    bestEffortHaptic("light");
-  });
-
-  noiseToggle.addEventListener("click", ()=>{
-    audio.noise = !audio.noise;
-    setToggleBtn(noiseToggle, audio.noise, "✅ On", "➕ Off");
-    saveSoundPrefs();
-    if(audio.on){
-      if(audio.noise) startNoise();
-      else stopNoise();
-      soundOnPhase(phase);
-    }
-    bestEffortHaptic("light");
-  });
-
-  /***********************
-   * INIT
-   ***********************/
-  function init(){
-    // theme
-    const t = localStorage.getItem(STORE.THEME);
-    setTheme(t === "dark");
-
-    // circle color
-    setCircleColor(localStorage.getItem(STORE.COLOR) || COLORS[0]);
-
-    // presets
-    fillPresets();
-    presetSel.value = "0";
-    applyPreset(0);
-
-    // duration
-    setMinutes(Number(durationMin.value) || 1);
-
-    // gauge
-    gauge.dispatchEvent(new Event("input"));
-
-    // logs
+  function init() {
+    applyTheme(localStorage.getItem(KEY_THEME) === 'light');
+    paletteIdx = (+localStorage.getItem(KEY_COLOR)||0) % PALETTES.length;
+    applyPalette(paletteIdx);
+    buildPresets(); applyPreset(0); setDuration(1);
+    gauge.dispatchEvent(new Event('input'));
     renderLogs();
-
-    // field
-    if(getFieldId()) fieldStatus.textContent = "Field: joined";
-    refreshCount();
-    setInterval(refreshCount, 5000);
-    setInterval(heartbeat, 20000);
-
-    // sound prefs
-    loadSoundPrefs();
-    setSoundToggleUI();
-    setToggleBtn(binauralToggle, audio.binaural, "✅ On", "➕ Off");
-    setToggleBtn(syncToggle, audio.sync, "✅ On", "➕ Off");
-    setToggleBtn(noiseToggle, audio.noise, "✅ On", "➕ Off");
-
-    // if sound was previously ON, keep UI ON but do NOT auto-start audio
-    // (iOS blocks audio until user gesture). User taps Sound On to begin.
-    if(audio.on){
-      // show on state but don't start oscillator until user taps
-      // keep as is
-    }
+    if (getFieldId()) { fieldStatus.textContent='Joined'; fieldDot.classList.add('online'); }
+    refreshCount(); setInterval(refreshCount, 5000);
+    const savedSound = localStorage.getItem(KEY_SOUND) || 'off';
+    const radio = document.querySelector(`input[name="sound"][value="${savedSound}"]`);
+    if (radio) radio.checked = true;
+    const savedVol = localStorage.getItem(KEY_VOL);
+    if (savedVol !== null) { volSlider.value = savedVol; volBadge.textContent = savedVol + '%'; }
+    const savedCarrier = localStorage.getItem(KEY_CARRIER);
+    if (savedCarrier !== null) { carrierSlider.value = savedCarrier; carrierBadge.textContent = savedCarrier + ' Hz'; }
   }
 
   init();
