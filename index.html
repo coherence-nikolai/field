@@ -1,369 +1,367 @@
-
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>field</title>
 <style>
-:root {
---bg1: #071516;
-  --bg2: #0e2423;
-  --card: rgba(12, 32, 34, 0.85);
-  --mint: #7ef5b5;
-  --header: #e6f1ee;
-  --soft: rgba(230,241,238,0.7);
-  --circleSize: clamp(220px, 62vw, 290px);
+:root{
+  --bg1:#071516;
+  --bg2:#0e2423;
+
+  --card1:rgba(14,40,40,0.90);
+  --card2:rgba(5,20,20,0.90);
+
+  --mint:#7ef5b5;
+  --mint2:#9fffcf;
+
+  --header:#e6f1ee;
+  --soft:rgba(230,241,238,0.70);
+
+  --circleText:#063a2b;
+  --shadow: rgba(0,0,0,0.55);
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  font-family: "Georgia", serif;
-}
-
-body {
-  min-height: 100vh;
-  background: radial-gradient(circle at top, #143332, var(--bg1));
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: var(--header);
-}
-
-.wrapper {
-  width: 100%;
-  max-width: 420px;
-  padding: 40px 20px 60px;
-  text-align: center;
-}
-
-h1.wordmark{
-  width: min(var(--circleSize), 86vw);
-  margin: 56px auto 52px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+*{ box-sizing:border-box; margin:0; padding:0; }
+body{
+  min-height:100vh;
+  background:
+    radial-gradient(circle at top, #143332, var(--bg1)),
+    linear-gradient(var(--bg1), var(--bg2));
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  color:var(--header);
   font-family: Georgia, "Times New Roman", serif;
-  font-weight: 500;
-  font-size: clamp(72px, 12vw, 112px);
+}
+
+.wrapper{
+  width:100%;
+  max-width:420px;
+  padding: 40px 20px 60px;
+  text-align:center;
+}
+
+/* Header wordmark constrained to circle width */
+.header{
+  width: 210px;          /* matches circle size */
+  margin: 0 auto 34px;
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  font-weight:400;
+  font-size: 3.6rem;
   letter-spacing: 0;
-  color: var(--text);
-  opacity: 1;
-  transition: opacity 650ms ease;
-  user-select: none;
-  pointer-events: none;
+  color: var(--header);
+  transition: opacity 900ms ease;
 }
-h1.wordmark span{
-  display: block;
-  line-height: 0.9;
-}
-body.running h1.wordmark{
-  opacity: 0;
+.header span{
+  display:inline-block;
+  line-height:1;
 }
 
-.card {
-  background: linear-gradient(160deg, rgba(14,40,40,0.9), rgba(5,20,20,0.9));
+/* card */
+.card{
+  background: linear-gradient(160deg, var(--card1), var(--card2));
   border-radius: 26px;
-  padding: 40px 25px 45px;
-  box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+  padding: 40px 25px 38px;
+  box-shadow: 0 30px 60px var(--shadow);
 }
 
-.circle {
-  width: var(--circleSize);
-  height: var(--circleSize);
-  margin: 0 auto 25px;
-  background: radial-gradient(circle at 30% 30%, #9fffcf, var(--mint));
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: Arial, sans-serif;
+/* circle + ripple */
+.circleWrap{
+  position:relative;
+  width:210px;
+  height:210px;
+  margin: 0 auto 22px;
+}
+
+.circle{
+  width:210px;
+  height:210px;
+  border-radius:50%;
+  background: radial-gradient(circle at 30% 30%, var(--mint2), var(--mint));
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-family: Arial, system-ui, sans-serif;
   letter-spacing: 0.15em;
+  text-transform: uppercase;
   font-size: 0.75rem;
-  color: #063a2b;
-  box-shadow: 0 0 50px rgba(126,245,181,0.6);
-  cursor: pointer;
-  transition: transform 1s ease-in-out, box-shadow 1s ease-in-out;
+  color: var(--circleText);
+  box-shadow: 0 0 52px rgba(126,245,181,0.52);
+  cursor:pointer;
+  user-select:none;
+  transition: box-shadow 900ms ease, filter 900ms ease;
 }
 
-.circle.phase-inhale{
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,0.06),
-    0 0 60px rgba(121,255,210,0.35),
-    0 0 140px rgba(121,255,210,0.18);
-}
-.circle.phase-exhale{
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,0.06),
-    0 0 40px rgba(121,255,210,0.22),
-    0 0 110px rgba(121,255,210,0.12);
-}
-
-
-.circle.breathing {
+/* breathing motion */
+.circle.breathing{
   animation: breathe 11s ease-in-out infinite;
 }
-
-@keyframes breathe {
-  0% { transform: scale(0.85); }
-  50% { transform: scale(1); }
-  100% { transform: scale(0.85); }
+@keyframes breathe{
+  0%{ transform: scale(0.84); }
+  50%{ transform: scale(1.00); }
+  100%{ transform: scale(0.84); }
 }
 
-.intent {
-  /* Responsive, and JS fitText() will shrink further if needed. */
-  font-size: clamp(18px, 4.8vw, 34px);
-  margin: 30px 0 10px;
-  cursor: pointer;
-  user-select: none;
+/* subtle phase glow shift (still silent: no label changes required) */
+.circle.phase-in{
+  box-shadow: 0 0 58px rgba(126,245,181,0.60);
+  filter: brightness(1.02);
+}
+.circle.phase-out{
+  box-shadow: 0 0 44px rgba(126,245,181,0.42);
+  filter: brightness(0.99);
+}
+
+/* start ripple */
+.ripple{
+  position:absolute;
+  inset:0;
+  border-radius:50%;
+  border: 1px solid rgba(126,245,181,0.0);
+  transform: scale(0.86);
+  opacity:0;
+  pointer-events:none;
+}
+.ripple.go{
+  animation: ripple 1100ms ease-out 1;
+}
+@keyframes ripple{
+  0%{
+    opacity:0.55;
+    transform: scale(0.86);
+    border-color: rgba(126,245,181,0.35);
+  }
+  100%{
+    opacity:0;
+    transform: scale(1.22);
+    border-color: rgba(126,245,181,0.0);
+  }
+}
+
+/* intention */
+.intent{
   color: var(--header);
-  transition: opacity 0.25s ease, text-shadow 0.25s ease;
+  font-weight: 400;
+  font-size: 1.65rem;          /* slightly smaller */
+  line-height: 1.1;
+  margin: 18px 0 8px;
+  cursor:pointer;
+  user-select:none;
+
   white-space: nowrap;
-  overflow: visible;
-  text-overflow: clip;
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  line-height: 1.15;
-  min-height: 1.4em;
+  overflow: visible;           /* never clip */
+  transition: opacity 420ms ease;
 }
-
-.intent:active {
-  opacity: 0.7;
+.intent.pulse{
+  text-shadow: 0 0 14px rgba(126,245,181,0.18);
 }
-
-.sub {
-  font-size: 0.9rem;
+.sub{
+  font-size: 0.92rem;
   color: var(--soft);
-  margin-bottom: 28px;
+  margin-bottom: 22px;
+  transition: opacity 420ms ease;
 }
 
-.controls {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  margin-bottom: 30px;
-}
-
-button {
-  background: linear-gradient(135deg, #6deeb0, var(--mint));
-  border: none;
-  padding: 12px 28px;
-  border-radius: 999px;
-  font-size: 1rem;
-  cursor: pointer;
-  color: #063a2b;
-  box-shadow: 0 6px 18px rgba(126,245,181,0.4);
-  transition: transform 0.2s ease;
-}
-
-button:hover {
-  transform: scale(1.05);
-}
-
-button.secondary {
-  background: transparent;
-  border: 1px solid rgba(126,245,181,0.4);
-  color: var(--mint);
-  box-shadow: none;
-}
-
-button.secondary:disabled {
-  opacity: 0.3;
-}
-
-
-.intent.fading {
+/* fade intention during session (silent mode) */
+.running .intent,
+.running .sub{
   opacity: 0;
+  pointer-events:none;
 }
 
-.intent.pulse {
-  animation: intentPulse 1.2s ease-in-out 1;
+/* single toggle button */
+.controls{ display:flex; justify-content:center; margin-top: 6px; }
+button{
+  border:none;
+  border-radius: 999px;
+  padding: 12px 30px;
+  font-size: 1rem;
+  cursor:pointer;
+  color: #063a2b;
+  background: linear-gradient(135deg, #6deeb0, var(--mint));
+  box-shadow: 0 6px 18px rgba(126,245,181,0.36);
+  transition: transform 140ms ease, filter 140ms ease, opacity 140ms ease;
 }
+button:active{ transform: scale(0.99); }
+button:hover{ filter: brightness(1.02); }
 
-@keyframes intentPulse {
-  0%   { text-shadow: 0 0 0 rgba(126,245,181,0.0); }
-  40%  { text-shadow: 0 0 18px rgba(126,245,181,0.22); }
-  70%  { text-shadow: 0 0 10px rgba(126,245,181,0.14); }
-  100% { text-shadow: 0 0 0 rgba(126,245,181,0.0); }
-}
-
-
-
-#intent{
-  display:block;
-  max-width: 86%;
-  margin: 0 auto;
-  white-space: nowrap;
-  overflow: visible;
-  text-overflow: clip;
+/* small screens: keep header & intent fitting */
+@media (max-width: 360px){
+  .header{ width: 200px; font-size: 3.25rem; }
+  .circleWrap,.circle{ width:200px; height:200px; }
+  .intent{ font-size: 1.52rem; }
 }
 </style>
 </head>
 <body>
-<div class="wrapper">
-<h1 class="wordmark"><span>f</span><span>i</span><span>e</span><span>l</span><span>d</span></h1>
-<div class="card">
-<div class="circle" id="circle">TAP TO BEGIN</div>
-<div class="intent" id="intent" tabindex="0">
-      Equanimity and awareness
+  <div class="wrapper" id="app">
+    <div class="header" id="header" aria-label="field wordmark">
+      <span>f</span><span>i</span><span>e</span><span>l</span><span>d</span>
     </div>
-<div class="sub">the field is shared.</div>
-<div class="controls">
-<button aria-label="Start or stop" class="primary" id="toggleBtn">Start</button>
-</div>
-</div>
-</div>
+
+    <div class="card">
+      <div class="circleWrap">
+        <div class="ripple" id="ripple"></div>
+        <div class="circle" id="circle">TAP TO BEGIN</div>
+      </div>
+
+      <div class="intent" id="intent" tabindex="0">Equanimity and awareness</div>
+      <div class="sub" id="sub">the field is shared.</div>
+
+      <div class="controls">
+        <button id="toggleBtn" type="button">Start</button>
+      </div>
+    </div>
+  </div>
+
 <script>
-const circle = document.getElementById("circle");
-const toggleBtn = document.getElementById("toggleBtn");
-const intentEl = document.getElementById("intent");
+(() => {
+  'use strict';
 
-let running = false;
-let intentIndex = 0;
+  // Breath timing (stabiliser default)
+  const IN_SEC  = 5.5;
+  const OUT_SEC = 5.5;
 
-const INTENTIONS = [
-  "Equanimity and awareness",
-  "Be the field",
-  "Steady and open",
-  "Soft belly, wide sky",
-  "Kind attention",
-  "Ease and clarity",
-  "Let it arrive",
-  "Quiet strength",
-  "Receive the breath"
-];
+  const INTENTIONS = [
+    "Equanimity and awareness",
+    "Steady and open",
+    "Soft and spacious",
+    "Let it arrive",
+    "Nothing to fix",
+    "Here, now",
+    "Be the field",
+    "Rest in the field",
+    "Clear and kind"
+  ];
 
-// Fit intention text to one line (no wrapping) by shrinking font-size if needed.
-function fitIntentText() {
-  const maxPx = 44;
-  const minPx = 18;
+  const app       = document.getElementById('app');
+  const header    = document.getElementById('header');
+  const circle    = document.getElementById('circle');
+  const ripple    = document.getElementById('ripple');
+  const toggleBtn = document.getElementById('toggleBtn');
+  const intentEl  = document.getElementById('intent');
 
-  // Reset to max first
-  let size = maxPx;
-  intentEl.style.fontSize = size + "px";
+  let running = false;
+  let intentIndex = 0;
 
-  // Ensure we have a measurable width
-  // Use the element's rendered width as the constraint.
-  const maxWidth = intentEl.getBoundingClientRect().width || intentEl.clientWidth || intentEl.parentElement?.clientWidth || 0;
-  if (!maxWidth) return;
+  // Phase timer (for glow only; silent mode keeps text static)
+  let phaseTimeoutA = null;
+  let phaseTimeoutB = null;
 
-  // Shrink until it fits (or hits min)
-  while (intentEl.scrollWidth > maxWidth && size > minPx) {
-    size -= 1;
-    intentEl.style.fontSize = size + "px";
+  function clearPhaseTimers(){
+    if (phaseTimeoutA) { clearTimeout(phaseTimeoutA); phaseTimeoutA = null; }
+    if (phaseTimeoutB) { clearTimeout(phaseTimeoutB); phaseTimeoutB = null; }
   }
-}
 
-let phase = "INHALE";
-let phaseTimeout = null;
-let phaseInterval = null;
-const CYCLE_MS = 11000;          // must match CSS animation duration
-const HALF_MS = CYCLE_MS / 2;
-
-function clearPhaseTimers() {
-  if (phaseTimeout) {
-    window.clearTimeout(phaseTimeout);
-    phaseTimeout = null;
+  function setGlowPhase(phase){
+    circle.classList.remove('phase-in','phase-out');
+    circle.classList.add(phase === 'in' ? 'phase-in' : 'phase-out');
   }
-  if (phaseInterval) {
-    window.clearInterval(phaseInterval);
-    phaseInterval = null;
+
+  function startPhaseLoop(){
+    clearPhaseTimers();
+
+    // Align phase glow to the same 11s loop: IN then OUT
+    setGlowPhase('in');
+    phaseTimeoutA = setTimeout(() => {
+      setGlowPhase('out');
+      phaseTimeoutB = setTimeout(() => {
+        if (running) startPhaseLoop();
+      }, OUT_SEC * 1000);
+    }, IN_SEC * 1000);
   }
-}
 
-function startPhaseLoop() {
-  clearPhaseTimers();
-  phase = "INHALE";
-  circle.textContent = phase;
+  function forceRestartAnimation(el, cls){
+    // Ensures animation starts from 0 each time (prevents drift)
+    el.classList.remove(cls);
+    void el.offsetWidth;
+    el.classList.add(cls);
+  }
 
-  // After first half-cycle, switch to EXHALE, then toggle every half-cycle.
-  phaseTimeout = window.setTimeout(() => {
-    phase = "EXHALE";
-    circle.textContent = phase;
+  function startSession(){
+    if (running) return;
+    running = true;
 
-    phaseInterval = window.setInterval(() => {
-      phase = (phase === "INHALE") ? "EXHALE" : "INHALE";
-      circle.textContent = phase;
-    }, HALF_MS);
-  }, HALF_MS);
-}
+    app.classList.add('running');
+    header.style.opacity = '0.25';
 
-function setRunning(next) {
-  running = next;
-  document.body.classList.toggle("running", running);
+    // Ripple once on start
+    ripple.classList.remove('go');
+    void ripple.offsetWidth;
+    ripple.classList.add('go');
 
-  if (running) {
-    // Restart the CSS animation so the label stays in sync.
-    circle.classList.remove("breathing");
-    void circle.offsetWidth; // force reflow
-    circle.classList.add("breathing");
+    // Start breathing animation (from 0)
+    forceRestartAnimation(circle, 'breathing');
 
+    // Silent mode: remove label while running
+    circle.textContent = '';
+
+    // Start glow phase loop (silent)
     startPhaseLoop();
 
-    toggleBtn.textContent = "Stop";
-    toggleBtn.setAttribute("aria-pressed", "true");
-  } else {
+    toggleBtn.textContent = 'Stop';
+  }
+
+  function stopSession(){
+    running = false;
+
+    app.classList.remove('running');
+    header.style.opacity = '1';
+
     clearPhaseTimers();
-    circle.classList.remove("breathing");
-    circle.textContent = "TAP TO BEGIN";
-    toggleBtn.textContent = "Start";
-    toggleBtn.setAttribute("aria-pressed", "false");
+    circle.classList.remove('breathing','phase-in','phase-out');
+
+    circle.textContent = 'TAP TO BEGIN';
+    toggleBtn.textContent = 'Start';
   }
-}
 
-
-function toggleSession() {
-  setRunning(!running);
-}
-
-function startIfIdle() {
-  if (!running) setRunning(true);
-}
-
-function nextIntent() {
-  intentIndex = (intentIndex + 1) % INTENTIONS.length;
-
-  // Fade out → swap text → fade in + subtle glow pulse
-  intentEl.classList.add("fading");
-
-  window.setTimeout(() => {
-    intentEl.textContent = INTENTIONS[intentIndex];
-    fitIntentText();
-
-    intentEl.classList.remove("fading");
-
-    // restart pulse animation
-    intentEl.classList.remove("pulse");
-    void intentEl.offsetWidth; // force reflow
-    intentEl.classList.add("pulse");
-    window.setTimeout(() => intentEl.classList.remove("pulse"), 1300);
-  }, 180);
-}
-
-toggleBtn.addEventListener("click", toggleSession);
-circle.addEventListener("click", startIfIdle);
-intentEl.addEventListener("click", nextIntent);
-
-intentEl.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" || e.key === " ") {
-    e.preventDefault();
-    nextIntent();
+  function toggleSession(){
+    running ? stopSession() : startSession();
   }
-});
 
-// Initial fit + respond to orientation / resize changes.
-window.addEventListener("load", fitIntentText);
-window.addEventListener("resize", () => {
-  // small delay so layout settles on iOS rotation
-  window.setTimeout(fitIntentText, 80);
-});
+  function fadeIntentTo(text){
+    // fade + tiny pulse (only when NOT running)
+    intentEl.style.opacity = '0';
+    intentEl.classList.remove('pulse');
+    setTimeout(() => {
+      intentEl.textContent = text;
+      intentEl.style.opacity = '1';
+      intentEl.classList.add('pulse');
+      setTimeout(() => intentEl.classList.remove('pulse'), 520);
+    }, 220);
+  }
 
-// Start in idle state
-setRunning(false);
-fitIntentText();</script>
+  function nextIntent(){
+    if (running) return; // silent during session
+    intentIndex = (intentIndex + 1) % INTENTIONS.length;
+    fadeIntentTo(INTENTIONS[intentIndex]);
+  }
+
+  // Events
+  toggleBtn.addEventListener('click', toggleSession);
+  circle.addEventListener('click', () => { if (!running) startSession(); });
+
+  intentEl.addEventListener('click', nextIntent);
+  intentEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      nextIntent();
+    }
+  });
+
+  // Safety: prevent timer pile-up on tab backgrounding
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && running) {
+      clearPhaseTimers();
+    } else if (!document.hidden && running) {
+      startPhaseLoop();
+    }
+  });
+
+})();
+</script>
 </body>
 </html>
