@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Field</title>
+  <meta name="theme-color" content="#080f12">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%2378f0b1'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#080f12;
+      --surface:#111c24;
+      --border:rgba(255,255,255,.06);
+      --border-h:rgba(255,255,255,.13);
+      --text:#dde8f0;
+      --text-dim:#607587;
+      --accent:#78f0b1;
+      --accent-dim:rgba(120,240,177,.10);
+      --accent-glow:rgba(120,240,177,.28);
+      --font-d:'DM Serif Display', Georgia, serif;
+      --font-b:'DM Sans', system-ui, sans-serif;
+      --r:18px;
+      --r-sm:11px;
+      --ease: cubic-bezier(.4,0,.2,1);
+    }
+
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{
+      font-family:var(--font-b);
+      background:var(--bg);
+      color:var(--text);
+      min-height:100vh;
+      -webkit-font-smoothing:antialiased;
+      overflow-x:hidden;
+    }
+
+    body::before{
+      content:'';
+      position:fixed; inset:0;
+      background:
+        radial-gradient(ellipse 80vw 60vw at 50% -10%, rgba(120,240,177,.04) 0%, transparent 70%),
+        radial-gradient(ellipse 60vw 40vw at 90% 80%, rgba(122,184,255,.03) 0%, transparent 60%);
+      pointer-events:none;
+      z-index:0;
+    }
+
+    .page{
+      position:relative; z-index:1;
+      max-width:520px;
+      margin:0 auto;
+      padding:28px 18px 70px;
+      text-align:center;
+ Awareness.
+    }
+
+    .field{
+      font-family:var(--font-d);
+      font-weight:300;
+      letter-spacing:.14em;
+      text-transform:lowercase;
+      font-size:3.6rem;
+      opacity:.92;
+      margin:6px 0 18px;
+      transition: opacity 1.8s ease 0.8s;
+      user-select:none;
+    }
+
+    .card{
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:var(--r);
+      padding:26px 22px 24px;
+      position:relative;
+      overflow:hidden;
+    }
+
+    .circle-wrap{
+      position:relative;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      margin:8px 0 16px;
+    }
+
+    .circle{
+      width:176px;height:176px;
+      border-radius:50%;
+      background:
+        radial-gradient(circle at 33% 28%, rgba(255,255,255,.22) 0%, transparent 55%),
+        var(--accent);
+      box-shadow:
+        0 0 70px var(--accent-glow),
+        inset 0 1px 0 rgba(255,255,255,.28);
+      cursor:pointer;
+      user-select:none;
+      position:relative;
+      transform:scale(1);
+      will-change: transform;
+    }
+
+    .phase{
+      position:absolute; inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex-direction:column;
+      pointer-events:none;
+    }
+
+    .phase-text{
+      font-size:10px;
+      font-weight:700;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      color:rgba(8,20,14,.62);
+    }
+
+    .cue{
+      font-family:var(--font-d);
+      font-size:26px;
+      line-height:1.15;
+      margin:12px 0 6px;
+      min-height:34px;
+      transition: opacity .25s ease;
+    }
+    .cue.fade{opacity:0;}
+
+    .field-line{
+      margin: 4px 0 14px;
+      font-size: 12px;
+      letter-spacing: .08em;
+      text-transform: lowercase;
+      color: rgba(221,232,240,.72);
+      opacity: .75;
+      user-select: none;
+    }
+
+    .row{
+      display:flex;
+      justify-content:center;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+
+    .chip{
+      appearance:none;
+      border:1px solid var(--border);
+      background:transparent;
+      color:var(--text-dim);
+      border-radius:999px;
+      padding:7px 14px;
+      font-size:12px;
+      font-weight:700;
+      cursor:pointer;
+      transition: all .18s var(--ease);
+      user-select:none;
+    }
+    .chip:hover{border-color:var(--border-h); color:var(--text);}
+    .chip.active{
+      background:var(--accent-dim);
+      border-color:rgba(120,240,177,.26);
+      color:var(--accent);
+    }
+
+    .btn{
+      appearance:none;
+      border:none;
+      border-radius:999px;
+      padding:12px 36px;
+      font-size:14px;
+      font-weight:800;
+      font-family:var(--font-b);
+      cursor:pointer;
+      transition: transform .18s var(--ease), filter .18s var(--ease);
+      user-select:none;
+    }
+
+    .btn.primary{
+      background:var(--accent);
+      color:#0a180f;
+      box-shadow:0 4px 22px var(--accent-glow);
+    }
+    .btn.primary:hover{transform:translateY(-1px); filter:brightness(1.02);}
+    .btn.primary.running{
+      background:rgba(255,255,255,.06);
+      color:var(--text-dim);
+      box-shadow:none;
+    }
+
+    .btn.ghost{
+      background:rgba(255,255,255,.04);
+      color:var(--text-dim);
+      border:1px solid var(--border);
+      padding:9px 16px;
+      font-size:12px;
+      font-weight:700;
+      border-radius:var(--r-sm);
+    }
+    .btn.ghost:hover{border-color:var(--border-h); color:var(--text);}
+
+    .modal{
+      position:fixed; inset:0; z-index:10;
+      background:rgba(8,15,18,.86);
+      backdrop-filter: blur(10px);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:22px;
+      opacity:0;
+      pointer-events:none;
+      transition: opacity .25s ease;
+    }
+    .modal.visible{
+      opacity:1;
+      pointer-events:auto;
+    }
+    .modal-box{
+      width:100%;
+      max-width:380px;
+      background:var(--surface);
+      border:1px solid var(--border-h);
+      border-radius:24px;
+      padding:26px 22px;
+      text-align:center;
+    }
+    .modal-title{
+      font-family:var(--font-d);
+      font-size:28px;
+      margin-bottom:8px;
+    }
+    .modal-body{
+      font-size:13px;
+      color:var(--text-dim);
+      line-height:1.6;
+      margin-bottom:16px;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="field" id="fieldWord">field</div>
+
+    <div class="card">
+      <div class="circle-wrap">
+        <div class="circle" id="circle" tabindex="0">
+          <div class="phase">
+            <div class="phase-text" id="phaseText">tap to begin</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <button class="chip" data-min="5" id="d5">5m</button>
+        <button class="chip" data-min="10" id="d10">10m</button>
+        <button class="chip" data-min="15" id="d15">15m</button>
+      </div>
+
+      <div class="cue" id="cueLine">Equanimity and awareness</div>
+
+      <div class="field-line">
+        The field is shared.
+      </div>
+
+      <div class="row">
+        <button class="btn ghost" id="changeCue">Change</button>
+      </div>
+
+      <br>
+
+      <button class="btn primary" id="startBtn">Start</button>
+
+    </div>
+  </div>
+
+  <div class="modal" id="doneModal">
+    <div class="modal-box">
+      <div class="modal-title">Session complete</div>
+      <div class="modal-body">Stay with the quiet for a moment.</div>
+      <button class="btn primary" id="doneBtn">Done</button>
+    </div>
+  </div>
+
+<script>
+(() => {
+  'use strict';
+
+  const CYCLE_SEC = 11.0;
+  const AMP = 0.22;
+
+  const CUES = [
+    'Equanimity and awareness',
+    'Steady and open',
+    'Let the exhale land',
+    'Nothing to fix',
+    'Soft eyes, soft jaw',
+    'Receive this moment',
+    'Gentle return'
+  ];
+
+  const $ = id => document.getElementById(id);
+
+  const circle = $('circle');
+  const phaseText = $('phaseText');
+  const startBtn = $('startBtn');
+  const fieldWord = $('fieldWord');
+
+  const dBtns = [$('d5'),$('d10'),$('d15')];
+  const cueLine = $('cueLine');
+  const changeCue = $('changeCue');
+
+  const doneModal = $('doneModal');
+  const doneBtn = $('doneBtn');
+
+  let running=false;
+  let remaining=0;
+  let timer=null;
+
+  let cueIdx=0;
+  let minutes=5;
+
+  let raf=null;
+  let startTs=0;
+
+  function setDuration(m){
+    minutes=m;
+    dBtns.forEach(b=>b.classList.toggle('active',+b.dataset.min===m));
+  }
+
+  function setCue(i){
+    cueIdx=i;
+    cueLine.textContent=CUES[i];
+  }
+
+  function fadeField(){
+    fieldWord.style.opacity='0';
+  }
+
+  function showField(){
+    fieldWord.style.opacity='.92';
+  }
+
+  function wave(){
+    if(raf) return;
+    startTs=performance.now();
+
+    const step=(t)=>{
+      if(!running){raf=null;return;}
+      const s=(t-startTs)/1000;
+      const p=(s/CYCLE_SEC)*Math.PI*2;
+
+      const scale=1-AMP*Math.cos(p);
+      circle.style.transform='scale('+scale+')';
+
+      phaseText.textContent=Math.sin(p)>=0?'inhale':'exhale';
+
+      raf=requestAnimationFrame(step);
+    };
+
+    raf=requestAnimationFrame(step);
+  }
+
+  function stopWave(){
+    cancelAnimationFrame(raf);
+    raf=null;
+    circle.style.transform='scale(1)';
+    phaseText.textContent='tap to begin';
+  }
+
+  function start(){
+    running=true;
+    remaining=minutes*60;
+
+    startBtn.textContent='Stop';
+    startBtn.classList.add('running');
+
+    fadeField();
+    wave();
+
+    timer=setInterval(()=>{
+      remaining--;
+      if(remaining<=0) stop(true);
+    },1000);
+  }
+
+  function stop(done){
+    running=false;
+    clearInterval(timer);
+
+    startBtn.textContent='Start';
+    startBtn.classList.remove('running');
+
+    stopWave();
+    showField();
+
+    if(done){
+      doneModal.classList.add('visible');
+    }
+  }
+
+  function toggle(){
+    running?stop(false):start();
+  }
+
+  startBtn.onclick=toggle;
+  circle.onclick=()=>{if(!running)toggle();};
+
+  dBtns.forEach(b=>{
+    b.onclick=()=>{if(!running)setDuration(+b.dataset.min);};
+  });
+
+  changeCue.onclick=()=>{
+    cueLine.classList.add('fade');
+    setTimeout(()=>{
+      cueIdx=(cueIdx+1)%CUES.length;
+      setCue(cueIdx);
+      cueLine.classList.remove('fade');
+    },150);
+  };
+
+  doneBtn.onclick=()=>{
+    doneModal.classList.remove('visible');
+  };
+
+  setDuration(5);
+  setCue(0);
+
+})();
+</script>
+</body>
+</html>
