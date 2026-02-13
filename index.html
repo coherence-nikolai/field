@@ -2,170 +2,177 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>field</title>
 
 <style>
-:root{
-  --bg1:#071315;
-  --bg2:#0f2a28;
-  --card:#0d1f23;
-  --mint:#7df2b2;
-  --text:#e6f1ef;
-  --muted:#8aa3a0;
+:root {
+  --bg1: #071516;
+  --bg2: #0e2423;
+  --card: rgba(12, 32, 34, 0.85);
+  --mint: #7ef5b5;
+  --header: #e6f1ee;
+  --soft: rgba(230,241,238,0.7);
 }
 
-*{
-  box-sizing:border-box;
-  margin:0;
-  padding:0;
-}
-
-body{
-  min-height:100vh;
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
   font-family: "Georgia", serif;
-  background:
-    radial-gradient(1200px at top,var(--bg2),var(--bg1));
-  color:var(--text);
-  display:flex;
-  justify-content:center;
 }
 
-.app{
-  width:100%;
-  max-width:430px;
-  padding:env(safe-area-inset-top) 20px 40px;
-  text-align:center;
+body {
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #143332, var(--bg1));
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--header);
 }
 
-/* HEADER */
-.header{
-  margin-top:40px;
-  margin-bottom:30px;
-  display:flex;
-  justify-content:center;
+.wrapper {
+  width: 100%;
+  max-width: 420px;
+  padding: 40px 20px 60px;
+  text-align: center;
 }
 
-.header h1{
-  font-size:3.8rem;
-  font-weight:400;
-  letter-spacing:0.3em;
-  transform:translateX(0.15em); /* optical centering */
-  opacity:1;
-  transition:opacity 1.5s ease;
+h1 {
+  font-size: 3.6rem;
+  letter-spacing: 0.35em;
+  margin-bottom: 40px;
+  color: var(--header);
+  font-weight: 400;
 }
 
-.header.fade{
-  opacity:0.15;
+.card {
+  background: linear-gradient(160deg, rgba(14,40,40,0.9), rgba(5,20,20,0.9));
+  border-radius: 26px;
+  padding: 40px 25px 45px;
+  box-shadow: 0 30px 60px rgba(0,0,0,0.5);
 }
 
-/* CARD */
-.card{
-  background:linear-gradient(160deg,#0b1d22,#0f2a28);
-  border-radius:28px;
-  padding:38px 26px 42px;
-  box-shadow:0 40px 80px rgba(0,0,0,.45);
+.circle {
+  width: 210px;
+  height: 210px;
+  margin: 0 auto 25px;
+  background: radial-gradient(circle at 30% 30%, #9fffcf, var(--mint));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Arial, sans-serif;
+  letter-spacing: 0.15em;
+  font-size: 0.75rem;
+  color: #063a2b;
+  box-shadow: 0 0 50px rgba(126,245,181,0.6);
+  cursor: pointer;
+  transition: transform 1s ease-in-out;
 }
 
-/* CIRCLE */
-.circle-wrap{
-  display:flex;
-  justify-content:center;
-  margin-bottom:22px;
+.circle.breathing {
+  animation: breathe 11s ease-in-out infinite;
 }
 
-.circle{
-  width:210px;
-  height:210px;
-  border-radius:50%;
-  background:radial-gradient(circle at 30% 30%,#8df5c0,var(--mint));
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-family:Arial, sans-serif;
-  letter-spacing:0.15em;
-  font-size:0.8rem;
-  color:#08351f;
-  box-shadow:0 0 60px rgba(125,242,178,.35);
-  transition:transform 5.5s ease-in-out;
+@keyframes breathe {
+  0% { transform: scale(0.85); }
+  50% { transform: scale(1); }
+  100% { transform: scale(0.85); }
 }
 
-.circle.expand{
-  transform:scale(1.1);
+.intent {
+  font-size: 2rem;
+  margin: 30px 0 10px;
+  cursor: pointer;
+  user-select: none;
+  color: var(--header);
+  transition: opacity 0.3s ease;
 }
 
-.circle.contract{
-  transform:scale(0.9);
+.intent:active {
+  opacity: 0.7;
 }
 
-/* INTENTION */
-.intention{
-  margin-bottom:6px;
-  font-size:2.2rem;
+.sub {
+  font-size: 0.9rem;
+  color: var(--soft);
+  margin-bottom: 28px;
 }
 
-.shared{
-  font-size:0.9rem;
-  color:var(--muted);
-  margin-bottom:26px;
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 30px;
 }
 
-/* CONTROLS */
-.controls{
-  display:flex;
-  justify-content:center;
-  gap:16px;
+button {
+  background: linear-gradient(135deg, #6deeb0, var(--mint));
+  border: none;
+  padding: 12px 28px;
+  border-radius: 999px;
+  font-size: 1rem;
+  cursor: pointer;
+  color: #063a2b;
+  box-shadow: 0 6px 18px rgba(126,245,181,0.4);
+  transition: transform 0.2s ease;
 }
 
-button{
-  border:none;
-  border-radius:28px;
-  padding:12px 28px;
-  font-size:1rem;
-  cursor:pointer;
+button:hover {
+  transform: scale(1.05);
 }
 
-.start{
-  background:linear-gradient(135deg,#6feea8,#88f5c4);
-  color:#06321f;
-  box-shadow:0 8px 24px rgba(125,242,178,.4);
+button.secondary {
+  background: transparent;
+  border: 1px solid rgba(126,245,181,0.4);
+  color: var(--mint);
+  box-shadow: none;
 }
 
-.stop{
-  background:transparent;
-  color:#6b8885;
-  border:1px solid rgba(255,255,255,.08);
-  display:none;
+button.secondary:disabled {
+  opacity: 0.3;
 }
 
-/* MOBILE TUNE */
-@media(max-width:390px){
-  .header h1{font-size:3.4rem;}
-  .circle{width:190px;height:190px;}
+
+.intent.fading {
+  opacity: 0;
 }
+
+.intent.pulse {
+  animation: intentPulse 1.2s ease-in-out 1;
+}
+
+@keyframes intentPulse {
+  0%   { text-shadow: 0 0 0 rgba(126,245,181,0.0); }
+  40%  { text-shadow: 0 0 18px rgba(126,245,181,0.22); }
+  70%  { text-shadow: 0 0 10px rgba(126,245,181,0.14); }
+  100% { text-shadow: 0 0 0 rgba(126,245,181,0.0); }
+}
+
 </style>
 </head>
 
 <body>
 
-<div class="app">
+<div class="wrapper">
 
-  <div class="header" id="header">
-    <h1>field</h1>
-  </div>
+  <h1>field</h1>
 
   <div class="card">
 
-    <div class="circle-wrap">
-      <div class="circle" id="circle">TAP TO BEGIN</div>
+    <div id="circle" class="circle">TAP TO BEGIN</div>
+
+    <div id="intent" class="intent" tabindex="0">
+      Equanimity and awareness
     </div>
-<div class="intention">Equanimity and awareness</div>
-    <div class="shared">the field is shared.</div>
+
+    <div class="sub">the field is shared.</div>
 
     <div class="controls">
-      <button class="start" id="startBtn">Start</button>
-      <button class="stop" id="stopBtn">Stop</button>
+      <button id="startBtn">Start</button>
+      <button id="stopBtn" class="secondary" disabled>Stop</button>
     </div>
 
   </div>
@@ -173,62 +180,79 @@ button{
 </div>
 
 <script>
+
+const circle = document.getElementById("circle");
 const startBtn = document.getElementById("startBtn");
-const stopBtn  = document.getElementById("stopBtn");
-const circle   = document.getElementById("circle");
-const header   = document.getElementById("header");
+const stopBtn = document.getElementById("stopBtn");
+const intentEl = document.getElementById("intent");
 
-let running=false;
-let cycle;
+let running = false;
+let intentIndex = 0;
 
-function inhale(){
-  circle.classList.remove("contract");
-  circle.classList.add("expand");
-  circle.textContent="INHALE";
+const INTENTIONS = [
+  "Equanimity and awareness",
+  "Be the field",
+  "Steady and open",
+  "Soft belly, wide sky",
+  "Kind attention",
+  "Ease and clarity",
+  "Let it arrive",
+  "Quiet strength",
+  "Receive the breath"
+];
+
+function startSession() {
+  if (running) return;
+
+  running = true;
+  circle.classList.add("breathing");
+  circle.textContent = "EXHALE";
+
+  startBtn.disabled = true;
+  stopBtn.disabled = false;
 }
 
-function exhale(){
-  circle.classList.remove("expand");
-  circle.classList.add("contract");
-  circle.textContent="EXHALE";
+function stopSession() {
+  running = false;
+  circle.classList.remove("breathing");
+  circle.textContent = "TAP TO BEGIN";
+
+  startBtn.disabled = false;
+  stopBtn.disabled = true;
 }
 
-function startBreathing(){
-  if(running) return;
-  running=true;
+function nextIntent() {
+  intentIndex = (intentIndex + 1) % INTENTIONS.length;
 
-  header.classList.add("fade");
+  // Fade out → swap text → fade in + subtle glow pulse
+  intentEl.classList.add("fading");
 
-  startBtn.style.display="none";
-  stopBtn.style.display="inline-block";
+  window.setTimeout(() => {
+    intentEl.textContent = INTENTIONS[intentIndex];
+    intentEl.classList.remove("fading");
 
-  inhale();
+    // restart pulse animation
+    intentEl.classList.remove("pulse");
+    // force reflow so animation restarts reliably
+    void intentEl.offsetWidth;
+    intentEl.classList.add("pulse");
 
-  cycle=setInterval(()=>{
-    if(circle.textContent==="INHALE"){
-      exhale();
-    }else{
-      inhale();
-    }
-  },5500);
+    window.setTimeout(() => intentEl.classList.remove("pulse"), 1300);
+  }, 180);
 }
 
-function stopBreathing(){
-  running=false;
-  clearInterval(cycle);
+startBtn.addEventListener("click", startSession);
+stopBtn.addEventListener("click", stopSession);
+circle.addEventListener("click", startSession);
+intentEl.addEventListener("click", nextIntent);
 
-  circle.classList.remove("expand","contract");
-  circle.textContent="TAP TO BEGIN";
+intentEl.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    nextIntent();
+  }
+});
 
-  header.classList.remove("fade");
-
-  startBtn.style.display="inline-block";
-  stopBtn.style.display="none";
-}
-
-startBtn.addEventListener("click",startBreathing);
-circle.addEventListener("click",startBreathing);
-stopBtn.addEventListener("click",stopBreathing);
 </script>
 
 </body>
