@@ -87,12 +87,12 @@ body{
   font-family: Arial, system-ui, sans-serif;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--circleText);
   box-shadow: 0 0 52px rgba(126,245,181,0.52);
   cursor:pointer;
   user-select:none;
-  transition: box-shadow 900ms ease, filter 900ms ease;
+  transition: box-shadow 900ms ease, filter 900ms ease, opacity 420ms ease;
 }
 
 /* breathing motion */
@@ -105,7 +105,7 @@ body{
   100%{ transform: scale(0.84); }
 }
 
-/* subtle phase glow shift (still silent: no label changes required) */
+/* subtle phase glow shift */
 .circle.phase-in{
   box-shadow: 0 0 58px rgba(126,245,181,0.60);
   filter: brightness(1.02);
@@ -145,14 +145,14 @@ body{
 .intent{
   color: var(--header);
   font-weight: 400;
-  font-size: 1.65rem;          /* slightly smaller */
+  font-size: 1.65rem;
   line-height: 1.1;
   margin: 18px 0 8px;
   cursor:pointer;
   user-select:none;
 
   white-space: nowrap;
-  overflow: visible;           /* never clip */
+  overflow: visible;
   transition: opacity 420ms ease;
 }
 .intent.pulse{
@@ -188,7 +188,7 @@ button{
 button:active{ transform: scale(0.99); }
 button:hover{ filter: brightness(1.02); }
 
-/* small screens: keep header & intent fitting */
+/* small screens */
 @media (max-width: 360px){
   .header{ width: 200px; font-size: 3.25rem; }
   .circleWrap,.circle{ width:200px; height:200px; }
@@ -205,7 +205,7 @@ button:hover{ filter: brightness(1.02); }
     <div class="card">
       <div class="circleWrap">
         <div class="ripple" id="ripple"></div>
-        <div class="circle" id="circle">TAP TO BEGIN</div>
+        <div class="circle" id="circle" aria-live="polite">FOLLOW THE CIRCLE</div>
       </div>
 
       <div class="intent" id="intent" tabindex="0">Equanimity and awareness</div>
@@ -246,14 +246,19 @@ button:hover{ filter: brightness(1.02); }
 
   let running = false;
   let intentIndex = 0;
+  let firstCycleGuidance = true;
 
-  // Phase timer (for glow only; silent mode keeps text static)
+  // Timers
   let phaseTimeoutA = null;
   let phaseTimeoutB = null;
+  let labelTimeoutA = null;
+  let labelTimeoutB = null;
 
-  function clearPhaseTimers(){
+  function clearTimers(){
     if (phaseTimeoutA) { clearTimeout(phaseTimeoutA); phaseTimeoutA = null; }
     if (phaseTimeoutB) { clearTimeout(phaseTimeoutB); phaseTimeoutB = null; }
+    if (labelTimeoutA) { clearTimeout(labelTimeoutA); labelTimeoutA = null; }
+    if (labelTimeoutB) { clearTimeout(labelTimeoutB); labelTimeoutB = null; }
   }
 
   function setGlowPhase(phase){
@@ -261,21 +266,34 @@ button:hover{ filter: brightness(1.02); }
     circle.classList.add(phase === 'in' ? 'phase-in' : 'phase-out');
   }
 
-  function startPhaseLoop(){
-    clearPhaseTimers();
+  function startGlowLoop(){
+    clearTimeout(phaseTimeoutA);
+    clearTimeout(phaseTimeoutB);
 
-    // Align phase glow to the same 11s loop: IN then OUT
     setGlowPhase('in');
     phaseTimeoutA = setTimeout(() => {
       setGlowPhase('out');
       phaseTimeoutB = setTimeout(() => {
-        if (running) startPhaseLoop();
+        if (running) startGlowLoop();
+      }, OUT_SEC * 1000);
+    }, IN_SEC * 1000);
+  }
+
+  function startFirstCycleLabels(){
+    clearTimeout(labelTimeoutA);
+    clearTimeout(labelTimeoutB);
+
+    circle.textContent = 'INHALE';
+    labelTimeoutA = setTimeout(() => {
+      circle.textContent = 'EXHALE';
+      labelTimeoutB = setTimeout(() => {
+        if (running) circle.textContent = ''; // silent thereafter
+        firstCycleGuidance = false;
       }, OUT_SEC * 1000);
     }, IN_SEC * 1000);
   }
 
   function forceRestartAnimation(el, cls){
-    // Ensures animation starts from 0 each time (prevents drift)
     el.classList.remove(cls);
     void el.offsetWidth;
     el.classList.add(cls);
@@ -288,19 +306,16 @@ button:hover{ filter: brightness(1.02); }
     app.classList.add('running');
     header.style.opacity = '0.25';
 
-    // Ripple once on start
     ripple.classList.remove('go');
     void ripple.offsetWidth;
     ripple.classList.add('go');
 
-    // Start breathing animation (from 0)
     forceRestartAnimation(circle, 'breathing');
 
-    // Silent mode: remove label while running
-    circle.textContent = '';
+    firstCycleGuidance = true;
+    startFirstCycleLabels();
 
-    // Start glow phase loop (silent)
-    startPhaseLoop();
+    startGlowLoop();
 
     toggleBtn.textContent = 'Stop';
   }
@@ -311,10 +326,10 @@ button:hover{ filter: brightness(1.02); }
     app.classList.remove('running');
     header.style.opacity = '1';
 
-    clearPhaseTimers();
+    clearTimers();
     circle.classList.remove('breathing','phase-in','phase-out');
 
-    circle.textContent = 'TAP TO BEGIN';
+    circle.textContent = 'FOLLOW THE CIRCLE';
     toggleBtn.textContent = 'Start';
   }
 
@@ -323,7 +338,6 @@ button:hover{ filter: brightness(1.02); }
   }
 
   function fadeIntentTo(text){
-    // fade + tiny pulse (only when NOT running)
     intentEl.style.opacity = '0';
     intentEl.classList.remove('pulse');
     setTimeout(() => {
@@ -335,12 +349,11 @@ button:hover{ filter: brightness(1.02); }
   }
 
   function nextIntent(){
-    if (running) return; // silent during session
+    if (running) return;
     intentIndex = (intentIndex + 1) % INTENTIONS.length;
     fadeIntentTo(INTENTIONS[intentIndex]);
   }
 
-  // Events
   toggleBtn.addEventListener('click', toggleSession);
   circle.addEventListener('click', () => { if (!running) startSession(); });
 
@@ -352,12 +365,12 @@ button:hover{ filter: brightness(1.02); }
     }
   });
 
-  // Safety: prevent timer pile-up on tab backgrounding
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && running) {
-      clearPhaseTimers();
+      clearTimers();
     } else if (!document.hidden && running) {
-      startPhaseLoop();
+      startGlowLoop();
+      if (firstCycleGuidance) startFirstCycleLabels();
     }
   });
 
