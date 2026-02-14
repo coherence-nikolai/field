@@ -194,9 +194,30 @@ button:hover{ filter: brightness(1.02); }
   .circleWrap,.circle{ width:200px; height:200px; }
   .intent{ font-size: 1.52rem; }
 }
+
+.lang-toggle{
+  position:absolute;
+  top:12px;
+  right:16px;
+  font-size:12px;
+  letter-spacing:0.12em;
+  opacity:0.7;
+}
+.lang-toggle span{
+  cursor:pointer;
+}
+.lang-toggle span.active{
+  opacity:1;
+}
+
 </style>
 </head>
 <body>
+
+<div class="lang-toggle">
+  <span id="enBtn">EN</span> · <span id="esBtn">ES</span>
+</div>
+
   <div class="wrapper" id="app">
     <div class="header" id="header" aria-label="field wordmark">
       <span>f</span><span>i</span><span>e</span><span>l</span><span>d</span>
@@ -225,17 +246,7 @@ button:hover{ filter: brightness(1.02); }
   const IN_SEC  = 5.5;
   const OUT_SEC = 5.5;
 
-  const INTENTIONS = [
-    "Equanimity and awareness",
-    "Steady and open",
-    "Soft and spacious",
-    "Let it arrive",
-    "Nothing to fix",
-    "Here, now",
-    "Be the field",
-    "Rest in the field",
-    "Clear and kind"
-  ];
+  let intentions = [];
 
   const app       = document.getElementById('app');
   const header    = document.getElementById('header');
@@ -375,6 +386,82 @@ button:hover{ filter: brightness(1.02); }
   });
 
 })();
+
+let lang = 'en';
+
+const TEXT = {
+  en: {
+    field: "field",
+    tagline: "Field propagates by resonance.",
+    inhale: "INHALE",
+    exhale: "EXHALE",
+    start: "START",
+    stop: "STOP",
+    sub: "The field is shared.",
+    intentions: [
+      "Equanimity and awareness",
+      "Steady and open",
+      "Soft and spacious",
+      "Let it arrive",
+      "Nothing to fix",
+      "Here, now",
+      "Be the field",
+      "Rest in the field",
+      "Clear and kind"
+    ]
+  },
+  es: {
+    field: "campo",
+    tagline: "El Campo de Presencia se comparte en resonancia.",
+    inhale: "INHALA",
+    exhale: "EXHALA",
+    start: "COMENZAR",
+    stop: "DETENER",
+    sub: "El campo se comparte.",
+    intentions: [
+      "Calma y atención",
+      "Tranquilo y abierto",
+      "Suave y amplio",
+      "Deja que llegue",
+      "Nada que arreglar",
+      "Aquí y ahora",
+      "Sé el campo presente",
+      "Descansa en el campo",
+      "Claro y cariñoso"
+    ]
+  }
+};
+
+function setLanguage(l){
+  lang = l;
+
+  logo.textContent = TEXT[lang].field;
+  tagline.textContent = TEXT[lang].tagline;
+  sub.textContent = TEXT[lang].sub;
+
+  startBtn.textContent = running ? TEXT[lang].stop : TEXT[lang].start;
+
+  intentions = [...TEXT[lang].intentions];
+  intentionIndex = 0;
+  updateIntention();
+}
+
+
+document.getElementById('enBtn').onclick = () => {
+  enBtn.classList.add('active');
+  esBtn.classList.remove('active');
+  setLanguage('en');
+};
+
+document.getElementById('esBtn').onclick = () => {
+  esBtn.classList.add('active');
+  enBtn.classList.remove('active');
+  setLanguage('es');
+};
+
+enBtn.classList.add('active');
+setLanguage('en');
+
 </script>
 </body>
 </html>
