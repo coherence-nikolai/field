@@ -294,9 +294,9 @@ button:hover{ filter: brightness(1.02); }
     clearTimeout(labelTimeoutA);
     clearTimeout(labelTimeoutB);
 
-    circle.textContent = 'INHALE';
+    circle.textContent = TEXT[lang].inhale;
     labelTimeoutA = setTimeout(() => {
-      circle.textContent = 'EXHALE';
+      circle.textContent = TEXT[lang].exhale;
       labelTimeoutB = setTimeout(() => {
         if (running) circle.textContent = ''; // silent thereafter
         firstCycleGuidance = false;
@@ -328,7 +328,7 @@ button:hover{ filter: brightness(1.02); }
 
     startGlowLoop();
 
-    toggleBtn.textContent = 'Stop';
+    toggleBtn.textContent = TEXT[lang].stop;
   }
 
   function stopSession(){
@@ -340,8 +340,8 @@ button:hover{ filter: brightness(1.02); }
     clearTimers();
     circle.classList.remove('breathing','phase-in','phase-out');
 
-    circle.textContent = 'FOLLOW THE CIRCLE';
-    toggleBtn.textContent = 'Start';
+    circle.textContent = TEXT[lang].follow;
+    toggleBtn.textContent = TEXT[lang].start;
   }
 
   function toggleSession(){
@@ -361,8 +361,8 @@ button:hover{ filter: brightness(1.02); }
 
   function nextIntent(){
     if (running) return;
-    intentIndex = (intentIndex + 1) % INTENTIONS.length;
-    fadeIntentTo(INTENTIONS[intentIndex]);
+    intentIndex = (intentIndex + 1) % intentions.length;
+    fadeIntentTo(intentions[intentIndex]);
   }
 
   toggleBtn.addEventListener('click', toggleSession);
@@ -389,15 +389,19 @@ button:hover{ filter: brightness(1.02); }
 
 let lang = 'en';
 
+const enBtn = document.getElementById('enBtn');
+const esBtn = document.getElementById('esBtn');
+const subEl = document.getElementById('sub');
+
 const TEXT = {
   en: {
-    field: "field",
-    tagline: "Field propagates by resonance.",
+    header: "field",
     inhale: "INHALE",
     exhale: "EXHALE",
     start: "START",
     stop: "STOP",
-    sub: "The field is shared.",
+    follow: "FOLLOW THE CIRCLE",
+    sub: "the field is shared.",
     intentions: [
       "Equanimity and awareness",
       "Steady and open",
@@ -411,13 +415,13 @@ const TEXT = {
     ]
   },
   es: {
-    field: "campo",
-    tagline: "El Campo de Presencia se comparte en resonancia.",
+    header: "campo",
     inhale: "INHALA",
     exhale: "EXHALA",
     start: "COMENZAR",
     stop: "DETENER",
-    sub: "El campo se comparte.",
+    follow: "SIGUE EL CÍRCULO",
+    sub: "el campo se comparte.",
     intentions: [
       "Calma y atención",
       "Tranquilo y abierto",
@@ -432,25 +436,45 @@ const TEXT = {
   }
 };
 
+function renderHeaderWord(word){
+  header.innerHTML = '';
+  for (const ch of word){
+    const s = document.createElement('span');
+    s.textContent = ch;
+    header.appendChild(s);
+  }
+}
+
 function setLanguage(l){
   lang = l;
 
-  logo.textContent = TEXT[lang].field;
-  tagline.textContent = TEXT[lang].tagline;
-  sub.textContent = TEXT[lang].sub;
-
-  startBtn.textContent = running ? TEXT[lang].stop : TEXT[lang].start;
+  renderHeaderWord(TEXT[lang].header);
+  subEl.textContent = TEXT[lang].sub;
 
   intentions = [...TEXT[lang].intentions];
-  intentionIndex = 0;
-  updateIntention();
+  intentIndex = 0;
+  // Only update visible text if we're not in a running session
+  if (!running){
+    intentEl.textContent = intentions[0];
+    circle.textContent = TEXT[lang].follow;
+    toggleBtn.textContent = TEXT[lang].start;
+  }
 }
 
-
-document.getElementById('enBtn').onclick = () => {
+enBtn.addEventListener('click', () => {
   enBtn.classList.add('active');
   esBtn.classList.remove('active');
   setLanguage('en');
+});
+
+esBtn.addEventListener('click', () => {
+  esBtn.classList.add('active');
+  enBtn.classList.remove('active');
+  setLanguage('es');
+});
+
+enBtn.classList.add('active');
+setLanguage('en');
 };
 
 document.getElementById('esBtn').onclick = () => {
