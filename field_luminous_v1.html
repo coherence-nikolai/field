@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>field</title>
+<meta name="theme-color" content="#0b2a24" />
+
+<style>
+:root{
+  /* Luminous field palette */
+  --bgTop:#eaf7f2;
+  --bgMid:#d9f0e7;
+  --bgLow:#cfe9df;
+
+  --cardA: rgba(255,255,255,0.68);
+  --cardB: rgba(255,255,255,0.46);
+  --stroke: rgba(9, 45, 37, 0.10);
+  --shadow: rgba(7, 21, 22, 0.14);
+
+  --mint:#76f0b4;
+  --mint2:#b8ffe0;
+  --mint3:#5fe3a4;
+
+  --ink: rgba(8, 30, 26, 0.88);
+  --soft: rgba(8, 30, 26, 0.56);
+
+  --circleText: rgba(5, 35, 28, 0.70);
+
+  --breathDur: 11s;
+}
+
+*{ box-sizing:border-box; margin:0; padding:0; }
+
+body{
+  min-height:100vh;
+  background:
+    radial-gradient(900px 520px at 50% 0%, rgba(118,240,180,0.24), rgba(118,240,180,0) 60%),
+    radial-gradient(800px 560px at 50% 18%, rgba(255,255,255,0.75), rgba(255,255,255,0) 70%),
+    linear-gradient(var(--bgTop), var(--bgMid) 52%, var(--bgLow));
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  color: var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+/* Subtle container vignette for safety */
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 50% 35%,
+      rgba(0,0,0,0) 0%,
+      rgba(0,0,0,0.025) 55%,
+      rgba(0,0,0,0.05) 100%);
+}
+
+.wrapper{
+  width:100%;
+  max-width:460px;
+  padding: 34px 18px 56px;
+  text-align:center;
+  position:relative;
+}
+
+.lang-toggle{
+  position:absolute;
+  top:10px;
+  right:14px;
+  font-size:12px;
+  letter-spacing:0.12em;
+  opacity:0.72;
+  user-select:none;
+  color: rgba(8,30,26,0.70);
+}
+.lang-toggle span{ cursor:pointer; }
+.lang-toggle span.active{
+  opacity:1;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* Header wordmark constrained to circle width */
+.header{
+  width: 224px;
+  margin: 0 auto 22px;
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  font-weight:400;
+  font-size: 3.45rem;
+  letter-spacing: 0;
+  color: rgba(8,30,26,0.86);
+  transition: opacity 1400ms ease;
+  will-change: opacity;
+}
+.header span{ display:inline-block; line-height:1; }
+
+.header--phrase{
+  width: auto;
+  max-width: min(92vw, 520px);
+  justify-content: center !important;
+  gap: 0 !important;
+  letter-spacing: 0.11em;
+}
+.header--phrase span{
+  white-space: nowrap;
+  font-size: clamp(30px, 6.8vw, 58px);
+  line-height: 1;
+}
+
+/* card */
+.card{
+  position: relative;
+  border-radius: 28px;
+  padding: 34px 22px 30px;
+  background: linear-gradient(165deg, var(--cardA), var(--cardB));
+  border: 1px solid var(--stroke);
+  box-shadow: 0 24px 55px var(--shadow);
+  backdrop-filter: blur(10px);
+}
+
+/* subtle grain */
+.card::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:28px;
+  pointer-events:none;
+  opacity:0.045;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.28'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+
+/* circle */
+.circleWrap{
+  position:relative;
+  width: 226px;
+  height: 226px;
+  margin: 0 auto 16px;
+}
+
+.circle{
+  width:226px;
+  height:226px;
+  border-radius:50%;
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255,255,255,0.80), rgba(255,255,255,0.0) 42%),
+    radial-gradient(circle at 30% 30%, var(--mint2), var(--mint));
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-family: Arial, system-ui, sans-serif;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  color: var(--circleText);
+  cursor:pointer;
+  user-select:none;
+
+  box-shadow:
+    0 0 68px rgba(118,240,180,0.34),
+    0 10px 30px rgba(7,21,22,0.10);
+
+  position: relative;
+  overflow: hidden;
+  will-change: transform, filter;
+}
+
+/* inner mist */
+.circle::before{
+  content:"";
+  position:absolute;
+  inset:7%;
+  border-radius:50%;
+  background:
+    radial-gradient(circle at 40% 35%,
+      rgba(255,255,255,0.18),
+      rgba(118,240,180,0.10),
+      rgba(5,35,28,0.12)
+    );
+  filter: blur(2px);
+  opacity: 0.82;
+}
+
+/* aura */
+.circle::after{
+  content:"";
+  position:absolute;
+  inset:-14%;
+  border-radius:50%;
+  background:
+    radial-gradient(circle,
+      rgba(118,240,180,0.24),
+      rgba(118,240,180,0.10),
+      rgba(118,240,180,0.0) 68%);
+  filter: blur(14px);
+  opacity: 0.70;
+}
+
+/* breathing motion (CONSTANT duration for stability) */
+.circle.breathing{
+  animation: breathe var(--breathDur) cubic-bezier(0.45,0.05,0.55,0.95) infinite;
+}
+@keyframes breathe{
+  0%{ transform: scale(0.885); }
+  50%{ transform: scale(1.00); }
+  100%{ transform: scale(0.885); }
+}
+
+/* inhale/exhale phase tint */
+.circle.phase-in{
+  filter: brightness(1.04) saturate(1.03);
+  box-shadow:
+    0 0 88px rgba(118,240,180,0.44),
+    0 10px 30px rgba(7,21,22,0.10);
+}
+.circle.phase-out{
+  filter: brightness(0.995) saturate(0.99);
+  box-shadow:
+    0 0 62px rgba(118,240,180,0.26),
+    0 10px 30px rgba(7,21,22,0.10);
+}
+
+/* optional stillness */
+.circle.still{
+  animation:none !important;
+  transform: scale(0.97);
+  filter: brightness(1.01);
+  box-shadow:
+    0 0 58px rgba(118,240,180,0.26),
+    0 10px 30px rgba(7,21,22,0.10);
+}
+
+/* label inside circle */
+.circleLabel{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-family: Arial, system-ui, sans-serif;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: clamp(18px, 4.8vw, 22px);
+  color: rgba(5,35,28,0.78);
+  opacity: 0;
+  transition: opacity 700ms ease;
+  pointer-events:none;
+}
+.circleLabel.show{ opacity: 0.95; }
+
+/* extra guidance message */
+.circleHint{
+  position:absolute;
+  left:0; right:0;
+  bottom: 18px;
+  font-family: Arial, system-ui, sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 0.70rem;
+  color: rgba(5,35,28,0.55);
+  opacity: 0;
+  transform: translateY(2px);
+  transition: opacity 900ms ease, transform 900ms ease;
+  pointer-events:none;
+}
+.circleHint.show{
+  opacity: 0.92;
+  transform: translateY(0);
+}
+
+/* stack: reserve height so koan never causes reflow */
+.textStack{
+  min-height: 9.0em;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-start;
+}
+
+/* intention/sub */
+.intent{
+  color: rgba(8,30,26,0.88);
+  font-weight: 400;
+  font-size: clamp(22px, 5.6vw, 30px);
+  line-height: 1.15;
+  margin: 16px 0 6px;
+  user-select:none;
+  transition: opacity 420ms ease;
+}
+.sub{
+  font-size: clamp(14px, 3.7vw, 16px);
+  color: rgba(8,30,26,0.56);
+  margin-bottom: 10px;
+  transition: opacity 420ms ease;
+}
+
+/* koan */
+.koan{
+  color: rgba(8,30,26,0.86);
+  font-weight: 400;
+  font-size: clamp(18px, 4.9vw, 24px);
+  line-height: 1.45;
+  margin: 10px 0 0;
+  opacity: 0;
+  transform: translateY(2px);
+  transition: opacity 1400ms ease, transform 1400ms ease;
+  min-height: 4.0em;
+
+  /* force its own composited layer, reduces impact on circle */
+  will-change: opacity, transform;
+  transform: translateY(2px) translateZ(0);
+}
+.koan.show{
+  opacity: 0.80;
+  transform: translateY(0) translateZ(0);
+}
+
+/* fade intention during session */
+.running .intent,
+.running .sub{
+  opacity: 0;
+  pointer-events:none;
+}
+
+/* koan controls */
+.moreWrap{
+  margin-top: 12px;
+  min-height: 2.4em;
+  display:flex;
+  justify-content:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+/* pill buttons */
+.pillBtn{
+  border: 1px solid rgba(8,30,26,0.16);
+  background: rgba(255,255,255,0.22);
+  color: rgba(8,30,26,0.72);
+  border-radius: 999px;
+  padding: 9px 14px;
+  font-size: 0.92rem;
+  letter-spacing: 0.03em;
+  cursor:pointer;
+  opacity: 0;
+  transform: translateY(2px);
+  transition: opacity 750ms ease, transform 750ms ease, filter 140ms ease;
+  backdrop-filter: blur(8px);
+}
+.pillBtn:active{ transform: translateY(2px) scale(0.99); }
+.pillBtn:hover{ filter: brightness(1.04); }
+.pillBtn.show{
+  opacity: 0.92;
+  transform: translateY(0);
+}
+.pillBtn.on{
+  background: rgba(118,240,180,0.18);
+  border-color: rgba(118,240,180,0.38);
+  color: rgba(5,35,28,0.78);
+}
+
+/* primary control */
+.controls{ display:flex; justify-content:center; margin-top: 10px; }
+button.primary{
+  border: 1px solid rgba(8,30,26,0.10);
+  border-radius: 999px;
+  padding: 12px 32px;
+  font-size: 1rem;
+  cursor:pointer;
+  color: rgba(5,35,28,0.86);
+  background: linear-gradient(135deg, rgba(118,240,180,0.55), rgba(118,240,180,0.28));
+  box-shadow: 0 10px 22px rgba(7,21,22,0.10);
+  transition: transform 140ms ease, filter 140ms ease, opacity 140ms ease;
+}
+button.primary:active{ transform: scale(0.99); }
+button.primary:hover{ filter: brightness(1.03); }
+
+/* small screens */
+@media (max-width: 360px){
+  .header{ width: 210px; font-size: 3.25rem; }
+  .circleWrap,.circle{ width:210px; height:210px; }
+}
+
+/* reduce motion */
+@media (prefers-reduced-motion:reduce){
+  .circle.breathing{ animation:none; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="wrapper" id="app">
+
+  <div class="lang-toggle" aria-label="language selector">
+    <span id="enBtn">EN</span> · <span id="esBtn">ES</span>
+  </div>
+
+  <div class="header" id="header" aria-label="field wordmark"></div>
+
+  <div class="card">
+    <div class="circleWrap">
+      <div class="circle" id="circle" aria-live="polite">
+        <div class="circleLabel" id="circleLabel"></div>
+        <div class="circleHint" id="circleHint"></div>
+        <span id="circleIdleText">FOLLOW THE CIRCLE</span>
+      </div>
+    </div>
+
+    <div class="textStack">
+      <div class="intent" id="intent">Equanimity and awareness</div>
+      <div class="sub" id="sub">the field is shared.</div>
+      <div class="koan" id="koan" aria-live="polite"></div>
+
+      <div class="moreWrap" aria-label="koan controls">
+        <button class="pillBtn" id="holdBtn" type="button">hold</button>
+        <button class="pillBtn" id="moreBtn" type="button">another question</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="primary" id="toggleBtn" type="button">START</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ───────── Language ───────── */
+  let lang = localStorage.getItem('field_lang') || null;
+
+  const TEXT = {
+    en: {
+      header: "field",
+      follow: "FOLLOW THE CIRCLE",
+      start: "START",
+      stop: "STOP",
+      inhale: "INHALE",
+      exhale: "EXHALE",
+      keep: "KEEP GOING",
+      intent: "Equanimity and awareness",
+      sub: "the field is shared.",
+      another: "another question",
+      hold: "hold",
+      held: "held"
+    },
+    es: {
+      header: "campo de presencia",
+      follow: "SIGUE EL CÍRCULO",
+      start: "COMENZAR",
+      stop: "DETENER",
+      inhale: "INHALA",
+      exhale: "EXHALA",
+      keep: "SIGUE",
+      intent: "Calma y atención",
+      sub: "el campo se comparte.",
+      another: "otra pregunta",
+      hold: "sostener",
+      held: "sostenida"
+    }
+  };
+
+  /* Gateway koans (gentle, body-linked). First koan uses only this set. */
+  const GATEWAY_KOANS = {
+    en: [
+      "What is aware of this breath?",
+      "What is noticing right now?",
+      "What is here before thought?",
+      "What is already present?"
+    ],
+    es: [
+      "¿Qué está notando esta respiración?",
+      "¿Qué se da cuenta ahora?",
+      "¿Qué está aquí antes del pensamiento?",
+      "¿Qué ya está presente?"
+    ]
+  };
+
+  /* Full koan pool (opt-in after the first) */
+  const KOANS = {
+    en: [
+      "What remains when effort drops?",
+      "Who is looking?",
+      "Where is the sense of me right now?",
+      "What if nothing is wrong?",
+      "What is already at ease?",
+      "What happens if you stop trying to fix it?",
+      "Is anything missing?",
+      "What is holding you right now?",
+      "Where does tension end and sensation begin?",
+      "What relaxes when you stop pushing?",
+      "What is quiet underneath the noise?",
+      "Who would you be without the next thought?",
+      "Where is the edge of the self right now?",
+      "Can this moment be enough?",
+      "Can you allow this exactly as it is?",
+      "What if you didn’t need to know?",
+      "What is simplest right now?",
+      "What is true without words?",
+      "What returns when you let everything be?",
+      "What if you trust the field?"
+    ],
+    es: [
+      "¿Qué queda cuando el esfuerzo cae?",
+      "¿Quién está mirando?",
+      "¿Dónde aparece el yo ahora mismo?",
+      "¿Y si no hay nada que arreglar?",
+      "¿Qué ya está en calma?",
+      "¿Qué pasa si dejas de querer arreglarlo?",
+      "¿Falta algo ahora?",
+      "¿Qué te está sosteniendo ahora?",
+      "¿Dónde termina la tensión y empieza la sensación?",
+      "¿Qué se suelta cuando dejas de empujar?",
+      "¿Qué silencio hay debajo del ruido?",
+      "¿Quién serías sin el próximo pensamiento?",
+      "¿Dónde se siente el borde del yo ahora?",
+      "¿Y si esto fuera suficiente?",
+      "¿Puedes permitir esto tal como es?",
+      "¿Y si no necesitas saber?",
+      "¿Qué es lo más simple ahora?",
+      "¿Qué es verdad sin palabras?",
+      "¿Qué vuelve cuando lo dejas ser?",
+      "¿Y si confías en el campo?"
+    ]
+  };
+
+  /* ───────── Breath timing (constant, stable) ───────── */
+  const BREATH_DUR = 11.0;   // seconds
+  const IN_SEC = 5.2;
+  const OUT_SEC = 5.8;
+
+  function setBreathCSS(totalSec){
+    document.documentElement.style.setProperty('--breathDur', totalSec.toFixed(2) + 's');
+  }
+
+  /* ───────── DOM ───────── */
+  const app = document.getElementById('app');
+  const header = document.getElementById('header');
+  const circle = document.getElementById('circle');
+  const circleIdleText = document.getElementById('circleIdleText');
+  const circleLabel = document.getElementById('circleLabel');
+  const circleHint = document.getElementById('circleHint');
+  const intentEl = document.getElementById('intent');
+  const subEl = document.getElementById('sub');
+  const koanEl = document.getElementById('koan');
+  const toggleBtn = document.getElementById('toggleBtn');
+  const moreBtn = document.getElementById('moreBtn');
+  const holdBtn = document.getElementById('holdBtn');
+  const enBtn = document.getElementById('enBtn');
+  const esBtn = document.getElementById('esBtn');
+
+  const REQUIRED = { app, header, circle, circleIdleText, circleLabel, circleHint, intentEl, subEl, koanEl, toggleBtn, moreBtn, holdBtn, enBtn, esBtn };
+  const missing = Object.entries(REQUIRED).filter(([,v]) => !v).map(([k]) => k);
+  if (missing.length){
+    console.error("field: missing DOM elements:", missing.join(", "));
+    return;
+  }
+
+  /* ───────── Audio: ocean-field noise tuned around ~220Hz ───────── */
+  let audioCtx = null;
+  let noiseSource = null;
+  let gain = null;
+  let driftOsc = null;
+  let driftGain = null;
+
+  function ensureAudio(){
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // White noise buffer
+    const bufferSize = 2 * audioCtx.sampleRate;
+    const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const out = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) out[i] = Math.random() * 2 - 1;
+
+    noiseSource = audioCtx.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+    noiseSource.loop = true;
+
+    // Band-pass around 220Hz, wide Q (natural)
+    const band = audioCtx.createBiquadFilter();
+    band.type = "bandpass";
+    band.frequency.value = 220;
+    band.Q.value = 0.75;
+
+    // Low-pass to remove harshness
+    const lowpass = audioCtx.createBiquadFilter();
+    lowpass.type = "lowpass";
+    lowpass.frequency.value = 950;
+
+    // Very faint high-shelf air (subtle)
+    const highshelf = audioCtx.createBiquadFilter();
+    highshelf.type = "highshelf";
+    highshelf.frequency.value = 4200;
+    highshelf.gain.value = 1.8;
+
+    gain = audioCtx.createGain();
+    gain.gain.value = 0.0;
+
+    // Slow amplitude drift (alive, not loop)
+    driftOsc = audioCtx.createOscillator();
+    driftOsc.type = "sine";
+    driftOsc.frequency.value = 0.022; // ~45s cycle
+    driftGain = audioCtx.createGain();
+    driftGain.gain.value = 0.010; // tiny (±1%)
+    driftOsc.connect(driftGain);
+    driftGain.connect(gain.gain);
+    driftOsc.start();
+
+    noiseSource.connect(band);
+    band.connect(lowpass);
+    lowpass.connect(highshelf);
+    highshelf.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    noiseSource.start(0);
+  }
+
+  function fadeTo(target, seconds=1.2){
+    if (!gain || !audioCtx) return;
+    const t0 = audioCtx.currentTime;
+    gain.gain.cancelScheduledValues(t0);
+    gain.gain.setValueAtTime(gain.gain.value, t0);
+    gain.gain.linearRampToValueAtTime(target, t0 + seconds);
+  }
+
+  function bell(){
+    if (!audioCtx) return;
+    const t0 = audioCtx.currentTime;
+
+    const osc = audioCtx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(784, t0);
+    osc.frequency.exponentialRampToValueAtTime(523.25, t0 + 0.55);
+
+    const g = audioCtx.createGain();
+    g.gain.setValueAtTime(0.0, t0);
+    g.gain.linearRampToValueAtTime(0.14, t0 + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.78);
+
+    osc.connect(g);
+    g.connect(audioCtx.destination);
+
+    osc.start(t0);
+    osc.stop(t0 + 0.85);
+  }
+
+  /* ───────── Header rendering ───────── */
+  function renderHeaderWord(word){
+    header.innerHTML = '';
+    if (word.includes(' ')) {
+      header.classList.add('header--phrase');
+      const s = document.createElement('span');
+      s.textContent = word;
+      header.appendChild(s);
+      return;
+    }
+    header.classList.remove('header--phrase');
+    for (const ch of word){
+      const s = document.createElement('span');
+      s.textContent = ch;
+      header.appendChild(s);
+    }
+  }
+
+  /* ───────── State / Timers ───────── */
+  let running = false;
+  let held = false;
+  let firstKoanShown = false;
+
+  let phaseTimeoutA=null, phaseTimeoutB=null, stillTimeout=null;
+  let guideTimeoutA=null, guideTimeoutB=null, guideTimeoutC=null, keepTimeoutA=null, keepTimeoutB=null;
+  let headerFadeTimeout=null;
+
+  // Koan cycle timers (Mode B)
+  let firstKoanTimeout=null;
+  let koanHideTimeout=null;
+  let afterglowTimeout=null;
+  let holdOfferTimeout=null;
+  let moreOfferTimeout=null;
+
+  let koans = [];
+  let kIndex = 0;
+
+  function clearAllTimers(){
+    [phaseTimeoutA,phaseTimeoutB,stillTimeout,
+     guideTimeoutA,guideTimeoutB,guideTimeoutC,keepTimeoutA,keepTimeoutB,
+     headerFadeTimeout, firstKoanTimeout, koanHideTimeout, afterglowTimeout, holdOfferTimeout, moreOfferTimeout
+    ].forEach(t => { if(t) clearTimeout(t); });
+
+    phaseTimeoutA=phaseTimeoutB=stillTimeout=null;
+    guideTimeoutA=guideTimeoutB=guideTimeoutC=keepTimeoutA=keepTimeoutB=null;
+    headerFadeTimeout=null;
+    firstKoanTimeout=koanHideTimeout=afterglowTimeout=holdOfferTimeout=moreOfferTimeout=null;
+  }
+
+  /* ───────── Breath / phases ───────── */
+  function setGlowPhase(phase){
+    circle.classList.remove('phase-in','phase-out');
+    circle.classList.add(phase === 'in' ? 'phase-in' : 'phase-out');
+  }
+
+  function startPhaseLoop(){
+    if(!running) return;
+
+    circle.classList.remove('still');
+    circle.classList.add('breathing');
+
+    setGlowPhase('in');
+    phaseTimeoutA = setTimeout(() => {
+      setGlowPhase('out');
+      phaseTimeoutB = setTimeout(() => {
+        // occasional stillness window
+        if (Math.random() < 0.20) enterStillness();
+        else startPhaseLoop();
+      }, OUT_SEC * 1000);
+    }, IN_SEC * 1000);
+  }
+
+  function enterStillness(){
+    circle.classList.remove('breathing','phase-in','phase-out');
+    circle.classList.add('still');
+    stillTimeout = setTimeout(() => {
+      if (running) startPhaseLoop();
+    }, 2200 + Math.random()*1200);
+  }
+
+  /* ───────── Guidance ───────── */
+  function startGuidance(){
+    // INHALE then EXHALE, then keep going, then silence
+    circleLabel.textContent = TEXT[lang].inhale;
+    circleLabel.classList.add('show');
+
+    guideTimeoutA = setTimeout(() => {
+      circleLabel.textContent = TEXT[lang].exhale;
+    }, 5200);
+
+    guideTimeoutB = setTimeout(() => {
+      circleLabel.classList.remove('show');
+    }, 11200);
+
+    guideTimeoutC = setTimeout(() => {
+      circleLabel.textContent = '';
+    }, 12500);
+
+    // keep going hint after first cycle guidance ends
+    keepTimeoutA = setTimeout(() => {
+      circleHint.textContent = TEXT[lang].keep;
+      circleHint.classList.add('show');
+    }, 13200);
+
+    keepTimeoutB = setTimeout(() => {
+      circleHint.classList.remove('show');
+      setTimeout(() => { circleHint.textContent=''; }, 800);
+    }, 16400);
+  }
+
+  /* ───────── Koans (Mode B) ───────── */
+  function initKoans(){
+    // shuffled pool for manual use
+    koans = [...KOANS[lang]].sort(() => Math.random() - 0.5);
+    kIndex = 0;
+  }
+
+  function nextFromPool(){
+    if(!koans.length) return "";
+    const q = koans[kIndex];
+    kIndex = (kIndex + 1) % koans.length;
+    return q;
+  }
+
+  function showKoan(text, {offerButtons=true} = {}){
+    if (!running) return;
+
+    // Reset hold state on new koan
+    held = false;
+    holdBtn.classList.remove('on');
+    holdBtn.textContent = TEXT[lang].hold;
+
+    // Clear prior koan timers
+    [koanHideTimeout, afterglowTimeout, holdOfferTimeout, moreOfferTimeout].forEach(t => { if(t) clearTimeout(t); });
+    koanHideTimeout=afterglowTimeout=holdOfferTimeout=moreOfferTimeout=null;
+
+    // Hide controls until later offers
+    holdBtn.classList.remove('show');
+    moreBtn.classList.remove('show');
+
+    koanEl.textContent = text;
+    koanEl.classList.add('show');
+
+    // Offer HOLD after ~12s (letting it land)
+    if (offerButtons){
+      holdOfferTimeout = setTimeout(() => {
+        if (!running) return;
+        holdBtn.classList.add('show');
+        setTimeout(() => holdBtn.classList.remove('show'), 18000);
+      }, 12000);
+
+      // Offer "another question" after afterglow starts (not during reading)
+      // We'll show it only once the koan dissolves and the field is empty.
+    }
+
+    // Keep visible ~52s then dissolve (8s fade)
+    koanHideTimeout = setTimeout(() => {
+      if (!running) return;
+      if (held) return; // pinned stays
+      koanEl.classList.remove('show');
+
+      // Afterglow: 25s of empty space
+      afterglowTimeout = setTimeout(() => {
+        if (!running) return;
+        if (offerButtons){
+          moreBtn.classList.add('show');
+          setTimeout(() => moreBtn.classList.remove('show'), 20000);
+        }
+      }, 25000);
+    }, 52000);
+  }
+
+  function scheduleFirstKoan(){
+    // First koan arrives at ~25s (fixed, per your request)
+    firstKoanTimeout = setTimeout(() => {
+      if (!running) return;
+      if (firstKoanShown) return;
+
+      const g = GATEWAY_KOANS[lang];
+      const pick = g[Math.floor(Math.random() * g.length)];
+      firstKoanShown = true;
+      showKoan(pick, {offerButtons:true});
+    }, 25000);
+  }
+
+  /* ───────── Language selection ───────── */
+  function setLanguage(l){
+    lang = l;
+    localStorage.setItem('field_lang', l);
+
+    enBtn.classList.toggle('active', l === 'en');
+    esBtn.classList.toggle('active', l === 'es');
+
+    renderHeaderWord(TEXT[lang].header);
+    circleIdleText.textContent = TEXT[lang].follow;
+    toggleBtn.textContent = running ? TEXT[lang].stop : TEXT[lang].start;
+    intentEl.textContent = TEXT[lang].intent;
+    subEl.textContent = TEXT[lang].sub;
+
+    holdBtn.textContent = held ? TEXT[lang].held : TEXT[lang].hold;
+    moreBtn.textContent = TEXT[lang].another;
+  }
+
+  enBtn.addEventListener('click', () => setLanguage('en'));
+  esBtn.addEventListener('click', () => setLanguage('es'));
+
+  /* ───────── Header dissolve ───────── */
+  function startHeaderDissolve(){
+    // fade over ~12–15s to a subtle watermark
+    header.style.opacity = '1';
+    headerFadeTimeout = setTimeout(() => {
+      header.style.opacity = '0.07';
+    }, 600); // begin quickly, but long CSS transition makes it gentle
+  }
+
+  /* ───────── Session control ───────── */
+  function startSession(){
+    if (!lang) lang = 'en';
+    setLanguage(lang);
+
+    if (running) return;
+    running = true;
+
+    app.classList.add('running');
+
+    // lock language during session
+    enBtn.style.pointerEvents = 'none';
+    esBtn.style.pointerEvents = 'none';
+    enBtn.style.opacity = '0.55';
+    esBtn.style.opacity = '0.55';
+
+    toggleBtn.textContent = TEXT[lang].stop;
+
+    // audio (must begin on user gesture)
+    ensureAudio();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    bell();
+    fadeTo(0.065, 1.8); // subtle bed
+
+    // prep UI
+    circleIdleText.textContent = '';
+    koanEl.textContent = '';
+    koanEl.classList.remove('show');
+    holdBtn.classList.remove('show','on');
+    moreBtn.classList.remove('show');
+    held = false;
+
+    firstKoanShown = false;
+    initKoans();
+
+    // start core loops
+    setBreathCSS(BREATH_DUR);
+    startHeaderDissolve();
+    startGuidance();
+    startPhaseLoop();
+    scheduleFirstKoan();
+  }
+
+  function stopSession(){
+    running = false;
+    app.classList.remove('running');
+    clearAllTimers();
+
+    if (audioCtx){
+      bell();
+      fadeTo(0.0, 1.6);
+    }
+
+    circle.classList.remove('breathing','phase-in','phase-out','still');
+    circleLabel.classList.remove('show');
+    circleLabel.textContent = '';
+    circleHint.classList.remove('show');
+    circleHint.textContent = '';
+
+    circleIdleText.textContent = TEXT[lang].follow;
+    toggleBtn.textContent = TEXT[lang].start;
+
+    koanEl.classList.remove('show');
+    koanEl.textContent = '';
+    holdBtn.classList.remove('show','on');
+    moreBtn.classList.remove('show');
+    held = false;
+
+    // restore header
+    header.style.opacity = '1';
+
+    // unlock language
+    enBtn.style.pointerEvents = 'auto';
+    esBtn.style.pointerEvents = 'auto';
+    enBtn.style.opacity = '';
+    esBtn.style.opacity = '';
+  }
+
+  function toggleSession(){
+    running ? stopSession() : startSession();
+  }
+
+  toggleBtn.addEventListener('click', toggleSession);
+
+  // tapping circle starts if not running
+  circle.addEventListener('click', () => {
+    if (!running) startSession();
+  });
+
+  // Hold pins current koan
+  holdBtn.addEventListener('click', () => {
+    if (!running) return;
+    held = !held;
+    holdBtn.classList.toggle('on', held);
+    holdBtn.textContent = held ? TEXT[lang].held : TEXT[lang].hold;
+    if (held) koanEl.classList.add('show');
+  });
+
+  // Another question: only manual after first koan
+  moreBtn.addEventListener('click', () => {
+    if (!running) return;
+
+    // small readiness pause so it doesn't feel like content swapping
+    moreBtn.classList.remove('show');
+    setTimeout(() => {
+      if (!running) return;
+      const q = nextFromPool();
+      showKoan(q, {offerButtons:true});
+    }, 1200);
+  });
+
+  // Long-press circle stops
+  let pressTimer=null;
+  const PRESS_MS=650;
+  function startPress(){ if(!running) return; pressTimer=setTimeout(stopSession, PRESS_MS); }
+  function endPress(){ if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; } }
+  circle.addEventListener('touchstart', startPress, {passive:true});
+  circle.addEventListener('touchend', endPress, {passive:true});
+  circle.addEventListener('mousedown', startPress);
+  circle.addEventListener('mouseup', endPress);
+  circle.addEventListener('mouseleave', endPress);
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && running) {
+      clearAllTimers();
+    } else if (!document.hidden && running) {
+      // resume core loops (koan timing restarts; acceptable for v1)
+      setBreathCSS(BREATH_DUR);
+      startGuidance();
+      startPhaseLoop();
+      scheduleFirstKoan();
+    }
+  });
+
+  // Init default language
+  if (lang){
+    setLanguage(lang);
+  } else {
+    enBtn.classList.add('active');
+    lang = 'en';
+    setLanguage('en');
+  }
+
+})();
+</script>
+</body>
+</html>
