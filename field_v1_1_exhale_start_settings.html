@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>field</title>
+<meta name="theme-color" content="#dce9e4"/>
+<style>
+:root{
+--bg1:#edf6f2;--bg2:#dce9e4;--bg3:#cfded8;
+--jade1:#a6edd0;--jade2:#7fd9b2;
+--ink:rgba(47,63,58,.85);--inkSoft:rgba(47,63,58,.55);
+--breathSec:16s;--minScale:.7;--maxScale:1.12;
+--circleSize:min(92vw,440px);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+min-height:100vh;
+background:
+radial-gradient(900px 600px at 50% 0%,rgba(166,237,208,.25),transparent 65%),
+radial-gradient(900px 600px at 50% 25%,rgba(255,255,255,.6),transparent 70%),
+linear-gradient(var(--bg1),var(--bg2) 55%,var(--bg3));
+display:flex;justify-content:center;align-items:center;
+font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+color:var(--ink);-webkit-font-smoothing:antialiased}
+.app{width:100%;max-width:520px;padding:48px 22px 64px;text-align:center}
+.header{
+font-size:clamp(60px,12vw,88px);letter-spacing:.32em;font-weight:500;
+color:var(--inkSoft);margin-bottom:12px;transition:opacity 2.4s ease;
+/* Optical centering compensation for heavy tracking */
+transform: translateX(0.16em);
+}
+.header.fade{opacity:.07}
+.lang{position:fixed;top:14px;right:18px;font-size:13px;letter-spacing:.14em;opacity:.6}
+.lang span{cursor:pointer}
+.lang span.active{opacity:1;text-decoration:underline;text-underline-offset:4px}
+.circleWrap{position:relative;width:var(--circleSize);height:var(--circleSize);margin:0 auto 22px}
+.circle{
+width:100%;height:100%;border-radius:50%;
+background:radial-gradient(circle at 30% 30%,var(--jade1),var(--jade2));
+display:flex;align-items:center;justify-content:center;cursor:pointer;
+box-shadow:0 0 60px rgba(127,217,178,.35);
+will-change:transform;
+-webkit-mask-image:radial-gradient(circle,black 62%,transparent 100%);
+mask-image:radial-gradient(circle,black 62%,transparent 100%)}
+.circle::after{
+content:"";position:absolute;inset:-20%;border-radius:50%;
+background:radial-gradient(circle,rgba(127,217,178,.2),transparent 65%);
+filter:blur(2px)}
+.circle.breath{animation:breathe var(--breathSec) cubic-bezier(.42,0,.18,1) infinite}
+@keyframes breathe{
+0%{transform:scale(var(--minScale))}
+50%{transform:scale(var(--maxScale))}
+100%{transform:scale(var(--minScale))}}
+.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:22px}
+.text{
+max-width:26ch;opacity:0;filter:blur(2px);
+transform:translateY(2px);
+transition:opacity 1.4s,filter 1.4s,transform 1.4s}
+.text.show{opacity:1;filter:blur(0);transform:none}
+.guide{font-weight:650;letter-spacing:.18em;text-transform:uppercase;
+font-size:clamp(18px,5vw,24px);color:var(--inkSoft)}
+.koan{font-weight:520;font-size:clamp(19px,5.6vw,27px);line-height:1.35}
+.controls{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:6px}
+button{
+border:none;border-radius:999px;padding:12px 30px;font-weight:650;
+background:linear-gradient(135deg,var(--jade1),var(--jade2));
+color:var(--ink);cursor:pointer}
+#next{
+background:transparent;border:1px solid rgba(47,63,58,.15);
+color:rgba(47,63,58,.6);
+display:none; /* don't reserve space until it's ready */
+}
+#next.show{display:inline-block;}
+
+/* Settings UI */
+.gear{
+  border:none;
+  background:transparent;
+  color:rgba(47,63,58,.55);
+  font-size:16px;
+  margin-left:10px;
+  padding:6px 8px;
+  border-radius:10px;
+  cursor:pointer;
+  opacity:0.65;
+}
+.gear:active{ transform:scale(.98); }
+.gear:hover{ opacity:0.9; }
+
+.modalBackdrop{
+  position:fixed; inset:0;
+  background:rgba(15,25,22,0.14);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index:50;
+}
+.modal{
+  position:fixed;
+  left:50%; top:50%;
+  transform:translate(-50%,-50%);
+  width:min(92vw,420px);
+  z-index:60;
+}
+.modalCard{
+  background:rgba(255,255,255,0.72);
+  border:1px solid rgba(47,63,58,0.12);
+  border-radius:18px;
+  padding:14px 14px 16px;
+  box-shadow:0 20px 50px rgba(0,0,0,0.12);
+}
+.modalHeader{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:4px 4px 10px;
+}
+.modalTitle{
+  font-weight:700;
+  letter-spacing:0.02em;
+  color:rgba(47,63,58,0.78);
+}
+.close{
+  border:none; background:transparent;
+  color:rgba(47,63,58,.55);
+  font-size:16px;
+  padding:6px 10px;
+  border-radius:10px;
+  cursor:pointer;
+  opacity:0.7;
+}
+.close:hover{ opacity:1; }
+
+.section{ padding:10px 4px; }
+.label{ font-size:12px; letter-spacing:0.14em; text-transform:uppercase; opacity:0.6; margin-bottom:8px; }
+
+.seg{ display:flex; gap:8px; }
+.segBtn{
+  flex:1;
+  border:1px solid rgba(47,63,58,0.14);
+  background:rgba(255,255,255,0.45);
+  border-radius:999px;
+  padding:10px 12px;
+  cursor:pointer;
+  font-weight:700;
+  color:rgba(47,63,58,0.7);
+}
+.segBtn.active{
+  background:linear-gradient(135deg,var(--jade1),var(--jade2));
+  border-color:transparent;
+  color:rgba(47,63,58,0.85);
+}
+
+.palettes{ display:flex; gap:10px; }
+.palBtn{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  align-items:center;
+  justify-content:center;
+  padding:10px 10px 12px;
+  border-radius:14px;
+  border:1px solid rgba(47,63,58,0.12);
+  background:rgba(255,255,255,0.42);
+  cursor:pointer;
+  color:rgba(47,63,58,0.72);
+  font-weight:700;
+}
+.palBtn.active{
+  outline:2px solid rgba(127,217,178,0.55);
+  border-color:transparent;
+  background:rgba(255,255,255,0.55);
+}
+.sw{
+  width:44px;height:26px;border-radius:999px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.06);
+}
+.sw-mist{ background:linear-gradient(135deg,#edf6f2,#a6edd0); }
+.sw-deep{ background:linear-gradient(135deg,#071516,#7ef5b5); }
+.sw-ash{ background:linear-gradient(135deg,#f2f4f3,#b9c6c0); }
+
+.modalNote{
+  margin-top:8px;
+  font-size:12px;
+  color:rgba(47,63,58,0.55);
+  text-align:center;
+}
+
+/* Themes (CSS variables) */
+html[data-theme="mist"]{
+  --bg1:#edf6f2;--bg2:#dce9e4;--bg3:#cfded8;
+  --jade1:#a6edd0;--jade2:#7fd9b2;
+  --ink:rgba(47,63,58,.85);--inkSoft:rgba(47,63,58,.55);
+}
+html[data-theme="deep"]{
+  --bg1:#071516;--bg2:#0e2423;--bg3:#0b1e1b;
+  --jade1:#9fffcf;--jade2:#7ef5b5;
+  --ink:rgba(230,241,238,0.92);--inkSoft:rgba(230,241,238,0.55);
+}
+html[data-theme="ash"]{
+  --bg1:#f2f4f3;--bg2:#e3e8e6;--bg3:#d4ddd8;
+  --jade1:#cfeee2;--jade2:#a8dec8;
+  --ink:rgba(45,56,52,.86);--inkSoft:rgba(45,56,52,.50);
+}
+
+/* Theme-aware background */
+body{
+  background:
+    radial-gradient(900px 600px at 50% 0%, rgba(166,237,208,0.25), transparent 65%),
+    radial-gradient(900px 600px at 50% 25%, rgba(255,255,255,0.6), transparent 70%),
+    linear-gradient(var(--bg1),var(--bg2) 55%,var(--bg3));
+}
+
+/* Theme-aware button */
+button{
+  background:linear-gradient(135deg,var(--jade1),var(--jade2));
+  color:var(--ink);
+}
+#next{
+  border:1px solid rgba(47,63,58,.15);
+  color:rgba(47,63,58,.6);
+}
+html[data-theme="deep"] #next{
+  border:1px solid rgba(230,241,238,.18);
+  color:rgba(230,241,238,.65);
+}
+
+</style>
+</head>
+<body>
+
+<div class="lang">
+  <span id="en">EN</span> · <span id="es">ES</span>
+  <button class="gear" id="gear" type="button" aria-label="Settings">⚙︎</button>
+</div>
+
+<div class="modalBackdrop" id="backdrop" hidden></div>
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" hidden>
+  <div class="modalCard">
+    <div class="modalHeader">
+      <div class="modalTitle" id="settingsTitle">Settings</div>
+      <button class="close" id="closeModal" type="button" aria-label="Close">✕</button>
+    </div>
+
+    <div class="section">
+      <div class="label">Language</div>
+      <div class="seg" role="group" aria-label="Language">
+        <button class="segBtn" id="langEN" type="button">EN</button>
+        <button class="segBtn" id="langES" type="button">ES</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="label">Colour</div>
+      <div class="palettes" role="group" aria-label="Colour themes">
+        <button class="palBtn" id="thMist" type="button">
+          <span class="sw sw-mist"></span>
+          <span>Mist</span>
+        </button>
+        <button class="palBtn" id="thDeep" type="button">
+          <span class="sw sw-deep"></span>
+          <span>Deep</span>
+        </button>
+        <button class="palBtn" id="thAsh" type="button">
+          <span class="sw sw-ash"></span>
+          <span>Ash</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="modalNote">Changes apply instantly. (Language can be changed before starting.)</div>
+  </div>
+</div>
+
+<div class="app">
+<div class="header" id="header">field</div>
+
+<div class="circleWrap">
+<div class="circle" id="circle">
+<div class="overlay">
+<div class="text show" id="overlay">
+Breathe with the circle.<br>Let a question open the field.
+</div>
+</div>
+</div>
+</div>
+
+<div class="controls">
+<button id="start">START</button>
+<button id="next">NEXT</button>
+</div>
+</div>
+
+<script>
+(()=>{
+
+const TEXT={
+en:{start:"START",stop:"STOP",next:"NEXT",
+inhale:"INHALE",exhale:"EXHALE",inS:"IN",outS:"OUT",
+pre:"Breathe with the circle.<br>Let a question open the field.",
+koans:[
+"What is here before thought?","Who is aware now?","What remains when effort drops?",
+"If nothing is missing, what is sought?","What knows this silence?",
+"Where does stillness come from?","Who is breathing this breath?",
+"Before I, what is?","What is present without trying?","What remains when nothing is held?"
+]},
+es:{start:"COMENZAR",stop:"DETENER",next:"OTRA",
+inhale:"INHALA",exhale:"EXHALA",inS:"IN",outS:"OUT",
+pre:"Respira con el círculo.<br>Deja que una pregunta abra el campo.",
+koans:[
+"¿Qué hay antes del pensamiento?","¿Quién es consciente ahora?",
+"¿Qué queda cuando cae el esfuerzo?","Si nada falta, ¿qué se busca?",
+"¿Qué conoce este silencio?","¿De dónde surge la quietud?",
+"¿Quién respira este aliento?","Antes de yo, ¿qué es?",
+"¿Qué está presente sin intentar?","¿Qué permanece cuando nada se sostiene?"
+]}
+};
+
+const BREATH=16000,FIRST=26000,SILENCE=3000;
+
+const circle=document.getElementById("circle"),
+overlay=document.getElementById("overlay"),
+start=document.getElementById("start"),
+next=document.getElementById("next"),
+header=document.getElementById("header"),
+en=document.getElementById("en"),
+es=document.getElementById("es");
+
+let lang=localStorage.getItem("field_lang")||"en",
+running=false,current="",timers=[];
+let audioCtx,gain,noise;
+
+function audioInit(){
+if(audioCtx)return;
+audioCtx=new(AudioContext||webkitAudioContext)();
+const buf=audioCtx.createBuffer(1,2*audioCtx.sampleRate,audioCtx.sampleRate);
+const d=buf.getChannelData(0);
+for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+noise=audioCtx.createBufferSource();
+noise.buffer=buf;noise.loop=true;
+const lp=audioCtx.createBiquadFilter();
+lp.type="lowpass";lp.frequency.value=900;
+gain=audioCtx.createGain();gain.gain.value=0;
+noise.connect(lp);lp.connect(gain);gain.connect(audioCtx.destination);
+noise.start();
+}
+
+function fade(v,t=2){
+if(!gain)return;
+const n=audioCtx.currentTime;
+gain.gain.linearRampToValueAtTime(v,n+t);
+}
+
+function show(txt,cls){
+overlay.className="text "+cls+" show";
+overlay.innerHTML=txt;
+}
+function hide(){overlay.classList.remove("show")}
+
+function clearTimers(){timers.forEach(t=>clearTimeout(t));timers=[]}
+
+function guide(){
+clearTimers();
+timers.push(setTimeout(()=>hide(),600));
+timers.push(setTimeout(()=>show(TEXT[lang].inhale,"guide"),900));
+timers.push(setTimeout(()=>show(TEXT[lang].exhale,"guide"),7900));
+timers.push(setTimeout(()=>show(TEXT[lang].inS,"guide"),16900));
+timers.push(setTimeout(()=>show(TEXT[lang].outS,"guide"),23900));
+// (Removed KEEP GOING to avoid any post-koan pop-in)
+
+}
+
+function pick(){const a=TEXT[lang].koans;return a[Math.floor(Math.random()*a.length)]}
+
+function schedule(){
+timers.push(setTimeout(()=>{
+hide();
+setTimeout(()=>{
+if(!running)return;
+current=pick();
+show(current,"koan");
+next.classList.add("show");
+},SILENCE);
+},FIRST));
+}
+
+function startS(){
+if(running) return;
+running = true;
+
+header.classList.add("fade");
+start.textContent = TEXT[lang].stop;
+
+/* No-jerk start: lock to exhale size (min) first, then begin animation next frame */
+circle.classList.remove("breath");
+circle.style.animation = "none";
+circle.style.transform = "scale(var(--minScale))";
+
+audioInit();
+audioCtx.resume();
+fade(.05,2);
+
+guide();
+schedule();
+
+requestAnimationFrame(()=>{
+  // allow style to apply
+  requestAnimationFrame(()=>{
+    circle.style.animation = "";
+    circle.style.transform = "";
+    circle.classList.add("breath");
+  });
+});
+}
+
+function stopS(){
+running=false;
+header.classList.remove("fade");
+circle.classList.remove("breath");
+start.textContent=TEXT[lang].start;
+clearTimers();next.classList.remove("show");
+fade(0,2);
+show(TEXT[lang].pre,"");
+}
+
+function replay(){
+if(!current)return;
+hide();setTimeout(()=>show(current,"koan"),600);
+}
+
+start.onclick=()=>running?stopS():startS();
+
+next.onclick=()=>{
+if(!running)return;
+hide();
+setTimeout(()=>{current=pick();show(current,"koan")},800);
+};
+
+circle.onclick=()=>{
+if(!running)startS();
+else if(current)replay();
+};
+
+function setLang(l){
+lang=l;localStorage.setItem("field_lang",l);
+en.classList.toggle("active",l==="en");
+es.classList.toggle("active",l==="es");
+start.textContent=running?TEXT[l].stop:TEXT[l].start;
+next.textContent=TEXT[l].next;
+if(!running)show(TEXT[l].pre,"");
+}
+
+en.onclick=()=>!running&&setLang("en");
+es.onclick=()=>!running&&setLang("es");
+
+document.addEventListener("visibilitychange",()=>{
+if(!running)return;
+if(document.hidden)fade(0,.3);
+else{audioInit();audioCtx.resume();fade(.05,.8)}
+});
+
+
+function setTheme(t){
+  document.documentElement.setAttribute("data-theme", t);
+  localStorage.setItem("field_theme", t);
+  thMist.classList.toggle("active", t==="mist");
+  thDeep.classList.toggle("active", t==="deep");
+  thAsh.classList.toggle("active", t==="ash");
+}
+
+// Settings modal
+const gear = document.getElementById("gear");
+const modal = document.getElementById("modal");
+const backdrop = document.getElementById("backdrop");
+const closeModal = document.getElementById("closeModal");
+const langEN = document.getElementById("langEN");
+const langES = document.getElementById("langES");
+const thMist = document.getElementById("thMist");
+const thDeep = document.getElementById("thDeep");
+const thAsh = document.getElementById("thAsh");
+
+function openModal(){
+  if(running) return; // keep it clean during session
+  backdrop.hidden = false;
+  modal.hidden = false;
+}
+function closeModalFn(){
+  backdrop.hidden = true;
+  modal.hidden = true;
+}
+
+gear.addEventListener("click", openModal);
+closeModal.addEventListener("click", closeModalFn);
+backdrop.addEventListener("click", closeModalFn);
+document.addEventListener("keydown", (e)=>{
+  if(e.key==="Escape" && !modal.hidden) closeModalFn();
+});
+
+langEN.addEventListener("click", ()=>{ if(!running) setLang("en"); syncSettings(); });
+langES.addEventListener("click", ()=>{ if(!running) setLang("es"); syncSettings(); });
+
+thMist.addEventListener("click", ()=> setTheme("mist"));
+thDeep.addEventListener("click", ()=> setTheme("deep"));
+thAsh.addEventListener("click", ()=> setTheme("ash"));
+
+function syncSettings(){
+  langEN.classList.toggle("active", lang==="en");
+  langES.classList.toggle("active", lang==="es");
+}
+
+const savedTheme = localStorage.getItem("field_theme") || "mist";
+setTheme(savedTheme);
+syncSettings();
+
+setLang(lang);
+
+})();
+</script>
+</body>
+</html>
