@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>field</title>
+
+<style>
+:root{
+  /* Sage + Mist Palette */
+  --bg1:#e6f0ec;
+  --bg2:#d4e3dd;
+  --bg3:#c9dad4;
+
+  --mist:rgba(230,240,236,0.55);
+
+  --jade1:#9fe6c5;
+  --jade2:#7fd9b2;
+
+  --ink:#2f3f3a;
+  --soft:rgba(47,63,58,0.62);
+
+  --shadow:rgba(0,0,0,0.12);
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+
+body{
+  min-height:100vh;
+  background:
+    radial-gradient(circle at top, var(--bg1), var(--bg2)),
+    linear-gradient(var(--bg2), var(--bg3));
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-family: Georgia, "Times New Roman", serif;
+  color:var(--ink);
+}
+
+/* Language toggle */
+.lang{
+  position:fixed;
+  top:14px;
+  right:18px;
+  font-size:13px;
+  letter-spacing:0.14em;
+  opacity:0.72;
+  user-select:none;
+}
+.lang span{ cursor:pointer; }
+.lang span.active{ opacity:1; text-decoration: underline; text-underline-offset:4px; }
+
+/* App container */
+.app{
+  width:100%;
+  max-width:420px;
+  padding:40px 20px 56px;
+  text-align:center;
+}
+
+/* Header */
+.header{
+  font-size:3.4rem;
+  letter-spacing:0.32em;
+  margin-bottom:24px;
+  transition:opacity 2.5s ease;
+  opacity:1;
+}
+.header.fade{ opacity:0.06; }
+
+/* Mist panel */
+.panel{
+  background:var(--mist);
+  border-radius:28px;
+  padding:34px 24px 36px;
+  box-shadow:0 24px 48px var(--shadow);
+  backdrop-filter:blur(8px);
+}
+
+/* Circle */
+.circleWrap{
+  position:relative;
+  width:210px;
+  height:210px;
+  margin:0 auto 20px;
+}
+
+.circle{
+  width:210px;
+  height:210px;
+  border-radius:50%;
+  background: radial-gradient(circle at 30% 30%, var(--jade1), var(--jade2));
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-transform:uppercase;
+  letter-spacing:0.14em;
+  font-size:0.72rem;
+  color:var(--ink);
+  user-select:none;
+  cursor:pointer;
+
+  /* Stability on iOS Safari */
+  transform:translateZ(0);
+  backface-visibility:hidden;
+  will-change:transform;
+
+  box-shadow:0 0 42px rgba(127,217,178,0.34);
+}
+
+/* Breathing (transform only; no filter/shadow changes) */
+.circle.breath{
+  animation:breathe 11s ease-in-out infinite;
+}
+@keyframes breathe{
+  0%{transform:translateZ(0) scale(0.86);}
+  50%{transform:translateZ(0) scale(1);}
+  100%{transform:translateZ(0) scale(0.86);}
+}
+
+/* Intent */
+.intent{
+  font-size:1.7rem;
+  margin:16px 0 6px;
+  transition:opacity 400ms ease;
+}
+.sub{
+  font-size:0.95rem;
+  color:var(--soft);
+  margin-bottom:18px;
+  transition:opacity 400ms ease;
+}
+
+/* Fade intent/sub during session */
+.running .intent,
+.running .sub{
+  opacity:0;
+  pointer-events:none;
+}
+
+/* Koan OUTSIDE the panel (prevents panel resize/jolt) */
+.koanArea{
+  margin-top:18px;
+  min-height:4.2em; /* reserves space so nothing jumps */
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+}
+.koan{
+  max-width: 34ch;
+  font-size:1.22rem;
+  line-height:1.55;
+  color:var(--ink);
+  opacity:0;
+  transform: translateY(2px) translateZ(0);
+  transition: opacity 1400ms ease, transform 1400ms ease;
+  will-change: opacity, transform;
+}
+.koan.show{
+  opacity:1;
+  transform: translateY(0) translateZ(0);
+}
+
+/* Controls */
+.controls{ margin-top:8px; }
+button{
+  border:none;
+  border-radius:999px;
+  padding:12px 32px;
+  font-size:1rem;
+  background:linear-gradient(135deg,var(--jade1),var(--jade2));
+  color:var(--ink);
+  box-shadow:0 6px 16px rgba(127,217,178,0.24);
+  cursor:pointer;
+  transition:transform 0.15s ease, filter 0.15s ease;
+}
+button:hover{ filter: brightness(1.01); }
+button:active{ transform:scale(0.98); }
+
+@media(max-width:360px){
+  .header{font-size:3.1rem;}
+  .circle,.circleWrap{width:195px;height:195px;}
+  .intent{font-size:1.5rem;}
+  .koan{ font-size:1.12rem; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="lang" aria-label="language selector">
+  <span id="enBtn">EN</span> · <span id="esBtn">ES</span>
+</div>
+
+<div class="app" id="app">
+  <div class="header" id="header">field</div>
+
+  <div class="panel">
+    <div class="circleWrap">
+      <div class="circle" id="circle">FOLLOW THE CIRCLE</div>
+    </div>
+
+    <div class="intent" id="intent">Equanimity and awareness</div>
+    <div class="sub" id="sub">the field is shared.</div>
+
+    <div class="controls">
+      <button id="toggle" type="button">Start</button>
+    </div>
+  </div>
+
+  <!-- Koan lives OUTSIDE panel to avoid resizing jolt -->
+  <div class="koanArea" aria-live="polite">
+    <div class="koan" id="koan"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ───────── Text ───────── */
+const TEXT = {
+  en:{
+    header:"field",
+    follow:"FOLLOW THE CIRCLE",
+    start:"START",
+    stop:"STOP",
+    sub:"the field is shared.",
+    intent:"Equanimity and awareness",
+    koans:[
+      "Who is breathing this breath?",
+      "What is here before thought?",
+      "Where does stillness come from?",
+      "What remains when nothing is held?",
+      "Who is aware of this moment?",
+      "What is listening right now?",
+      "If nothing is missing, what is sought?",
+      "What knows this silence?",
+      "Where does this awareness end?"
+    ]
+  },
+  es:{
+    header:"campo de presencia",
+    follow:"SIGUE EL CÍRCULO",
+    start:"COMENZAR",
+    stop:"DETENER",
+    sub:"el campo se comparte.",
+    intent:"Calma y atención",
+    koans:[
+      "¿Quién respira este aliento?",
+      "¿Qué hay antes del pensamiento?",
+      "¿De dónde surge la quietud?",
+      "¿Qué permanece cuando nada se sostiene?",
+      "¿Quién es consciente de este momento?",
+      "¿Qué está escuchando ahora?",
+      "Si nada falta, ¿qué se busca?",
+      "¿Qué conoce este silencio?",
+      "¿Dónde termina esta presencia?"
+    ]
+  }
+};
+
+/* Timing */
+const KOAN_FIRST_MS = 25000;     // first koan at 25s
+const KOAN_REPEAT_MS = 37000;   // gentle repeat cadence (no pressure)
+
+/* DOM */
+const app = document.getElementById('app');
+const circle = document.getElementById('circle');
+const toggle = document.getElementById('toggle');
+const header = document.getElementById('header');
+const koan = document.getElementById('koan');
+const intent = document.getElementById('intent');
+const sub = document.getElementById('sub');
+const enBtn = document.getElementById('enBtn');
+const esBtn = document.getElementById('esBtn');
+
+let lang = localStorage.getItem('field_lang') || 'en';
+let running=false;
+let koanTimer=null;
+let firstTimer=null;
+let index=0;
+
+/* ───────── Audio (restored) ───────── */
+let audioCtx=null, noiseSource=null, gain=null, driftOsc=null, driftGain=null;
+
+function ensureAudio(){
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  const bufferSize = 2 * audioCtx.sampleRate;
+  const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const out = noiseBuffer.getChannelData(0);
+  for (let i=0; i<bufferSize; i++) out[i] = Math.random()*2 - 1;
+
+  noiseSource = audioCtx.createBufferSource();
+  noiseSource.buffer = noiseBuffer;
+  noiseSource.loop = true;
+
+  const band = audioCtx.createBiquadFilter();
+  band.type = "bandpass";
+  band.frequency.value = 220;
+  band.Q.value = 0.75;
+
+  const lowpass = audioCtx.createBiquadFilter();
+  lowpass.type = "lowpass";
+  lowpass.frequency.value = 950;
+
+  gain = audioCtx.createGain();
+  gain.gain.value = 0.0;
+
+  // slow drift so it feels alive
+  driftOsc = audioCtx.createOscillator();
+  driftOsc.type = "sine";
+  driftOsc.frequency.value = 0.022; // ~45s
+  driftGain = audioCtx.createGain();
+  driftGain.gain.value = 0.010; // tiny
+  driftOsc.connect(driftGain);
+  driftGain.connect(gain.gain);
+  driftOsc.start();
+
+  noiseSource.connect(band);
+  band.connect(lowpass);
+  lowpass.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  noiseSource.start(0);
+}
+
+function fadeTo(target, seconds=1.6){
+  if (!gain || !audioCtx) return;
+  const t0 = audioCtx.currentTime;
+  gain.gain.cancelScheduledValues(t0);
+  gain.gain.setValueAtTime(gain.gain.value, t0);
+  gain.gain.linearRampToValueAtTime(target, t0 + seconds);
+}
+
+function bell(){
+  if (!audioCtx) return;
+  const t0 = audioCtx.currentTime;
+
+  const osc = audioCtx.createOscillator();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(784, t0);
+  osc.frequency.exponentialRampToValueAtTime(523.25, t0 + 0.55);
+
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(0.0, t0);
+  g.gain.linearRampToValueAtTime(0.14, t0 + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.78);
+
+  osc.connect(g);
+  g.connect(audioCtx.destination);
+  osc.start(t0);
+  osc.stop(t0 + 0.85);
+}
+
+/* Language */
+function setLang(l){
+  lang=l;
+  localStorage.setItem('field_lang', l);
+
+  enBtn.classList.toggle('active',l==='en');
+  esBtn.classList.toggle('active',l==='es');
+
+  header.textContent = TEXT[l].header;
+  circle.textContent = TEXT[l].follow;
+  intent.textContent = TEXT[l].intent;
+  sub.textContent = TEXT[l].sub;
+  toggle.textContent = running ? TEXT[l].stop : TEXT[l].start;
+}
+
+enBtn.addEventListener('click', () => { if(!running) setLang('en'); });
+esBtn.addEventListener('click', () => { if(!running) setLang('es'); });
+
+/* Koans */
+function showKoanOnce(){
+  if(!running) return;
+  koan.classList.remove('show');
+  // small pause for softer entry
+  setTimeout(() => {
+    koan.textContent = TEXT[lang].koans[index];
+    index = (index + 1) % TEXT[lang].koans.length;
+    koan.classList.add('show');
+  }, 450);
+}
+
+function scheduleKoans(){
+  clearTimeout(firstTimer);
+  clearTimeout(koanTimer);
+  firstTimer = setTimeout(() => {
+    showKoanOnce();
+    koanTimer = setInterval(showKoanOnce, KOAN_REPEAT_MS);
+  }, KOAN_FIRST_MS);
+}
+
+function clearKoans(){
+  clearTimeout(firstTimer);
+  clearInterval(koanTimer);
+  firstTimer=null; koanTimer=null;
+  koan.classList.remove('show');
+  koan.textContent='';
+}
+
+/* Session */
+function start(){
+  if(running) return;
+  running=true;
+
+  app.classList.add('running');
+  header.classList.add('fade');
+  circle.classList.add('breath');
+  toggle.textContent = TEXT[lang].stop;
+
+  // lock language during session
+  enBtn.style.pointerEvents='none';
+  esBtn.style.pointerEvents='none';
+  enBtn.style.opacity='0.55';
+  esBtn.style.opacity='0.55';
+
+  // audio must begin on gesture
+  ensureAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  bell();
+  fadeTo(0.060, 1.8);
+
+  scheduleKoans();
+}
+
+function stop(){
+  running=false;
+  app.classList.remove('running');
+  header.classList.remove('fade');
+  circle.classList.remove('breath');
+  toggle.textContent = TEXT[lang].start;
+
+  // unlock language
+  enBtn.style.pointerEvents='auto';
+  esBtn.style.pointerEvents='auto';
+  enBtn.style.opacity='';
+  esBtn.style.opacity='';
+
+  clearKoans();
+
+  if (audioCtx){
+    bell();
+    fadeTo(0.0, 1.6);
+  }
+}
+
+toggle.addEventListener('click', () => running ? stop() : start());
+circle.addEventListener('click', () => { if(!running) start(); });
+
+/* Init */
+setLang(lang);
+
+})();
+</script>
+
+</body>
+</html>
