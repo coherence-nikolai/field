@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>field</title>
+<meta name="theme-color" content="#d4e3dd" />
+
+<style>
+:root{
+  /* Quiet & Deep — Sage / Mist / Mineral */
+  --bg1:#e6f0ec;
+  --bg2:#d4e3dd;
+  --bg3:#c9dad4;
+
+  --jade1:#9fe6c5;
+  --jade2:#7fd9b2;
+
+  --ink:#2f3f3a;
+  --soft:rgba(47,63,58,0.62);
+  --faint:rgba(47,63,58,0.38);
+
+  --shadow:rgba(0,0,0,0.10);
+
+  --breathSec: 11s;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+
+body{
+  min-height:100vh;
+  background:
+    radial-gradient(820px 520px at 50% 0%, rgba(159,230,197,0.18), rgba(159,230,197,0) 62%),
+    radial-gradient(900px 620px at 50% 22%, rgba(255,255,255,0.55), rgba(255,255,255,0) 70%),
+    linear-gradient(var(--bg1), var(--bg2) 54%, var(--bg3));
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-family: Georgia, "Times New Roman", serif;
+  color:var(--ink);
+}
+
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 50% 38%,
+      rgba(0,0,0,0) 0%,
+      rgba(0,0,0,0.018) 60%,
+      rgba(0,0,0,0.035) 100%);
+}
+
+.lang{
+  position:fixed;
+  top:14px;
+  right:18px;
+  font-size:13px;
+  letter-spacing:0.14em;
+  opacity:0.72;
+  user-select:none;
+}
+.lang span{ cursor:pointer; }
+.lang span.active{
+  opacity:1;
+  text-decoration: underline;
+  text-underline-offset:4px;
+}
+
+.app{
+  width:100%;
+  max-width:460px;
+  padding:44px 22px 58px;
+  text-align:center;
+}
+
+/* Header wordmark */
+.header{
+  font-size: clamp(46px, 8.6vw, 62px);
+  letter-spacing: 0.30em;
+  margin: 0 0 22px;
+  transition: opacity 2600ms ease;
+  opacity:1;
+}
+.header.watermark{ opacity:0.06; }
+
+/* Circle */
+.circleWrap{
+  position:relative;
+  width: 236px;
+  height: 236px;
+  margin: 0 auto 14px;
+}
+
+.circle{
+  width:236px;
+  height:236px;
+  border-radius:50%;
+  background: radial-gradient(circle at 30% 30%, var(--jade1), var(--jade2));
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  user-select:none;
+  cursor:pointer;
+
+  /* Stable rendering on iOS Safari */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform;
+
+  box-shadow: 0 0 44px rgba(127,217,178,0.34);
+  position:relative;
+  overflow:hidden;
+}
+
+/* Soft inner mist to avoid flatness (STATIC, no filter animation) */
+.circle::before{
+  content:"";
+  position:absolute;
+  inset:8%;
+  border-radius:50%;
+  background:
+    radial-gradient(circle at 38% 34%,
+      rgba(255,255,255,0.22),
+      rgba(159,230,197,0.10),
+      rgba(47,63,58,0.08));
+  opacity:0.75;
+  pointer-events:none;
+}
+
+/* Circle breathing (transform only) */
+.circle.breath{
+  animation: breathe var(--breathSec) ease-in-out infinite;
+}
+@keyframes breathe{
+  0%{ transform: translateZ(0) scale(0.86); }
+  50%{ transform: translateZ(0) scale(1.00); }
+  100%{ transform: translateZ(0) scale(0.86); }
+}
+
+/* Text inside circle (idle) */
+.circleIdle{
+  position:relative;
+  font-family: Arial, system-ui, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.72rem;
+  color: rgba(47,63,58,0.70);
+}
+
+/* Breath labels overlay (first cycle) */
+.breathLabel{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-family: Arial, system-ui, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: clamp(18px, 4.8vw, 22px);
+  color: rgba(47,63,58,0.78);
+  opacity:0;
+  transition: opacity 750ms ease;
+  pointer-events:none;
+}
+.breathLabel.show{ opacity: 0.95; }
+
+/* Keep going hint */
+.keepHint{
+  position:absolute;
+  left:0; right:0;
+  bottom: 18px;
+  font-family: Arial, system-ui, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.70rem;
+  color: rgba(47,63,58,0.52);
+  opacity:0;
+  transform: translateY(2px);
+  transition: opacity 900ms ease, transform 900ms ease;
+  pointer-events:none;
+}
+.keepHint.show{
+  opacity: 0.92;
+  transform: translateY(0);
+}
+
+/* Threshold instruction */
+.threshold{
+  margin: 10px auto 18px;
+  max-width: 34ch;
+  color: rgba(47,63,58,0.62);
+  font-size: clamp(14px, 3.8vw, 16px);
+  line-height: 1.45;
+  letter-spacing: 0.02em;
+  transition: opacity 1400ms ease, transform 1400ms ease;
+  opacity: 0.86;
+}
+.threshold.hide{
+  opacity:0;
+  transform: translateY(-2px);
+  pointer-events:none;
+}
+
+.intent{
+  font-size: clamp(22px, 5.8vw, 32px);
+  margin: 10px 0 6px;
+  transition: opacity 450ms ease;
+}
+.sub{
+  font-size: clamp(14px, 3.8vw, 16px);
+  color:var(--soft);
+  margin-bottom: 14px;
+  transition: opacity 450ms ease;
+}
+
+/* We can fade these slightly during running (keeps field clean) */
+.running .intent,
+.running .sub{
+  opacity: 0.0;
+  pointer-events:none;
+}
+
+/* Controls */
+.controls{ margin-top: 12px; }
+button{
+  border:none;
+  border-radius:999px;
+  padding:12px 34px;
+  font-size:1rem;
+  background: linear-gradient(135deg, var(--jade1), var(--jade2));
+  color: var(--ink);
+  box-shadow: 0 7px 18px rgba(127,217,178,0.22);
+  cursor:pointer;
+  transition: transform 0.15s ease, filter 0.15s ease, opacity 0.4s ease;
+}
+button:active{ transform:scale(0.98); }
+button:hover{ filter: brightness(1.01); }
+.running button{ opacity: 0.92; }
+
+/* Koan area (reserved space; no layout jump) */
+.koanArea{
+  margin-top: 18px;
+  min-height: 4.8em;
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+}
+.koan{
+  max-width: 38ch;
+  font-size: clamp(18px, 4.9vw, 24px);
+  line-height: 1.55;
+  color: rgba(47,63,58,0.86);
+  opacity: 0;
+  transform: translateY(2px) translateZ(0);
+  transition: opacity 1400ms ease, transform 1400ms ease;
+  will-change: opacity, transform;
+}
+.koan.show{
+  opacity: 1;
+  transform: translateY(0) translateZ(0);
+}
+
+@media(max-width:360px){
+  .circle,.circleWrap{ width:210px; height:210px; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="lang" aria-label="language selector">
+  <span id="enBtn">EN</span> · <span id="esBtn">ES</span>
+</div>
+
+<div class="app" id="app">
+  <div class="header" id="header">field</div>
+
+  <div class="circleWrap">
+    <div class="circle" id="circle" aria-live="polite">
+      <div class="breathLabel" id="breathLabel"></div>
+      <div class="keepHint" id="keepHint"></div>
+      <div class="circleIdle" id="circleIdle">FOLLOW THE CIRCLE</div>
+    </div>
+  </div>
+
+  <div class="threshold" id="threshold">
+    Breathe with the circle.<br>
+    Let a question open the field.
+  </div>
+
+  <div class="intent" id="intent">Equanimity and awareness</div>
+  <div class="sub" id="sub">the field is shared.</div>
+
+  <div class="controls">
+    <button id="toggle" type="button">START</button>
+  </div>
+
+  <div class="koanArea" aria-live="polite">
+    <div class="koan" id="koan"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ───────── Text ───────── */
+const TEXT = {
+  en:{
+    header:"field",
+    follow:"FOLLOW THE CIRCLE",
+    start:"START",
+    stop:"STOP",
+    inhale:"INHALE",
+    exhale:"EXHALE",
+    keep:"KEEP GOING",
+    threshold1:"Breathe with the circle.",
+    threshold2:"Let a question open the field.",
+    sub:"the field is shared.",
+    intent:"Equanimity and awareness",
+    koans:[
+      "Who is breathing this breath?",
+      "What is here before thought?",
+      "What is listening right now?",
+      "If nothing is missing, what is sought?",
+      "What knows this silence?",
+      "Where does awareness end?",
+      "What remains when effort drops?",
+      "Who is looking?",
+      "What is already at ease?"
+    ]
+  },
+  es:{
+    header:"campo de presencia",
+    follow:"SIGUE EL CÍRCULO",
+    start:"COMENZAR",
+    stop:"DETENER",
+    inhale:"INHALA",
+    exhale:"EXHALA",
+    keep:"SIGUE",
+    threshold1:"Respira con el círculo.",
+    threshold2:"Deja que una pregunta abra el campo.",
+    sub:"el campo se comparte.",
+    intent:"Calma y atención",
+    koans:[
+      "¿Quién respira este aliento?",
+      "¿Qué hay antes del pensamiento?",
+      "¿Qué está escuchando ahora?",
+      "Si nada falta, ¿qué se busca?",
+      "¿Qué conoce este silencio?",
+      "¿Dónde termina la presencia?",
+      "¿Qué queda cuando el esfuerzo cae?",
+      "¿Quién está mirando?",
+      "¿Qué ya está en calma?"
+    ]
+  }
+};
+
+/* ───────── Timing ───────── */
+const BREATH_TOTAL_MS = 11000;
+const IN_MS  = 5200;
+const OUT_MS = 5800;
+
+const KOAN_FIRST_MS = 25000;   // first koan at 25s
+const KOAN_REPEAT_MS = 52000; // replace gently every ~52s (koan stays until replaced)
+
+/* ───────── DOM ───────── */
+const app = document.getElementById('app');
+const header = document.getElementById('header');
+const circle = document.getElementById('circle');
+const circleIdle = document.getElementById('circleIdle');
+const breathLabel = document.getElementById('breathLabel');
+const keepHint = document.getElementById('keepHint');
+const threshold = document.getElementById('threshold');
+const intent = document.getElementById('intent');
+const sub = document.getElementById('sub');
+const koan = document.getElementById('koan');
+const toggle = document.getElementById('toggle');
+const enBtn = document.getElementById('enBtn');
+const esBtn = document.getElementById('esBtn');
+
+/* Defensive */
+const REQUIRED = {app,header,circle,circleIdle,breathLabel,keepHint,threshold,intent,sub,koan,toggle,enBtn,esBtn};
+const missing = Object.entries(REQUIRED).filter(([,v]) => !v).map(([k]) => k);
+if (missing.length){
+  console.error("field: missing DOM elements:", missing.join(", "));
+  return;
+}
+
+/* ───────── State ───────── */
+let lang = localStorage.getItem('field_lang') || 'en';
+let running = false;
+let kIndex = 0;
+let firstKoanTimer = null;
+let koanInterval = null;
+let guideTimers = [];
+
+/* ───────── Audio ───────── */
+let audioCtx=null, noiseSource=null, gain=null, driftOsc=null, driftGain=null;
+
+function ensureAudio(){
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  const bufferSize = 2 * audioCtx.sampleRate;
+  const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const out = noiseBuffer.getChannelData(0);
+  for (let i=0; i<bufferSize; i++) out[i] = Math.random()*2 - 1;
+
+  noiseSource = audioCtx.createBufferSource();
+  noiseSource.buffer = noiseBuffer;
+  noiseSource.loop = true;
+
+  // band-pass around ~220Hz (ocean-field)
+  const band = audioCtx.createBiquadFilter();
+  band.type = "bandpass";
+  band.frequency.value = 220;
+  band.Q.value = 0.75;
+
+  // low-pass to remove harshness
+  const lowpass = audioCtx.createBiquadFilter();
+  lowpass.type = "lowpass";
+  lowpass.frequency.value = 950;
+
+  gain = audioCtx.createGain();
+  gain.gain.value = 0.0;
+
+  // very slow drift
+  driftOsc = audioCtx.createOscillator();
+  driftOsc.type = "sine";
+  driftOsc.frequency.value = 0.022; // ~45s
+  driftGain = audioCtx.createGain();
+  driftGain.gain.value = 0.010; // tiny
+  driftOsc.connect(driftGain);
+  driftGain.connect(gain.gain);
+  driftOsc.start();
+
+  noiseSource.connect(band);
+  band.connect(lowpass);
+  lowpass.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  noiseSource.start(0);
+}
+
+function fadeTo(target, seconds=1.8){
+  if (!gain || !audioCtx) return;
+  const t0 = audioCtx.currentTime;
+  gain.gain.cancelScheduledValues(t0);
+  gain.gain.setValueAtTime(gain.gain.value, t0);
+  gain.gain.linearRampToValueAtTime(target, t0 + seconds);
+}
+
+function bell(){
+  if (!audioCtx) return;
+  const t0 = audioCtx.currentTime;
+
+  const osc = audioCtx.createOscillator();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(784, t0);
+  osc.frequency.exponentialRampToValueAtTime(523.25, t0 + 0.55);
+
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(0.0, t0);
+  g.gain.linearRampToValueAtTime(0.14, t0 + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.78);
+
+  osc.connect(g);
+  g.connect(audioCtx.destination);
+  osc.start(t0);
+  osc.stop(t0 + 0.85);
+}
+
+/* ───────── Language ───────── */
+function setLang(l){
+  lang = l;
+  localStorage.setItem('field_lang', l);
+
+  enBtn.classList.toggle('active', l === 'en');
+  esBtn.classList.toggle('active', l === 'es');
+
+  header.textContent = TEXT[lang].header;
+  circleIdle.textContent = TEXT[lang].follow;
+  toggle.textContent = running ? TEXT[lang].stop : TEXT[lang].start;
+
+  threshold.innerHTML = `${TEXT[lang].threshold1}<br>${TEXT[lang].threshold2}`;
+  intent.textContent = TEXT[lang].intent;
+  sub.textContent = TEXT[lang].sub;
+
+  // keep current koan text if present; otherwise blank
+}
+
+enBtn.addEventListener('click', () => { if(!running) setLang('en'); });
+esBtn.addEventListener('click', () => { if(!running) setLang('es'); });
+
+/* ───────── Guidance (first cycle) ───────── */
+function clearGuides(){
+  guideTimers.forEach(t => clearTimeout(t));
+  guideTimers = [];
+  breathLabel.classList.remove('show');
+  breathLabel.textContent = '';
+  keepHint.classList.remove('show');
+  keepHint.textContent = '';
+}
+
+function startGuidesAndThresholdFade(){
+  clearGuides();
+
+  // breath labels
+  breathLabel.textContent = TEXT[lang].inhale;
+  breathLabel.classList.add('show');
+
+  guideTimers.push(setTimeout(() => {
+    breathLabel.textContent = TEXT[lang].exhale;
+  }, IN_MS));
+
+  // remove label at end of cycle
+  guideTimers.push(setTimeout(() => {
+    breathLabel.classList.remove('show');
+  }, BREATH_TOTAL_MS));
+
+  guideTimers.push(setTimeout(() => {
+    breathLabel.textContent = '';
+  }, BREATH_TOTAL_MS + 400));
+
+  // keep going hint right after first cycle
+  guideTimers.push(setTimeout(() => {
+    keepHint.textContent = TEXT[lang].keep;
+    keepHint.classList.add('show');
+  }, BREATH_TOTAL_MS + 350));
+
+  guideTimers.push(setTimeout(() => {
+    keepHint.classList.remove('show');
+  }, BREATH_TOTAL_MS + 3200));
+
+  guideTimers.push(setTimeout(() => {
+    keepHint.textContent = '';
+  }, BREATH_TOTAL_MS + 4200));
+
+  // threshold fades after first breath cycle (your "B")
+  guideTimers.push(setTimeout(() => {
+    threshold.classList.add('hide');
+  }, BREATH_TOTAL_MS + 250));
+}
+
+/* ───────── Koans (persist; gentle replacement) ───────── */
+function clearKoans(){
+  clearTimeout(firstKoanTimer);
+  clearInterval(koanInterval);
+  firstKoanTimer = null;
+  koanInterval = null;
+  koan.classList.remove('show');
+  koan.textContent = '';
+}
+
+function setKoanText(text){
+  // gentle replace without layout jump
+  koan.classList.remove('show');
+  setTimeout(() => {
+    koan.textContent = text;
+    koan.classList.add('show');
+  }, 520);
+}
+
+function startKoans(){
+  clearKoans();
+
+  firstKoanTimer = setTimeout(() => {
+    if (!running) return;
+    setKoanText(TEXT[lang].koans[kIndex]);
+    kIndex = (kIndex + 1) % TEXT[lang].koans.length;
+
+    koanInterval = setInterval(() => {
+      if (!running) return;
+      setKoanText(TEXT[lang].koans[kIndex]);
+      kIndex = (kIndex + 1) % TEXT[lang].koans.length;
+    }, KOAN_REPEAT_MS);
+
+  }, KOAN_FIRST_MS);
+}
+
+/* ───────── Session control ───────── */
+function lockLanguage(lock){
+  enBtn.style.pointerEvents = lock ? 'none' : 'auto';
+  esBtn.style.pointerEvents = lock ? 'none' : 'auto';
+  enBtn.style.opacity = lock ? '0.55' : '';
+  esBtn.style.opacity = lock ? '0.55' : '';
+}
+
+function start(){
+  if (running) return;
+  running = true;
+
+  app.classList.add('running');
+  header.classList.add('watermark');
+
+  // start breath
+  circle.classList.add('breath');
+
+  // hide idle text as soon as breath begins
+  circleIdle.textContent = '';
+
+  // audio starts on gesture
+  ensureAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  bell();
+  fadeTo(0.060, 1.8);
+
+  // lock language during session
+  lockLanguage(true);
+
+  // button label
+  toggle.textContent = TEXT[lang].stop;
+
+  // first-cycle guidance + threshold fade
+  startGuidesAndThresholdFade();
+
+  // start koans
+  startKoans();
+}
+
+function stop(){
+  running = false;
+
+  app.classList.remove('running');
+  header.classList.remove('watermark');
+
+  circle.classList.remove('breath');
+  clearGuides();
+  clearKoans();
+
+  // restore threshold + idle text
+  threshold.classList.remove('hide');
+  circleIdle.textContent = TEXT[lang].follow;
+
+  // button label
+  toggle.textContent = TEXT[lang].start;
+
+  // unlock language
+  lockLanguage(false);
+
+  // audio fade out + bell
+  if (audioCtx){
+    bell();
+    fadeTo(0.0, 1.6);
+  }
+}
+
+toggle.addEventListener('click', () => running ? stop() : start());
+circle.addEventListener('click', () => { if (!running) start(); });
+
+/* visibility */
+document.addEventListener('visibilitychange', () => {
+  // keep it simple for v1: stop if backgrounded to preserve coherence
+  if (document.hidden && running) stop();
+});
+
+/* init */
+setLang(lang);
+})();
+</script>
+
+</body>
+</html>
