@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>field</title>
+
+<style>
+:root{
+  /* Sage + Mist Palette */
+  --bg1:#e6f0ec;
+  --bg2:#d4e3dd;
+  --bg3:#c9dad4;
+
+  --mist:rgba(230,240,236,0.55);
+
+  --jade1:#9fe6c5;
+  --jade2:#7fd9b2;
+
+  --ink:#2f3f3a;
+  --soft:rgba(47,63,58,0.65);
+
+  --shadow:rgba(0,0,0,0.12);
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+
+body{
+  min-height:100vh;
+  background:
+    radial-gradient(circle at top, var(--bg1), var(--bg2)),
+    linear-gradient(var(--bg2), var(--bg3));
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-family: Georgia, "Times New Roman", serif;
+  color:var(--ink);
+}
+
+/* Language toggle */
+.lang{
+  position:fixed;
+  top:14px;
+  right:18px;
+  font-size:13px;
+  letter-spacing:0.14em;
+  opacity:0.7;
+}
+.lang span{
+  cursor:pointer;
+}
+.lang span.active{
+  opacity:1;
+}
+
+/* App container */
+.app{
+  width:100%;
+  max-width:420px;
+  padding:40px 20px 56px;
+  text-align:center;
+}
+
+/* Header */
+.header{
+  font-size:3.4rem;
+  letter-spacing:0.32em;
+  margin-bottom:28px;
+  transition:opacity 2.5s ease;
+}
+.header.fade{
+  opacity:0.06;
+}
+
+/* Mist panel */
+.panel{
+  background:var(--mist);
+  border-radius:28px;
+  padding:36px 24px 42px;
+  box-shadow:0 24px 48px var(--shadow);
+  backdrop-filter:blur(8px);
+}
+
+/* Circle */
+.circleWrap{
+  position:relative;
+  width:210px;
+  height:210px;
+  margin:0 auto 22px;
+}
+
+.circle{
+  width:210px;
+  height:210px;
+  border-radius:50%;
+  background:
+    radial-gradient(circle at 30% 30%, var(--jade1), var(--jade2));
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-transform:uppercase;
+  letter-spacing:0.14em;
+  font-size:0.72rem;
+  color:var(--ink);
+
+  /* Stability */
+  transform:translateZ(0);
+  backface-visibility:hidden;
+  will-change:transform;
+
+  box-shadow:0 0 42px rgba(127,217,178,0.38);
+  user-select:none;
+}
+
+/* Breathing */
+.circle.breath{
+  animation:breathe 11s ease-in-out infinite;
+}
+
+@keyframes breathe{
+  0%{transform:translateZ(0) scale(0.86);}
+  50%{transform:translateZ(0) scale(1);}
+  100%{transform:translateZ(0) scale(0.86);}
+}
+
+/* Intention */
+.intent{
+  font-size:1.7rem;
+  margin:18px 0 6px;
+}
+
+.sub{
+  font-size:0.95rem;
+  color:var(--soft);
+  margin-bottom:22px;
+}
+
+/* Question */
+.koan{
+  font-size:1.2rem;
+  line-height:1.5;
+  color:var(--ink);
+  margin:18px 0 8px;
+  opacity:0;
+  transition:opacity 1.4s ease;
+}
+.koan.show{
+  opacity:1;
+}
+
+/* Controls */
+.controls{
+  margin-top:8px;
+}
+
+button{
+  border:none;
+  border-radius:999px;
+  padding:12px 32px;
+  font-size:1rem;
+  background:linear-gradient(135deg,var(--jade1),var(--jade2));
+  color:var(--ink);
+  box-shadow:0 6px 16px rgba(127,217,178,0.28);
+  cursor:pointer;
+  transition:transform 0.15s ease;
+}
+button:active{
+  transform:scale(0.98);
+}
+
+@media(max-width:360px){
+  .header{font-size:3.1rem;}
+  .circle,.circleWrap{width:195px;height:195px;}
+  .intent{font-size:1.5rem;}
+}
+</style>
+</head>
+
+<body>
+
+<div class="lang">
+  <span id="enBtn">EN</span> · <span id="esBtn">ES</span>
+</div>
+
+<div class="app" id="app">
+
+  <div class="header" id="header">field</div>
+
+  <div class="panel">
+
+    <div class="circleWrap">
+      <div class="circle" id="circle">FOLLOW THE CIRCLE</div>
+    </div>
+
+    <div class="intent" id="intent">Equanimity and awareness</div>
+    <div class="sub" id="sub">the field is shared.</div>
+
+    <div class="koan" id="koan"></div>
+
+    <div class="controls">
+      <button id="toggle">Start</button>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* Text */
+const TEXT = {
+  en:{
+    header:"field",
+    follow:"FOLLOW THE CIRCLE",
+    start:"START",
+    stop:"STOP",
+    sub:"the field is shared.",
+    intent:"Equanimity and awareness",
+    koans:[
+      "Who is breathing this breath?",
+      "What is here before thought?",
+      "Where does stillness come from?",
+      "What remains when nothing is held?",
+      "Who is aware of this moment?",
+      "What is listening right now?",
+      "If nothing is missing, what is sought?",
+      "What knows this silence?",
+      "Where does this awareness end?"
+    ]
+  },
+  es:{
+    header:"campo de presencia",
+    follow:"SIGUE EL CÍRCULO",
+    start:"COMENZAR",
+    stop:"DETENER",
+    sub:"el campo se comparte.",
+    intent:"Calma y atención",
+    koans:[
+      "¿Quién respira este aliento?",
+      "¿Qué hay antes del pensamiento?",
+      "¿De dónde surge la quietud?",
+      "¿Qué permanece cuando nada se sostiene?",
+      "¿Quién es consciente de este momento?",
+      "¿Qué está escuchando ahora?",
+      "Si nada falta, ¿qué se busca?",
+      "¿Qué conoce este silencio?",
+      "¿Dónde termina esta presencia?"
+    ]
+  }
+};
+
+const IN = 5500;
+const OUT = 5500;
+const KOAN_DELAY = 25000;
+
+/* DOM */
+const circle = document.getElementById('circle');
+const toggle = document.getElementById('toggle');
+const header = document.getElementById('header');
+const koan = document.getElementById('koan');
+const intent = document.getElementById('intent');
+const sub = document.getElementById('sub');
+const enBtn = document.getElementById('enBtn');
+const esBtn = document.getElementById('esBtn');
+
+let lang='en';
+let running=false;
+let koanTimer=null;
+let index=0;
+
+/* Language */
+function setLang(l){
+  lang=l;
+  enBtn.classList.toggle('active',l==='en');
+  esBtn.classList.toggle('active',l==='es');
+
+  header.textContent=TEXT[l].header;
+  circle.textContent=TEXT[l].follow;
+  intent.textContent=TEXT[l].intent;
+  sub.textContent=TEXT[l].sub;
+  toggle.textContent=running?TEXT[l].stop:TEXT[l].start;
+}
+
+enBtn.onclick=()=>setLang('en');
+esBtn.onclick=()=>setLang('es');
+
+/* Koans */
+function showKoan(){
+  if(!running) return;
+
+  koan.classList.remove('show');
+
+  setTimeout(()=>{
+    koan.textContent=TEXT[lang].koans[index];
+    index=(index+1)%TEXT[lang].koans.length;
+    koan.classList.add('show');
+  },600);
+
+  koanTimer=setTimeout(showKoan,KOAN_DELAY+12000);
+}
+
+/* Session */
+function start(){
+  if(running) return;
+  running=true;
+
+  header.classList.add('fade');
+  circle.classList.add('breath');
+
+  toggle.textContent=TEXT[lang].stop;
+
+  koanTimer=setTimeout(showKoan,KOAN_DELAY);
+}
+
+function stop(){
+  running=false;
+
+  header.classList.remove('fade');
+  circle.classList.remove('breath');
+
+  koan.classList.remove('show');
+  koan.textContent='';
+
+  clearTimeout(koanTimer);
+
+  toggle.textContent=TEXT[lang].start;
+}
+
+toggle.onclick=()=>running?stop():start();
+
+/* Init */
+setLang('en');
+
+})();
+</script>
+
+</body>
+</html>
