@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>field</title>
+<meta name="theme-color" content="#d4e3dd" />
+<style>
+:root{
+  /* Quiet & Deep — Sage / Mist / Mineral */
+  --bg1:#e6f0ec;
+  --bg2:#d4e3dd;
+  --bg3:#c9dad4;
+
+  --jade1:#9fe6c5;
+  --jade2:#7fd9b2;
+
+  --ink:#2f3f3a;
+  --soft:rgba(47,63,58,0.62);
+  --faint:rgba(47,63,58,0.40);
+
+  --breathSec: 11s;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+
+body{
+  min-height:100vh;
+  background:
+    radial-gradient(820px 520px at 50% 0%, rgba(159,230,197,0.18), rgba(159,230,197,0) 62%),
+    radial-gradient(900px 620px at 50% 22%, rgba(255,255,255,0.55), rgba(255,255,255,0) 70%),
+    linear-gradient(var(--bg1), var(--bg2) 54%, var(--bg3));
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-family: Georgia, "Times New Roman", serif;
+  color:var(--ink);
+}
+
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 50% 38%,
+      rgba(0,0,0,0) 0%,
+      rgba(0,0,0,0.018) 60%,
+      rgba(0,0,0,0.035) 100%);
+}
+
+/* Language toggle */
+.lang{
+  position:fixed;
+  top:14px;
+  right:18px;
+  font-size:13px;
+  letter-spacing:0.14em;
+  opacity:0.72;
+  user-select:none;
+}
+.lang span{ cursor:pointer; }
+.lang span.active{
+  opacity:1;
+  text-decoration: underline;
+  text-underline-offset:4px;
+}
+
+.app{
+  width:100%;
+  max-width:460px;
+  padding:44px 22px 58px;
+  text-align:center;
+}
+
+/* Header wordmark */
+.header{
+  font-size: clamp(46px, 8.6vw, 62px);
+  letter-spacing: 0.30em;
+  margin: 0 0 18px;
+  transition: opacity 2400ms ease;
+  opacity:1;
+}
+.header.watermark{ opacity:0.06; }
+
+/* Circle */
+.circleWrap{
+  position:relative;
+  width: 244px;
+  height: 244px;
+  margin: 0 auto 12px;
+}
+
+.circle{
+  width:244px;
+  height:244px;
+  border-radius:50%;
+  background: radial-gradient(circle at 30% 30%, var(--jade1), var(--jade2));
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  user-select:none;
+  cursor:pointer;
+
+  /* Stable rendering on iOS Safari */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform;
+
+  box-shadow: 0 0 46px rgba(127,217,178,0.34);
+  position:relative;
+  overflow:hidden;
+}
+
+.circle::before{
+  content:"";
+  position:absolute;
+  inset:8%;
+  border-radius:50%;
+  background:
+    radial-gradient(circle at 38% 34%,
+      rgba(255,255,255,0.22),
+      rgba(159,230,197,0.10),
+      rgba(47,63,58,0.08));
+  opacity:0.78;
+  pointer-events:none;
+}
+
+/* Circle breathing (transform only) */
+.circle.breath{
+  animation: breathe var(--breathSec) ease-in-out infinite;
+}
+@keyframes breathe{
+  0%{ transform: translateZ(0) scale(0.86); }
+  50%{ transform: translateZ(0) scale(1.00); }
+  100%{ transform: translateZ(0) scale(0.86); }
+}
+
+/* One unified overlay layer inside the circle */
+.overlay{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding: 18px 18px;
+  text-align:center;
+  pointer-events:none;
+}
+
+.overlayText{
+  font-family: Arial, system-ui, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: clamp(18px, 4.8vw, 22px);
+  color: rgba(47,63,58,0.78);
+  opacity:0;
+  transition: opacity 750ms ease, transform 750ms ease;
+  transform: translateY(2px) translateZ(0);
+  will-change: opacity, transform;
+}
+
+.overlayText.show{
+  opacity:0.96;
+  transform: translateY(0) translateZ(0);
+}
+
+/* Koan overlay: not uppercase, tighter tracking, wraps */
+.koanText{
+  font-family: Georgia, "Times New Roman", serif;
+  text-transform:none;
+  letter-spacing: 0.01em;
+  font-size: clamp(18px, 4.9vw, 24px);
+  line-height: 1.35;
+  color: rgba(47,63,58,0.88);
+}
+
+/* Threshold instruction */
+.threshold{
+  margin: 10px auto 16px;
+  max-width: 34ch;
+  color: rgba(47,63,58,0.62);
+  font-size: clamp(14px, 3.8vw, 16px);
+  line-height: 1.45;
+  letter-spacing: 0.02em;
+  transition: opacity 1400ms ease, transform 1400ms ease;
+  opacity: 0.86;
+}
+.threshold.hide{
+  opacity:0;
+  transform: translateY(-2px);
+  pointer-events:none;
+}
+
+/* Controls */
+.controls{ margin-top: 14px; }
+button{
+  border:none;
+  border-radius:999px;
+  padding:12px 34px;
+  font-size:1rem;
+  background: linear-gradient(135deg, var(--jade1), var(--jade2));
+  color: var(--ink);
+  box-shadow: 0 7px 18px rgba(127,217,178,0.22);
+  cursor:pointer;
+  transition: transform 0.15s ease, filter 0.15s ease, opacity 0.35s ease;
+}
+button:active{ transform:scale(0.98); }
+button:hover{ filter: brightness(1.01); }
+.running button{ opacity: 0.92; }
+
+/* Tiny helper hint */
+.hint{
+  margin-top:10px;
+  font-size: 13px;
+  color: var(--faint);
+  letter-spacing: 0.02em;
+  opacity:0.75;
+}
+
+/* Small phones */
+@media(max-width:360px){
+  .circle,.circleWrap{ width:214px; height:214px; }
+}
+</style>
+</head>
+
+<body>
+<div class="lang" aria-label="language selector">
+  <span id="enBtn">EN</span> · <span id="esBtn">ES</span>
+</div>
+
+<div class="app" id="app">
+  <div class="header" id="header">field</div>
+
+  <div class="circleWrap">
+    <div class="circle" id="circle" aria-live="polite" role="button" aria-label="breath circle">
+      <div class="overlay">
+        <div class="overlayText" id="overlayText"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="threshold" id="threshold">
+    Breathe with the circle.<br>
+    Let a question open the field.
+  </div>
+
+  <div class="controls">
+    <button id="toggle" type="button">START</button>
+  </div>
+  <div class="hint" id="hint">Tap the circle to replay the question.</div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+const TEXT = {
+  en:{
+    header:"field",
+    start:"START",
+    stop:"STOP",
+    inhale:"INHALE",
+    exhale:"EXHALE",
+    inShort:"IN",
+    outShort:"OUT",
+    keep:"KEEP GOING",
+    threshold1:"Breathe with the circle.",
+    threshold2:"Let a question open the field.",
+    hint:"Tap the circle to replay the question.",
+    koans:{
+      soft:[
+        "What is here before thought?",
+        "What is already at ease?",
+        "What is listening right now?",
+        "What remains when effort drops?",
+        "What is present without trying?"
+      ],
+      medium:[
+        "Who is aware of this moment?",
+        "If nothing is missing, what is sought?",
+        "What knows this silence?",
+        "Where does stillness come from?",
+        "Who is looking?"
+      ],
+      deep:[
+        "Who is breathing this breath?",
+        "Where does awareness end?",
+        "What is here when the self is absent?",
+        "What remains when nothing is held?",
+        "Before ‘I’, what is?"
+      ]
+    }
+  },
+  es:{
+    header:"campo de presencia",
+    start:"COMENZAR",
+    stop:"DETENER",
+    inhale:"INHALA",
+    exhale:"EXHALA",
+    inShort:"IN",
+    outShort:"OUT",
+    keep:"SIGUE",
+    threshold1:"Respira con el círculo.",
+    threshold2:"Deja que una pregunta abra el campo.",
+    hint:"Toca el círculo para repetir la pregunta.",
+    koans:{
+      soft:[
+        "¿Qué hay antes del pensamiento?",
+        "¿Qué ya está en calma?",
+        "¿Qué está escuchando ahora?",
+        "¿Qué queda cuando cae el esfuerzo?",
+        "¿Qué está presente sin intentar?"
+      ],
+      medium:[
+        "¿Quién es consciente de este momento?",
+        "Si nada falta, ¿qué se busca?",
+        "¿Qué conoce este silencio?",
+        "¿De dónde surge la quietud?",
+        "¿Quién está mirando?"
+      ],
+      deep:[
+        "¿Quién respira este aliento?",
+        "¿Dónde termina la presencia?",
+        "¿Qué hay cuando no hay ‘yo’?",
+        "¿Qué permanece cuando nada se sostiene?",
+        "Antes de “yo”, ¿qué es?"
+      ]
+    }
+  }
+};
+
+const BREATH_TOTAL_MS = 11000;
+const IN_MS  = 5200;
+const KOAN_FIRST_MS = 25000;
+const KOAN_REPEAT_MS = 52000;
+const PRE_KOAN_SILENCE_MS = 3000;
+
+const app = document.getElementById('app');
+const header = document.getElementById('header');
+const circle = document.getElementById('circle');
+const overlayText = document.getElementById('overlayText');
+const threshold = document.getElementById('threshold');
+const toggle = document.getElementById('toggle');
+const hint = document.getElementById('hint');
+const enBtn = document.getElementById('enBtn');
+const esBtn = document.getElementById('esBtn');
+
+let lang = localStorage.getItem('field_lang') || 'en';
+let running = false;
+
+let guideTimers = [];
+let firstKoanTimer = null;
+let koanInterval = null;
+
+let currentKoan = "";
+let sessionStartMs = 0;
+
+const LS = { prog: "field_prog_v1", stats:"field_stats_v1" };
+
+function now(){ return Date.now(); }
+
+/* Audio */
+let audioCtx=null, noiseSource=null, gain=null, driftOsc=null, driftGain=null;
+
+function ensureAudio(){
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  const bufferSize = 2 * audioCtx.sampleRate;
+  const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const out = noiseBuffer.getChannelData(0);
+  for (let i=0; i<bufferSize; i++) out[i] = Math.random()*2 - 1;
+
+  noiseSource = audioCtx.createBufferSource();
+  noiseSource.buffer = noiseBuffer;
+  noiseSource.loop = true;
+
+  const band = audioCtx.createBiquadFilter();
+  band.type = "bandpass";
+  band.frequency.value = 220;
+  band.Q.value = 0.75;
+
+  const lowpass = audioCtx.createBiquadFilter();
+  lowpass.type = "lowpass";
+  lowpass.frequency.value = 950;
+
+  gain = audioCtx.createGain();
+  gain.gain.value = 0.0;
+
+  driftOsc = audioCtx.createOscillator();
+  driftOsc.type = "sine";
+  driftOsc.frequency.value = 0.022; // ~45s
+  driftGain = audioCtx.createGain();
+  driftGain.gain.value = 0.010;
+  driftOsc.connect(driftGain);
+  driftGain.connect(gain.gain);
+  driftOsc.start();
+
+  noiseSource.connect(band);
+  band.connect(lowpass);
+  lowpass.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  noiseSource.start(0);
+}
+
+function fadeTo(target, seconds=1.8){
+  if (!gain || !audioCtx) return;
+  const t0 = audioCtx.currentTime;
+  gain.gain.cancelScheduledValues(t0);
+  gain.gain.setValueAtTime(gain.gain.value, t0);
+  gain.gain.linearRampToValueAtTime(target, t0 + seconds);
+}
+
+function bell(){
+  if (!audioCtx) return;
+  const t0 = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(784, t0);
+  osc.frequency.exponentialRampToValueAtTime(523.25, t0 + 0.55);
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(0.0, t0);
+  g.gain.linearRampToValueAtTime(0.14, t0 + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.78);
+  osc.connect(g);
+  g.connect(audioCtx.destination);
+  osc.start(t0);
+  osc.stop(t0 + 0.85);
+}
+
+/* Local storage helpers */
+function loadJSON(key, fallback){
+  try{
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    return parsed ?? fallback;
+  }catch{
+    return fallback;
+  }
+}
+function saveJSON(key, value){
+  try{ localStorage.setItem(key, JSON.stringify(value)); }catch{}
+}
+
+function getStats(){
+  return loadJSON(LS.stats, { sessions:0, total_ms:0, avg_ms:0 });
+}
+function updateStats(sessionMs){
+  const s = getStats();
+  s.sessions += 1;
+  s.total_ms += sessionMs;
+  s.avg_ms = Math.round(s.total_ms / Math.max(1, s.sessions));
+  saveJSON(LS.stats, s);
+  return s;
+}
+
+function shuffle(arr){
+  const a = arr.slice();
+  for (let i=a.length-1; i>0; i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function buildPoolForLang(){
+  const prog = loadJSON(LS.prog, {});
+  if (!prog[lang]) prog[lang] = {};
+  const lp = prog[lang];
+
+  for (const tier of ["soft","medium","deep"]){
+    const list = TEXT[lang].koans[tier].map((_, idx) => idx);
+    if (!lp[tier] || !Array.isArray(lp[tier].order) || lp[tier].order.length !== list.length){
+      lp[tier] = { order: shuffle(list), pos: 0 };
+    }
+  }
+  saveJSON(LS.prog, prog);
+  return prog[lang];
+}
+
+function chooseTier(elapsedMs, stats){
+  const avg = stats?.avg_ms ?? 0;
+  if (elapsedMs >= 180000 || avg >= 240000) return "deep";
+  if (elapsedMs >=  90000 || avg >= 120000) return "medium";
+  return "soft";
+}
+
+function nextKoan(elapsedMs){
+  const stats = getStats();
+  const pools = buildPoolForLang();
+  const tier = chooseTier(elapsedMs, stats);
+  const tp = pools[tier];
+
+  const idx = tp.order[tp.pos];
+  tp.pos = (tp.pos + 1) % tp.order.length;
+
+  const prog = loadJSON(LS.prog, {});
+  prog[lang] = pools;
+  saveJSON(LS.prog, prog);
+
+  return TEXT[lang].koans[tier][idx];
+}
+
+/* Overlay */
+function showOverlay(text, koan=false){
+  overlayText.classList.toggle('koanText', !!koan);
+  overlayText.textContent = text;
+  overlayText.classList.add('show');
+}
+function hideOverlay(){ overlayText.classList.remove('show'); }
+
+/* Guidance arc */
+function clearGuides(){
+  guideTimers.forEach(t => clearTimeout(t));
+  guideTimers = [];
+  overlayText.classList.remove('show');
+  overlayText.classList.remove('koanText');
+  overlayText.textContent = '';
+}
+
+function startGuidanceArc(){
+  clearGuides();
+
+  // Cycle 1
+  guideTimers.push(setTimeout(() => showOverlay(TEXT[lang].inhale), 0));
+  guideTimers.push(setTimeout(() => showOverlay(TEXT[lang].exhale), IN_MS));
+
+  // Cycle 2
+  guideTimers.push(setTimeout(() => showOverlay(TEXT[lang].inhale), BREATH_TOTAL_MS));
+  guideTimers.push(setTimeout(() => showOverlay(TEXT[lang].exhale), BREATH_TOTAL_MS + IN_MS));
+
+  // Keep going
+  guideTimers.push(setTimeout(() => showOverlay(TEXT[lang].keep), 2*BREATH_TOTAL_MS + 250));
+  guideTimers.push(setTimeout(() => hideOverlay(), 2*BREATH_TOTAL_MS + 2750));
+
+  // IN/OUT until silence window
+  const startShort = 2*BREATH_TOTAL_MS + 3400;
+  const stopShortAt = Math.max(0, KOAN_FIRST_MS - PRE_KOAN_SILENCE_MS);
+  let t = startShort;
+  while (t < stopShortAt){
+    guideTimers.push(setTimeout(() => showOverlay(TEXT[lang].inShort), t));
+    guideTimers.push(setTimeout(() => showOverlay(TEXT[lang].outShort), t + IN_MS));
+    t += BREATH_TOTAL_MS;
+  }
+
+  guideTimers.push(setTimeout(() => hideOverlay(), stopShortAt));
+  guideTimers.push(setTimeout(() => threshold.classList.add('hide'), BREATH_TOTAL_MS + 250));
+}
+
+/* Koans */
+function clearKoans(){
+  clearTimeout(firstKoanTimer);
+  clearInterval(koanInterval);
+  firstKoanTimer = null;
+  koanInterval = null;
+  currentKoan = "";
+}
+
+function showKoan(text){
+  currentKoan = text;
+  showOverlay(text, true);
+}
+
+function scheduleKoans(){
+  clearKoans();
+
+  firstKoanTimer = setTimeout(() => {
+    if (!running) return;
+    hideOverlay();
+    setTimeout(() => {
+      if (!running) return;
+      showKoan(nextKoan(now() - sessionStartMs));
+    }, PRE_KOAN_SILENCE_MS);
+
+    koanInterval = setInterval(() => {
+      if (!running) return;
+      hideOverlay();
+      setTimeout(() => {
+        if (!running) return;
+        showKoan(nextKoan(now() - sessionStartMs));
+      }, PRE_KOAN_SILENCE_MS);
+    }, KOAN_REPEAT_MS);
+
+  }, KOAN_FIRST_MS);
+}
+
+function replayKoan(){
+  if (!running || !currentKoan) return;
+  hideOverlay();
+  setTimeout(() => { if (running) showKoan(currentKoan); }, 520);
+}
+
+/* Language */
+function setLang(l){
+  lang = l;
+  localStorage.setItem('field_lang', l);
+  enBtn.classList.toggle('active', l === 'en');
+  esBtn.classList.toggle('active', l === 'es');
+  header.textContent = TEXT[lang].header;
+  toggle.textContent = running ? TEXT[lang].stop : TEXT[lang].start;
+  threshold.innerHTML = `${TEXT[lang].threshold1}<br>${TEXT[lang].threshold2}`;
+  hint.textContent = TEXT[lang].hint;
+  buildPoolForLang();
+}
+enBtn.addEventListener('click', () => { if(!running) setLang('en'); });
+esBtn.addEventListener('click', () => { if(!running) setLang('es'); });
+
+function lockLanguage(lock){
+  enBtn.style.pointerEvents = lock ? 'none' : 'auto';
+  esBtn.style.pointerEvents = lock ? 'none' : 'auto';
+  enBtn.style.opacity = lock ? '0.55' : '';
+  esBtn.style.opacity = lock ? '0.55' : '';
+}
+
+/* Session */
+function start(){
+  if (running) return;
+  running = true;
+  sessionStartMs = now();
+
+  app.classList.add('running');
+  header.classList.add('watermark');
+  circle.classList.add('breath');
+  toggle.textContent = TEXT[lang].stop;
+  lockLanguage(true);
+
+  ensureAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  bell();
+  fadeTo(0.060, 1.8);
+
+  startGuidanceArc();
+  scheduleKoans();
+}
+
+function stop(){
+  if (!running) return;
+  running = false;
+
+  app.classList.remove('running');
+  header.classList.remove('watermark');
+  circle.classList.remove('breath');
+  toggle.textContent = TEXT[lang].start;
+  lockLanguage(false);
+
+  clearGuides();
+  clearKoans();
+
+  threshold.classList.remove('hide');
+
+  updateStats(Math.max(0, now() - sessionStartMs));
+
+  if (audioCtx){
+    bell();
+    fadeTo(0.0, 1.6);
+  }
+}
+
+toggle.addEventListener('click', () => running ? stop() : start());
+circle.addEventListener('click', () => { if (!running) start(); else replayKoan(); });
+
+/* Audio recovery (no reload needed) */
+document.addEventListener('visibilitychange', () => {
+  if (!running) return;
+  if (document.hidden){
+    if (audioCtx && gain) fadeTo(0.0, 0.35);
+  }else{
+    ensureAudio();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    fadeTo(0.060, 0.9);
+  }
+});
+
+/* Init */
+setLang(lang);
+})();
+</script>
+</body>
+</html>
