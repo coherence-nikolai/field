@@ -466,6 +466,31 @@ body.fs-large .obs-note{font-size:clamp(18px,4.8vw,24px);}
 body.fs-large .btext{font-size:clamp(24px,6.5vw,34px);}
 body.fs-large .imag-prompt{font-size:clamp(18px,4.8vw,24px);}
 #fontBtn.active{color:var(--gold);}
+
+/* ── OBSERVE SETUP ── */
+#s-observe-setup{gap:0;justify-content:center;}
+.obs-setup-btn{
+  background:rgba(201,169,110,0.04);
+  border:1px solid rgba(201,169,110,0.14);
+  border-radius:10px;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:clamp(12px,3vw,14px);
+  letter-spacing:.10em;
+  color:rgba(201,169,110,0.45);
+  cursor:pointer;
+  padding:14px 10px;
+  min-height:48px;
+  -webkit-tap-highlight-color:transparent;
+  transition:color .3s ease,border-color .3s ease,background .3s ease,box-shadow .3s ease;
+  font-weight:300;
+}
+.obs-setup-btn.active{
+  color:var(--gold);
+  border-color:rgba(201,169,110,0.50);
+  background:rgba(201,169,110,0.10);
+  box-shadow:0 0 14px rgba(201,169,110,0.15);
+}
+.obs-setup-btn:active{transform:scale(.97);}
 </style>
 </head>
 <body>
@@ -532,7 +557,7 @@ body.fs-large .imag-prompt{font-size:clamp(18px,4.8vw,24px);}
   <div class="field-title">Field</div>
   <div class="field-sub" id="homeFieldSub"></div>
   <div class="movements">
-    <div class="movement" id="mv-observe" onclick="startObserve()">
+    <div class="movement" id="mv-observe">
       <div class="mv-glyph">◎</div>
       <div class="mv-label" id="mvObserveLabel"></div>
       <div class="mv-hint" id="mvObserveHint"></div>
@@ -552,8 +577,10 @@ body.fs-large .imag-prompt{font-size:clamp(18px,4.8vw,24px);}
   <button id="revisitHomeBtn" onclick="revisitIntro()">revisit introduction</button>
 </div>
 
+<!-- OBSERVE SETUP -->
+<div class="screen" id="s-observe-setup"></div>
+
 <!-- OBSERVE -->
-<div class="screen" id="s-observe"></div>
 
 <!-- OBSERVE COHERENCE -->
 <div class="screen" id="s-obs-coherence" onclick="goHome()">

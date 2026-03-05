@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// FIELD — Unified App v2.0
+// FIELD — Unified App v2.1
 // Observe · Collapse · Decohere
 // ═══════════════════════════════════════
 
@@ -14,12 +14,16 @@ let currentMode = 'home';
 // Observer state
 let attentionTimer = null, attentionSec = 0, isCoherent = false;
 let fieldActive = false, scatterTO = null, observeParticle = null;
-const COHERENCE_SEC = 45;
+let COHERENCE_SEC = 60; // default 1 min — overridden by duration choice
+let obsTargetSec = 60;
 const METER_DOTS = 9;
+
+// Observer mode: 'wander' (original) or 'kasina' (static flame)
+let obsMode = 'wander';
 
 // Three-signal attention system
 let isStill = true, lastMotionTime = 0, lastAffirmTime = 0;
-let affirmBonus = 0; // extra seconds from affirmations
+let affirmBonus = 0;
 let microToneTimer = null;
 let motionCheckInterval = null;
 
@@ -63,7 +67,6 @@ const bgPts = Array.from({length:70}, () => new Pt());
 class SpParticle {
   constructor(i, total) {
     this.idx = i;
-    // Full screen distribution — field surrounds you, not just above
     const angle = (Math.PI*2/total)*i + Math.random()*0.5;
     const r = 0.28 + Math.random()*0.18;
     this.cx = 0.5 + Math.cos(angle)*r; this.cy = 0.45 + Math.sin(angle)*r;
@@ -82,7 +85,6 @@ class SpParticle {
     this.cx += (this.targetCx - this.cx) * 0.018;
     this.cy += (this.targetCy - this.cy) * 0.018;
     const ds = Math.min(innerWidth, innerHeight);
-    // Full screen — no clamping to top quarter
     this.x = this.cx*innerWidth + Math.cos(this.ph)*this.driftR*(ds/500);
     this.y = this.cy*innerHeight + Math.sin(this.ph*0.73)*this.driftR*0.65*(ds/500);
     this.alpha += (this.targetAlpha - this.alpha) * 0.025;
@@ -94,7 +96,6 @@ class SpParticle {
   }
   draw() {
     if (this.alpha < 0.01 || particlesHidden) return;
-    // Blur matching original Collapse: (1-clarity)*14 + 2 for full superposition feel
     const blur = (1-this.clarity)*20 + 4;
     const glow = 10 + this.clarity*28;
     cx.save();
@@ -112,7 +113,7 @@ class SpParticle {
 }
 let spParticles = [];
 
-// ── OBSERVE PARTICLE ──
+// ── OBSERVE PARTICLE (wander mode) ──
 let clarityLevel = 0, particleVisible = false;
 class ObsParticle {
   constructor() {
@@ -122,15 +123,14 @@ class ObsParticle {
     this.phV = 0.004 + Math.random()*0.003;
     this.driftR = 55 + Math.random()*35;
     this.r = 5; this.alpha = 0; this.targetAlpha = 0.9;
-    this.breathPh = 0; // 0..2π for breathing glow
+    this.breathPh = 0;
     this.scattering = false; this.scatterParts = [];
   }
   update() {
     this.ph += this.phV;
-    this.breathPh += 0.017; // ~6s full breath cycle
+    this.breathPh += 0.017;
     this.cx += (0.5-this.cx)*0.001; this.cy += (0.5-this.cy)*0.001;
     const ds = Math.min(innerWidth, innerHeight);
-    // Device motion: particle drifts away when phone moves
     const motionFactor = isStill ? 1 : 0.5;
     this.x = this.cx*innerWidth + Math.cos(this.ph)*this.driftR*(ds/400)*motionFactor;
     this.y = this.cy*innerHeight + Math.sin(this.ph*0.67)*this.driftR*0.7*(ds/400)*motionFactor;
@@ -138,9 +138,8 @@ class ObsParticle {
   }
   draw() {
     if (this.alpha < 0.01) return;
-    // Breathing glow — expands and contracts on 6s cycle
     const breathFactor = 0.7 + 0.3*Math.sin(this.breathPh);
-    const stillFactor = isStill ? 1 : 0.4; // dims when phone moving
+    const stillFactor = isStill ? 1 : 0.4;
     const blur = (1-clarityLevel)*12;
     const r = this.r + clarityLevel*2;
     const glow = (18 + clarityLevel*40) * breathFactor;
@@ -184,14 +183,114 @@ class ObsParticle {
   }
 }
 
+// ── KASINA PARTICLE (static flame — stays centred, pulses + micro-shudders) ──
+class KasinaParticle {
+  constructor() {
+    this.x = innerWidth * 0.5;
+    this.y = innerHeight * 0.5;
+    this.breathPh = 0;
+    this.shudderPh = 0;
+    this.shudderX = 0; this.shudderY = 0;
+    this.shudderTargetX = 0; this.shudderTargetY = 0;
+    this.shudderTimer = 0;
+    this.alpha = 0; this.targetAlpha = 1;
+    this.r = 6;
+    // Flame flicker state
+    this.flickerPh = Math.random()*Math.PI*2;
+    this.flickerV = 0.08 + Math.random()*0.04;
+    // Radiate rings timing
+    this.ringPh = 0;
+  }
+  update() {
+    this.x = innerWidth * 0.5;
+    this.y = innerHeight * 0.5;
+    this.breathPh += 0.012; // slow 8s breath
+    this.flickerPh += this.flickerV;
+    this.ringPh += 0.018;
+    this.alpha += (this.targetAlpha - this.alpha) * 0.025;
+
+    // Micro shudder — tiny random quiver, never leaves centre by more than 3px
+    this.shudderTimer++;
+    if (this.shudderTimer > 8 + Math.random()*12) {
+      this.shudderTargetX = (Math.random()-0.5) * 4;
+      this.shudderTargetY = (Math.random()-0.5) * 4;
+      this.shudderTimer = 0;
+    }
+    this.shudderX += (this.shudderTargetX - this.shudderX) * 0.18;
+    this.shudderY += (this.shudderTargetY - this.shudderY) * 0.18;
+  }
+  draw() {
+    if (this.alpha < 0.01) return;
+    const px = this.x + this.shudderX;
+    const py = this.y + this.shudderY;
+
+    // Clarity-driven expansion
+    const breathScale = 0.75 + 0.25*Math.sin(this.breathPh);
+    const flickerScale = 1 + 0.06*Math.sin(this.flickerPh) + 0.03*Math.sin(this.flickerPh*2.3);
+    const clarityScale = 1 + clarityLevel * 0.8;
+
+    const r = this.r * breathScale * flickerScale * clarityScale;
+    const glow = (26 + clarityLevel*55) * breathScale * flickerScale;
+    const coreAlpha = (0.85 + 0.15*Math.sin(this.flickerPh)) * this.alpha;
+    const glowAlpha = (0.18 + clarityLevel*0.28) * breathScale * this.alpha;
+
+    cx.save();
+
+    // Outer aura — large, diffuse
+    const aura = cx.createRadialGradient(px, py, 0, px, py, glow * 2.5);
+    aura.addColorStop(0, `rgba(240,204,136,${(glowAlpha*0.35).toFixed(3)})`);
+    aura.addColorStop(0.5, `rgba(240,204,136,${(glowAlpha*0.12).toFixed(3)})`);
+    aura.addColorStop(1, 'rgba(240,204,136,0)');
+    cx.fillStyle = aura;
+    cx.beginPath(); cx.arc(px, py, glow*2.5, 0, Math.PI*2); cx.fill();
+
+    // Mid glow
+    const grad = cx.createRadialGradient(px, py, 0, px, py, glow);
+    grad.addColorStop(0, `rgba(255,240,200,${(glowAlpha*0.9).toFixed(3)})`);
+    grad.addColorStop(0.4, `rgba(240,204,136,${(glowAlpha*0.5).toFixed(3)})`);
+    grad.addColorStop(1, 'rgba(240,204,136,0)');
+    cx.fillStyle = grad;
+    cx.beginPath(); cx.arc(px, py, glow, 0, Math.PI*2); cx.fill();
+
+    // Sharp core — no blur
+    cx.globalAlpha = coreAlpha;
+    // Warm white centre
+    const core = cx.createRadialGradient(px, py, 0, px, py, r);
+    core.addColorStop(0, 'rgba(255,252,240,1)');
+    core.addColorStop(0.35, 'rgba(255,232,160,0.95)');
+    core.addColorStop(1, 'rgba(240,180,80,0.4)');
+    cx.fillStyle = core;
+    cx.beginPath(); cx.arc(px, py, r, 0, Math.PI*2); cx.fill();
+
+    // Radiating ring — pulses outward every ~3s
+    const ringProgress = (Math.sin(this.ringPh) + 1) / 2; // 0..1
+    if (ringProgress > 0.02) {
+      const ringR = 30 + ringProgress * 80 * clarityScale;
+      const ringAlpha = (1 - ringProgress) * 0.18 * this.alpha;
+      cx.globalAlpha = ringAlpha;
+      cx.strokeStyle = 'rgba(240,204,136,1)';
+      cx.lineWidth = 0.8;
+      cx.beginPath(); cx.arc(px, py, ringR, 0, Math.PI*2); cx.stroke();
+    }
+
+    cx.restore();
+  }
+}
+let kasinaParticle = null;
+
 // ── RENDER LOOP ──
 function loop() {
   cx.clearRect(0, 0, cv.width, cv.height);
   bgPts.forEach(p => { p.update(); p.draw(); });
-  if (currentMode === 'observe' && particleVisible && observeParticle) {
-    observeParticle.update();
-    if (observeParticle.scattering) observeParticle.drawScatter();
-    else observeParticle.draw();
+  if (currentMode === 'observe' && particleVisible) {
+    if (obsMode === 'kasina' && kasinaParticle) {
+      kasinaParticle.update();
+      kasinaParticle.draw();
+    } else if (obsMode === 'wander' && observeParticle) {
+      observeParticle.update();
+      if (observeParticle.scattering) observeParticle.drawScatter();
+      else observeParticle.draw();
+    }
   }
   if ((currentMode === 'collapse' || currentMode === 'home' || currentMode === 'decohere') && spParticles.length) {
     spParticles.forEach(p => { p.update(); p.draw(); });
@@ -271,10 +370,9 @@ function playObsCoherenceTone() {
     o.connect(g); g.connect(audioCtx.destination); o.start(t0); o.stop(t0+5.5);
   });
 }
-// Micro-tone: barely-there harmonic shimmer every ~12s when coherent
 function playMicroTone() {
   if (!audioCtx || !fieldActive || isCoherent) return;
-  const freq = isStill ? 660 : 550; // higher when still, lower when drifting
+  const freq = isStill ? 660 : 550;
   [freq, freq*2].forEach((f, i) => {
     const o = audioCtx.createOscillator(), g = audioCtx.createGain();
     o.type = 'sine'; o.frequency.value = f;
@@ -317,9 +415,8 @@ function playScatterSound() {
   src.connect(g); g.connect(audioCtx.destination); src.start();
 }
 
-// ── SCREEN TRANSITIONS — smooth, no flashes ──
+// ── SCREEN TRANSITIONS ──
 function showScreen(id, postCb) {
-  // Clear ghost state words whenever leaving collapse/field screens
   if (id !== 's-collapse' && id !== 's-field') {
     const gh = document.getElementById('ghosts');
     if (gh && gh.style.opacity !== '0') {
@@ -330,7 +427,6 @@ function showScreen(id, postCb) {
   const next = document.getElementById(id);
   const current = document.querySelector('.screen.active');
   if (current === next) { if (postCb) postCb(); return; }
-  // Fade out current
   if (current) {
     current.style.transition = 'opacity 0.7s ease';
     current.style.opacity = '0';
@@ -340,7 +436,6 @@ function showScreen(id, postCb) {
       current.style.transition = '';
     }, 720);
   }
-  // Fade in next after short delay
   setTimeout(() => {
     next.style.opacity = '0';
     next.style.transition = 'none';
@@ -357,7 +452,6 @@ function showScreen(id, postCb) {
   }, 400);
 }
 
-// ── LANG ──
 // ── AUDIO TOGGLE ──
 let audioEnabled = true;
 function toggleAudio() {
@@ -383,7 +477,6 @@ function toggleFont() {
   const btn = document.getElementById('fontBtn');
   if (btn) btn.classList.toggle('active', fontLarge);
 }
-// Apply on load
 if (fontLarge) {
   document.body.classList.add('fs-large');
   const btn = document.getElementById('fontBtn');
@@ -441,14 +534,12 @@ function goHome() {
   showScreen('s-home', () => {
     document.querySelectorAll('.al').forEach(a => a.classList.add('on'));
     if (cameFromDecohere) {
-      // Particles bloom from centre — dissolved state rejoining the field
       setTimeout(() => {
         spParticles = Array.from({length:12}, (_,i) => new SpParticle(i,12));
         spParticles.forEach(p => {
           p.x = innerWidth/2 + (Math.random()-0.5)*30;
           p.y = innerHeight/2 + (Math.random()-0.5)*30;
-          p.targetAlpha = 0;
-          p.targetClarity = 0;
+          p.targetAlpha = 0; p.targetClarity = 0;
         });
         setTimeout(() => {
           spParticles.forEach(p => { p.targetAlpha = 0.4+Math.random()*0.3; });
@@ -460,7 +551,6 @@ function goHome() {
     tryDrone();
   });
   updateHomeCount();
-  // Clear all lit states
   document.querySelectorAll('.movement').forEach(m => m.classList.remove('lit'));
   setTimeout(() => {
     const obs = parseInt(localStorage.getItem('field_obs')||'0');
@@ -471,7 +561,6 @@ function goHome() {
     const mvId = max === obs ? 'mv-collapse' : max === dec ? 'mv-decohere' : 'mv-observe';
     const el = document.getElementById(mvId);
     if (el) el.classList.add('lit');
-    // After Decohere: ◯ glyph glows for 3 minutes
     if (cameFromDecohere) {
       const decEl = document.getElementById('mv-decohere');
       if (decEl) {
@@ -491,40 +580,166 @@ function showBackBtn() {
 }
 
 // ══════════════════════════════════════
-// OBSERVE MOVEMENT — three-signal attention
+// OBSERVE MOVEMENT — setup screen
 // ══════════════════════════════════════
+
+function startObserve() {
+  if (navigator.vibrate) navigator.vibrate(18);
+  currentMode = 'observe-setup';
+  showBackBtn();
+  showScreen('s-observe-setup');
+}
+
+// Called when user picks duration + mode on setup screen
+function beginObserveSession(mins, mode) {
+  obsTargetSec = mins * 60;
+  COHERENCE_SEC = obsTargetSec;
+  obsMode = mode;
+  if (navigator.vibrate) navigator.vibrate(18);
+  initAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  fadeDrone(true, 1); spParticles = [];
+  buildObsScreen();
+  setTimeout(() => {
+    if (!droneNodes.length && currentMode === 'observe') {
+      [40,80,120].forEach((f,i) => {
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = 'sine'; o.frequency.value = f;
+        g.gain.setValueAtTime(0, audioCtx.currentTime);
+        g.gain.linearRampToValueAtTime(0.015-i*0.004, audioCtx.currentTime+3);
+        o.connect(g); g.connect(audioCtx.destination); o.start();
+        droneNodes.push({o, g});
+      });
+    }
+  }, 1200);
+  isCoherent = false; fieldActive = false; attentionSec = 0; affirmBonus = 0; clarityLevel = 0;
+  isStill = true; lastAffirmTime = 0;
+
+  if (obsMode === 'kasina') {
+    kasinaParticle = new KasinaParticle();
+  } else {
+    observeParticle = new ObsParticle();
+  }
+  particleVisible = true;
+
+  showScreen('s-observe', () => {
+    setTimeout(() => {
+      const hint = document.getElementById('obs-hint-txt');
+      if (hint) hint.style.opacity = '1';
+    }, 600);
+    setTimeout(() => {
+      const hint = document.getElementById('obs-hint-txt');
+      if (hint) { hint.style.transition = 'opacity 1.5s ease'; hint.style.opacity = '0'; }
+    }, 3500);
+    setTimeout(() => {
+      if (currentMode !== 'observe') return;
+      currentMode = 'observe';
+      fieldActive = true;
+      startAttentionTimer();
+      startMicroTones();
+      startMotionCheck();
+      const sigs = document.getElementById('obs-signals');
+      const meter = document.getElementById('obs-meter-wrap');
+      const btn = document.getElementById('affirmBtn');
+      if (sigs) sigs.style.opacity = '1';
+      if (meter) meter.style.opacity = '1';
+      if (btn) btn.style.opacity = '1';
+    }, 4500);
+  });
+}
 
 function buildObsScreen() {
   const screen = document.getElementById('s-observe');
+  const modeLabel = obsMode === 'kasina'
+    ? (lang==='en' ? 'Rest your gaze on the light.' : 'Descansa la mirada en la luz.')
+    : (lang==='en' ? 'One particle.<br>Just watch it.' : 'Una partícula.<br>Solo obsérvala.');
+
+  const minLabel = obsTargetSec === 60 ? '1 min'
+    : obsTargetSec === 300 ? '5 min' : '10 min';
+
   screen.innerHTML = `
-    <div id="obs-hint-txt" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;opacity:0;transition:opacity 2s ease;z-index:20;">
-      <div style="font-size:clamp(26px,7vw,38px);font-weight:300;letter-spacing:.12em;color:rgba(201,169,110,.55);margin-bottom:16px;">◎</div>
+    <div id="obs-hint-txt" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;opacity:0;transition:opacity 2s ease;z-index:20;pointer-events:none;">
+      <div style="font-size:clamp(26px,7vw,38px);font-weight:300;letter-spacing:.12em;color:rgba(201,169,110,.55);margin-bottom:16px;">${obsMode==='kasina'?'◈':'◎'}</div>
       <div style="font-size:clamp(11px,2.8vw,14px);letter-spacing:.12em;color:rgba(240,230,208,.45);line-height:1.8;">
-        ${lang==='en'?'One particle.<br>Just watch it.':'Una partícula.<br>Solo obsérvala.'}
+        ${modeLabel}
       </div>
+      <div style="font-size:clamp(10px,2.4vw,12px);letter-spacing:.16em;color:rgba(201,169,110,.28);margin-top:10px;">${minLabel}</div>
     </div>
     <div id="clarity-ring"></div>
-    <div id="obs-signals" style="position:fixed;bottom:90px;left:50%;transform:translateX(-50%);display:flex;gap:20px;align-items:flex-end;opacity:0;transition:opacity 2s ease;z-index:20;">
-      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+
+    <!-- TIME REMAINING arc -->
+    <canvas id="obs-timer-arc" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:3;opacity:0;transition:opacity 2s ease;"></canvas>
+
+    <!-- SIGNALS — moved to left side, vertical stack, clearly labelled -->
+    <div id="obs-signals" style="position:fixed;left:clamp(18px,5vw,32px);top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:18px;align-items:flex-start;opacity:0;transition:opacity 2s ease;z-index:20;">
+      <div style="display:flex;align-items:center;gap:10px;">
         <div class="sig-dot" id="sig-still"></div>
         <div class="sig-label">${lang==='en'?'still':'quieto'}</div>
       </div>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+      <div style="display:flex;align-items:center;gap:10px;">
         <div class="sig-dot" id="sig-present"></div>
         <div class="sig-label">${lang==='en'?'present':'presente'}</div>
       </div>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+      <div style="display:flex;align-items:center;gap:10px;">
         <div class="sig-dot" id="sig-affirm"></div>
         <div class="sig-label">${lang==='en'?'here':'aquí'}</div>
       </div>
     </div>
-    <div id="meter" style="position:fixed;bottom:46px;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center;z-index:20;opacity:0;transition:opacity 2s ease;"></div>
-    <div id="scatter-text" style="position:fixed;top:38%;left:50%;transform:translateX(-50%);font-size:clamp(11px,2.8vw,13px);letter-spacing:.14em;color:rgba(240,230,208,.45);white-space:nowrap;opacity:0;transition:opacity 1s ease;z-index:20;"></div>
-    <button id="affirmBtn" onclick="doAffirm()" style="position:fixed;bottom:130px;right:clamp(24px,6vw,48px);width:48px;height:48px;border-radius:50%;background:none;border:1px solid rgba(201,169,110,.15);cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 2s ease,border-color .3s ease,box-shadow .3s ease;z-index:30;">
-      <div id="affirmDot" style="width:8px;height:8px;border-radius:50%;background:rgba(201,169,110,.4);transition:transform .3s ease,background .3s ease;animation:affirmPulse 3s ease-in-out infinite;"></div>
+
+    <!-- METER — dots at top -->
+    <div id="obs-meter-wrap" style="position:fixed;top:clamp(68px,14vw,88px);left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center;z-index:20;opacity:0;transition:opacity 2s ease;">
+      <div id="meter"></div>
+    </div>
+
+    <div id="scatter-text" style="position:fixed;top:38%;left:50%;transform:translateX(-50%);font-size:clamp(11px,2.8vw,13px);letter-spacing:.14em;color:rgba(240,230,208,.45);white-space:nowrap;opacity:0;transition:opacity 1s ease;z-index:20;pointer-events:none;"></div>
+
+    <!-- PRESENCE BUTTON — large, clearly visible, bottom centre -->
+    <button id="affirmBtn" onclick="doAffirm()"
+      style="position:fixed;bottom:clamp(80px,18vw,110px);left:50%;transform:translateX(-50%);
+        width:auto;min-width:120px;height:52px;
+        border-radius:26px;
+        background:rgba(201,169,110,0.08);
+        border:1px solid rgba(201,169,110,0.30);
+        cursor:pointer;-webkit-tap-highlight-color:transparent;
+        display:flex;align-items:center;justify-content:center;gap:10px;
+        opacity:0;transition:opacity 2s ease,border-color .3s ease,background .3s ease,box-shadow .3s ease;
+        z-index:30;padding:0 20px;color:rgba(201,169,110,0.70);
+        font-family:inherit;font-size:clamp(11px,2.8vw,13px);letter-spacing:.14em;font-weight:300;">
+      <div id="affirmDot" style="width:7px;height:7px;border-radius:50%;background:rgba(201,169,110,.55);flex-shrink:0;transition:transform .3s ease,background .3s ease;animation:affirmPulse 3s ease-in-out infinite;"></div>
+      <span id="affirmLabel">${lang==='en'?'I am here':'estoy aquí'}</span>
     </button>
   `;
   buildObsMeter();
+  initTimerArc();
+}
+
+function initTimerArc() {
+  const arc = document.getElementById('obs-timer-arc');
+  if (!arc) return;
+  const size = Math.min(innerWidth, innerHeight) * 0.72;
+  arc.width = size; arc.height = size;
+  arc.style.width = size + 'px'; arc.style.height = size + 'px';
+  arc.style.marginLeft = -size/2 + 'px'; arc.style.marginTop = -size/2 + 'px';
+}
+
+function drawTimerArc() {
+  const arc = document.getElementById('obs-timer-arc');
+  if (!arc) return;
+  const c = arc.getContext('2d');
+  const size = arc.width;
+  c.clearRect(0,0,size,size);
+  const progress = Math.min((attentionSec + affirmBonus) / obsTargetSec, 1);
+  const cx2 = size/2, cy2 = size/2, r = size/2 - 2;
+  // Background ring — very faint
+  c.beginPath(); c.arc(cx2,cy2,r,0,Math.PI*2);
+  c.strokeStyle = 'rgba(201,169,110,0.06)'; c.lineWidth = 1; c.stroke();
+  // Progress arc
+  if (progress > 0.005) {
+    c.beginPath();
+    c.arc(cx2, cy2, r, -Math.PI/2, -Math.PI/2 + progress*Math.PI*2);
+    c.strokeStyle = `rgba(201,169,110,${0.15 + progress*0.35})`;
+    c.lineWidth = 1.5; c.stroke();
+  }
 }
 
 function buildObsMeter() {
@@ -536,7 +751,7 @@ function buildObsMeter() {
 }
 
 function updateObsMeter() {
-  const progress = Math.min((attentionSec + affirmBonus) / COHERENCE_SEC, 1);
+  const progress = Math.min((attentionSec + affirmBonus) / obsTargetSec, 1);
   const lit = Math.floor(progress * METER_DOTS);
   for (let i = 0; i < METER_DOTS; i++) {
     const d = document.getElementById('mdot'+i);
@@ -544,21 +759,22 @@ function updateObsMeter() {
   }
   clarityLevel = Math.min(progress, 1);
   updateClarityRing();
-  // Update signal dots
   updateSignalDots();
+  drawTimerArc();
+  // Show timer arc once session starts
+  const arc = document.getElementById('obs-timer-arc');
+  if (arc && attentionSec > 2) arc.style.opacity = '0.9';
 }
 
 function updateSignalDots() {
   const ss = document.getElementById('sig-still');
-  const sp = document.getElementById('sig-present');
+  const sp2 = document.getElementById('sig-present');
   const sa = document.getElementById('sig-affirm');
   if (ss) ss.style.background = isStill ? 'var(--gold)' : 'rgba(201,169,110,.18)';
   if (ss) ss.style.boxShadow = isStill ? '0 0 8px rgba(201,169,110,.6)' : 'none';
-  // Present = particle alpha above threshold (proxy: clarity building)
   const isPresent = clarityLevel > 0.05 && isStill;
-  if (sp) sp.style.background = isPresent ? 'var(--gold)' : 'rgba(201,169,110,.18)';
-  if (sp) sp.style.boxShadow = isPresent ? '0 0 8px rgba(201,169,110,.6)' : 'none';
-  // Affirm = recent tap
+  if (sp2) sp2.style.background = isPresent ? 'var(--gold)' : 'rgba(201,169,110,.18)';
+  if (sp2) sp2.style.boxShadow = isPresent ? '0 0 8px rgba(201,169,110,.6)' : 'none';
   const recentAffirm = Date.now() - lastAffirmTime < 4000;
   if (sa) sa.style.background = recentAffirm ? 'rgba(240,204,136,.9)' : 'rgba(201,169,110,.18)';
   if (sa) sa.style.boxShadow = recentAffirm ? '0 0 12px rgba(240,204,136,.7)' : 'none';
@@ -575,63 +791,13 @@ function updateClarityRing() {
   ring.style.boxShadow = `0 0 ${20+c*40}px rgba(201,169,110,${(c*0.15).toFixed(3)})`;
 }
 
-function startObserve() {
-  if (navigator.vibrate) navigator.vibrate(18);
-  currentMode = 'observe'; showBackBtn(); initAudio();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
-  fadeDrone(true, 1); spParticles = [];
-  buildObsScreen();
-  // Subtle observe drone
-  setTimeout(() => {
-    if (!droneNodes.length && currentMode === 'observe') {
-      [40,80,120].forEach((f,i) => {
-        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-        o.type = 'sine'; o.frequency.value = f;
-        g.gain.setValueAtTime(0, audioCtx.currentTime);
-        g.gain.linearRampToValueAtTime(0.015-i*0.004, audioCtx.currentTime+3);
-        o.connect(g); g.connect(audioCtx.destination); o.start();
-        droneNodes.push({o, g});
-      });
-    }
-  }, 1200);
-  isCoherent = false; fieldActive = false; attentionSec = 0; affirmBonus = 0; clarityLevel = 0;
-  isStill = true; lastAffirmTime = 0;
-  observeParticle = new ObsParticle(); particleVisible = true;
-  showScreen('s-observe', () => {
-    // Fade in hint
-    setTimeout(() => {
-      const hint = document.getElementById('obs-hint-txt');
-      if (hint) hint.style.opacity = '1';
-    }, 600);
-    // Fade hint out, show signals and meter
-    setTimeout(() => {
-      const hint = document.getElementById('obs-hint-txt');
-      if (hint) { hint.style.transition = 'opacity 1.5s ease'; hint.style.opacity = '0'; }
-    }, 3500);
-    setTimeout(() => {
-      if (currentMode !== 'observe') return;
-      fieldActive = true;
-      startAttentionTimer();
-      startMicroTones();
-      startMotionCheck();
-      const sigs = document.getElementById('obs-signals');
-      const meter = document.getElementById('meter');
-      const btn = document.getElementById('affirmBtn');
-      if (sigs) sigs.style.opacity = '1';
-      if (meter) meter.style.opacity = '1';
-      if (btn) btn.style.opacity = '1';
-    }, 4500);
-  });
-}
-
 function startAttentionTimer() {
   clearInterval(attentionTimer);
   attentionTimer = setInterval(() => {
     if (!fieldActive || isCoherent) return;
     if (isStill) attentionSec++;
-    // Meter only advances when still
     updateObsMeter();
-    if (attentionSec + affirmBonus >= COHERENCE_SEC) reachObsCoherence();
+    if (attentionSec + affirmBonus >= obsTargetSec) reachObsCoherence();
   }, 1000);
 }
 
@@ -648,42 +814,42 @@ function startMotionCheck() {
     if (currentMode !== 'observe') return;
     const timeSinceMotion = Date.now() - lastMotionTime;
     const wasStill = isStill;
-    isStill = timeSinceMotion > 1800; // still if no motion for 1.8s
+    isStill = timeSinceMotion > 1800;
     if (!wasStill && isStill) {
-      // Became still — particle returns
-      if (observeParticle) { observeParticle.cx = 0.5; observeParticle.cy = 0.5; }
+      if (observeParticle && obsMode === 'wander') { observeParticle.cx = 0.5; observeParticle.cy = 0.5; }
     }
     updateSignalDots();
   }, 300);
 }
 
-// Affirmation button
 function doAffirm() {
   if (!fieldActive || isCoherent) return;
   lastAffirmTime = Date.now();
-  affirmBonus = Math.min(affirmBonus + 1.5, 12); // max 12s bonus from affirmations
+  affirmBonus = Math.min(affirmBonus + 1.5, 12);
   playAffirmSound();
   if (navigator.vibrate) navigator.vibrate(18);
-  // Visual bloom on button
   const btn = document.getElementById('affirmBtn');
   const dot = document.getElementById('affirmDot');
-  if (btn) { btn.style.borderColor = 'rgba(201,169,110,.6)'; btn.style.boxShadow = '0 0 16px rgba(201,169,110,.35)'; }
-  if (dot) { dot.style.transform = 'scale(2.2)'; dot.style.background = 'rgba(240,204,136,.9)'; }
-  // Clarity ring flash
+  if (btn) {
+    btn.style.borderColor = 'rgba(201,169,110,.7)';
+    btn.style.background = 'rgba(201,169,110,.15)';
+    btn.style.boxShadow = '0 0 20px rgba(201,169,110,.3)';
+  }
+  if (dot) { dot.style.transform = 'scale(2)'; dot.style.background = 'rgba(240,204,136,.95)'; }
   const ring = document.getElementById('clarity-ring');
   if (ring) { ring.style.boxShadow = `0 0 ${40+clarityLevel*60}px rgba(201,169,110,.4)`; }
   setTimeout(() => {
-    if (btn) { btn.style.borderColor = ''; btn.style.boxShadow = ''; }
+    if (btn) { btn.style.borderColor = ''; btn.style.background = ''; btn.style.boxShadow = ''; }
     if (dot) { dot.style.transform = ''; dot.style.background = ''; }
     if (ring) ring.style.boxShadow = '';
     updateSignalDots();
   }, 600);
   updateObsMeter();
-  if (attentionSec + affirmBonus >= COHERENCE_SEC) reachObsCoherence();
+  if (attentionSec + affirmBonus >= obsTargetSec) reachObsCoherence();
 }
 
 function obsScatter() {
-  if (isCoherent || !fieldActive) return;
+  if (isCoherent || !fieldActive || obsMode === 'kasina') return;
   if (observeParticle) observeParticle.scatter();
   playScatterSound();
   attentionSec = 0; affirmBonus = 0;
@@ -697,11 +863,9 @@ function obsScatter() {
 function reachObsCoherence() {
   isCoherent = true; clearInterval(attentionTimer); clearInterval(microToneTimer); clearInterval(motionCheckInterval);
   clarityLevel = 1; updateClarityRing(); playObsCoherenceTone(); fadeDrone(true, 3);
-  // Hide signals
-  ['obs-signals','meter','affirmBtn','scatter-text','obs-hint-txt'].forEach(id => {
+  ['obs-signals','obs-meter-wrap','affirmBtn','scatter-text','obs-hint-txt','obs-timer-arc'].forEach(id => {
     const el = document.getElementById(id); if (el) { el.style.transition = 'opacity 1.5s ease'; el.style.opacity = '0'; }
   });
-  // Count both total and observe-specific
   const n = parseInt(localStorage.getItem('field_obs')||'0') + 1;
   localStorage.setItem('field_obs', n); totalObs = n;
   const no = parseInt(localStorage.getItem('field_obs_observe')||'0') + 1;
@@ -719,7 +883,7 @@ function clearObserver() {
   clearInterval(attentionTimer); clearInterval(microToneTimer); clearInterval(motionCheckInterval);
   fieldActive = false; isCoherent = false;
   particleVisible = false; attentionSec = 0; affirmBonus = 0; clarityLevel = 0;
-  isStill = true;
+  isStill = true; kasinaParticle = null;
   clearTimeout(scatterTO);
 }
 
@@ -732,22 +896,131 @@ if (window.DeviceMotionEvent) {
     if (mag > 2.5) {
       lastMotionTime = Date.now();
       isStill = false;
-      // Scatter if heavy shake
       if (mag > 6 && Date.now() - lastMotionTime > 1500) obsScatter();
     }
   });
 }
 
-// Tap observe screen to scatter (not on chrome or affirmBtn)
+// Tap observe screen — scatter only in wander mode
 document.getElementById('s-observe').addEventListener('click', e => {
   if (e.target.closest('#chrome') || e.target.closest('#affirmBtn')) return;
-  if (fieldActive && !isCoherent) obsScatter();
+  if (fieldActive && !isCoherent && obsMode === 'wander') obsScatter();
 });
 document.getElementById('s-observe').addEventListener('touchend', e => {
   if (e.target.closest('#chrome') || e.target.closest('#affirmBtn')) return;
   e.preventDefault();
-  if (fieldActive && !isCoherent) obsScatter();
+  if (fieldActive && !isCoherent && obsMode === 'wander') obsScatter();
 });
+
+// ══════════════════════════════════════
+// OBSERVE SETUP SCREEN
+// ══════════════════════════════════════
+
+function buildObsSetupScreen() {
+  const screen = document.getElementById('s-observe-setup');
+  const isEn = lang === 'en';
+  screen.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;gap:clamp(28px,7vw,44px);
+      width:100%;max-width:340px;text-align:center;">
+
+      <!-- Title -->
+      <div style="font-size:clamp(13px,3.2vw,16px);letter-spacing:.18em;
+        color:rgba(201,169,110,.45);font-weight:300;">
+        ${isEn ? 'OBSERVE' : 'OBSERVAR'}
+      </div>
+
+      <!-- Duration -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;">
+        <div style="font-size:clamp(11px,2.8vw,13px);letter-spacing:.14em;
+          color:rgba(240,230,208,.28);margin-bottom:2px;">
+          ${isEn ? 'duration' : 'duración'}
+        </div>
+        <div style="display:flex;gap:10px;width:100%;justify-content:center;">
+          <button class="obs-setup-btn" id="dur-1" onclick="selectDur(1)"
+            style="flex:1;max-width:90px;">1 min</button>
+          <button class="obs-setup-btn active" id="dur-5" onclick="selectDur(5)"
+            style="flex:1;max-width:90px;">5 min</button>
+          <button class="obs-setup-btn" id="dur-10" onclick="selectDur(10)"
+            style="flex:1;max-width:90px;">10 min</button>
+        </div>
+      </div>
+
+      <!-- Mode -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;">
+        <div style="font-size:clamp(11px,2.8vw,13px);letter-spacing:.14em;
+          color:rgba(240,230,208,.28);margin-bottom:2px;">
+          ${isEn ? 'practice' : 'práctica'}
+        </div>
+        <div style="display:flex;gap:10px;width:100%;justify-content:center;">
+          <button class="obs-setup-btn active" id="mode-wander" onclick="selectMode('wander')"
+            style="flex:1;max-width:140px;display:flex;flex-direction:column;gap:6px;align-items:center;padding:14px 10px;">
+            <span style="font-size:clamp(20px,5vw,26px);color:rgba(201,169,110,.55);">◎</span>
+            <span>${isEn ? 'wander' : 'deriva'}</span>
+            <span style="font-size:clamp(9px,2.2vw,11px);color:rgba(201,169,110,.28);letter-spacing:.06em;line-height:1.4;">
+              ${isEn ? 'follow the particle' : 'sigue la partícula'}
+            </span>
+          </button>
+          <button class="obs-setup-btn" id="mode-kasina" onclick="selectMode('kasina')"
+            style="flex:1;max-width:140px;display:flex;flex-direction:column;gap:6px;align-items:center;padding:14px 10px;">
+            <span style="font-size:clamp(20px,5vw,26px);color:rgba(201,169,110,.55);">◈</span>
+            <span>${isEn ? 'kasina' : 'kasina'}</span>
+            <span style="font-size:clamp(9px,2.2vw,11px);color:rgba(201,169,110,.28);letter-spacing:.06em;line-height:1.4;">
+              ${isEn ? 'rest on the flame' : 'descansa en la llama'}
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Begin button -->
+      <button id="obs-begin-btn" onclick="commitObserve()"
+        style="margin-top:8px;background:none;
+          border:1px solid rgba(201,169,110,.28);border-radius:4px;
+          font-family:inherit;font-size:clamp(12px,3vw,15px);letter-spacing:.18em;
+          color:rgba(201,169,110,.65);cursor:pointer;padding:16px 40px;min-height:52px;
+          -webkit-tap-highlight-color:transparent;
+          transition:color .4s ease,border-color .4s ease;font-weight:300;">
+        ${isEn ? 'enter' : 'entrar'}
+      </button>
+    </div>
+  `;
+  // Set defaults
+  _setupDur = 5;
+  _setupMode = 'wander';
+}
+
+let _setupDur = 5;
+let _setupMode = 'wander';
+
+function selectDur(m) {
+  _setupDur = m;
+  [1,5,10].forEach(d => {
+    const btn = document.getElementById('dur-'+d);
+    if (btn) btn.classList.toggle('active', d === m);
+  });
+}
+
+function selectMode(m) {
+  _setupMode = m;
+  ['wander','kasina'].forEach(k => {
+    const btn = document.getElementById('mode-'+k);
+    if (btn) btn.classList.toggle('active', k === m);
+  });
+}
+
+function commitObserve() {
+  beginObserveSession(_setupDur, _setupMode);
+}
+
+// Hook into showScreen for setup
+const _origShowScreen = showScreen;
+// Override startObserve to go to setup
+function startObserveSetup() {
+  if (navigator.vibrate) navigator.vibrate(18);
+  currentMode = 'observe-setup';
+  showBackBtn();
+  buildObsSetupScreen();
+  showScreen('s-observe-setup');
+}
 
 // ══════════════════════════════════════
 // COLLAPSE MOVEMENT
@@ -943,7 +1216,6 @@ document.getElementById('retBtn').addEventListener('click', () => {
   showScreen('s-field', () => { buildCollapseField(); tryDrone(); });
 });
 
-// Breath
 function bDelay(fn,ms){ const t=setTimeout(fn,ms); breathTimers.push(t); return t; }
 function clearAllBreath(){ breathTimers.forEach(clearTimeout); breathTimers=[]; breathRunning=false; }
 function startBreath() {
@@ -991,20 +1263,19 @@ function goStill() {
 }
 
 // ══════════════════════════════════════
-// DECOHERE MOVEMENT — somatic release
+// DECOHERE MOVEMENT
 // ══════════════════════════════════════
 
 function startDecohere() {
   if (navigator.vibrate) navigator.vibrate(18);
   currentMode = 'decohere'; showBackBtn();
   fadeDrone(true, 1.5); spParticles = [];
-  // Weight the field — slow heavy particles
   setTimeout(() => {
     initSpParticles(10);
     spParticles.forEach(p => {
       p.targetAlpha = 0.18 + Math.random()*0.15;
       p.targetClarity = 0;
-      p.phV *= 0.4; // much slower drift
+      p.phV *= 0.4;
     });
   }, 300);
   buildShadowGrid();
@@ -1027,25 +1298,18 @@ function buildShadowGrid() {
   });
 }
 
-// PHASE 1: Acknowledgment — word sits alone, seen
 function startDecAcknowledge() {
   const displayName = lang==='en' ? decStateName : decStateNameES;
   const t = TRANSLATIONS[lang];
-
-  // Reset all layers to zero — clean slate, no flash
   const ackLayer   = document.getElementById('dec-ack-layer');
   const breathLayer= document.getElementById('dec-breath-layer');
   const wordEl     = document.getElementById('dec-word');
   const ackLine    = document.getElementById('dec-ack-line');
   const btext      = document.getElementById('dec-btext');
   const bp         = document.getElementById('dec-bp');
-
-  // Kill transitions temporarily so reset is instant
   [ackLayer, breathLayer, wordEl, ackLine, btext, bp].forEach(el => {
     if (el) { el.style.transition = 'none'; el.style.opacity = '0'; }
   });
-
-  // Set content before anything is visible
   wordEl.innerHTML = '';
   displayName.split('').forEach(ch => {
     const span = document.createElement('span');
@@ -1054,35 +1318,24 @@ function startDecAcknowledge() {
     wordEl.appendChild(span);
   });
   ackLine.textContent = lang==='en' ? 'seen.' : 'visto.';
-
-  // Reset breath layer elements
   [0,1,2].forEach(i => {
     const d = document.getElementById('dec-dot'+i);
     if (d) d.classList.remove('done');
   });
   if (bp) { bp.style.transform='scale(1)'; bp.style.filter=''; bp.style.background='rgba(180,175,165,.5)'; }
-
   showScreen('s-dec-breath', () => {
-    // Re-enable transitions after screen is visible
     requestAnimationFrame(() => requestAnimationFrame(() => {
       wordEl.style.transition = 'color 3s ease, opacity 2s ease';
       ackLayer.style.transition = 'opacity 1s ease';
       ackLine.style.transition = 'opacity 1.4s ease';
-
-      // Fade word in
       setTimeout(() => { wordEl.style.opacity = '1'; }, 100);
-      // Fade ack layer in (contains "yes. this is real.")
       setTimeout(() => { ackLayer.style.opacity = '1'; }, 200);
-      // Fade ack line in after word settles
       setTimeout(() => { ackLine.style.opacity = '1'; }, 1400);
-
-      // After 5s — cross-fade: ack layer out, breath layer in (word stays put)
       setTimeout(() => startDecBreath(displayName), 5000);
     }));
   });
 }
 
-// PHASE 2: Breath cycles — all 10 improvements
 function startDecBreath(displayName) {
   const t = TRANSLATIONS[lang];
   const ackLayer    = document.getElementById('dec-ack-layer');
@@ -1091,8 +1344,6 @@ function startDecBreath(displayName) {
   const btext       = document.getElementById('dec-btext');
   const bp          = document.getElementById('dec-bp');
   const letters     = Array.from(wordEl.querySelectorAll('span'));
-
-  // Assign per-letter stagger transitions — smooth, no jank
   letters.forEach((span, i) => {
     const dur  = (1.8 + Math.random()*1.4).toFixed(2);
     const dly  = (Math.random()*0.6).toFixed(2);
@@ -1101,52 +1352,33 @@ function startDecBreath(displayName) {
       `transform ${(parseFloat(dur)+0.4).toFixed(2)}s ease ${dly}s,` +
       `color 2s ease,filter ${dur}s ease ${dly}s`;
   });
-
-  // Hide back button during dissolution — no escape affordance
   const backBtn = document.getElementById('backBtn');
   if (backBtn) { backBtn.style.opacity='0'; backBtn.style.pointerEvents='none'; }
-
-  // Cross-fade: ack layer out, breath layer in — word stays put
   ackLayer.style.transition = 'opacity 1.2s ease';
   ackLayer.style.opacity = '0';
   setTimeout(() => { ackLayer.style.pointerEvents = 'none'; }, 1200);
-
   breathLayer.style.transition = 'opacity 1.2s ease';
   setTimeout(() => {
     breathLayer.style.opacity = '1';
     breathLayer.style.pointerEvents = 'all';
     if (bp) { bp.style.transition = 'opacity 1.2s ease'; bp.style.opacity = '1'; }
   }, 400);
-
   let cycle = 0;
   function dDelay(fn,ms){ const id=setTimeout(fn,ms); decBreathTimers.push(id); return id; }
-
   function setBtext(txt) {
     if (!btext) return;
-    btext.style.transition = 'opacity 0.6s ease';
-    btext.style.opacity = '0';
-    const id = setTimeout(() => {
-      btext.textContent = txt;
-      btext.style.opacity = '1';
-    }, 650);
+    btext.style.transition = 'opacity 0.6s ease'; btext.style.opacity = '0';
+    const id = setTimeout(() => { btext.textContent = txt; btext.style.opacity = '1'; }, 650);
     decBreathTimers.push(id);
   }
   function hideBtext() {
     if (!btext) return;
-    btext.style.transition = 'opacity 0.8s ease';
-    btext.style.opacity = '0';
+    btext.style.transition = 'opacity 0.8s ease'; btext.style.opacity = '0';
   }
-
-  // Fire exhale ripple on a given cycle index
   function fireRipple(idx) {
-    const rip = document.getElementById('dec-rip'+idx);
-    if (!rip) return;
-    rip.classList.remove('go');
-    void rip.offsetWidth; // force reflow
-    rip.classList.add('go');
+    const rip = document.getElementById('dec-rip'+idx); if (!rip) return;
+    rip.classList.remove('go'); void rip.offsetWidth; rip.classList.add('go');
   }
-
-  // Modulate drone pitch subtly on inhale/exhale
   function dronePitch(up) {
     if (!droneNodes.length) return;
     droneNodes.forEach(n => {
@@ -1156,200 +1388,116 @@ function startDecBreath(displayName) {
       }
     });
   }
-
   function runCycle() {
     if (cycle >= 3) {
-      // Restore back button
       if (backBtn) { backBtn.style.opacity='1'; backBtn.style.pointerEvents='all'; }
-
-      // Phase 3a: letter fragmentation — drift apart before dissolving
       dDelay(() => {
         hideBtext();
         letters.forEach((span, i) => {
-          const tx = (Math.random()-0.5)*80;
-          const ty = (Math.random()-0.5)*60 - 20;
-          const rot = (Math.random()-0.5)*25;
-          span.style.opacity = '0';
-          span.style.transform = `translate(${tx}px,${ty}px) rotate(${rot}deg)`;
+          const tx = (Math.random()-0.5)*80, ty = (Math.random()-0.5)*60 - 20, rot = (Math.random()-0.5)*25;
+          span.style.opacity = '0'; span.style.transform = `translate(${tx}px,${ty}px) rotate(${rot}deg)`;
           span.style.filter = 'blur(10px)';
         });
-        // bp particle pulses bright then fades — becomes the residual glow
         if (bp) {
           bp.style.transition = 'transform 1.2s cubic-bezier(.4,0,.2,1),opacity 1.8s ease,background 1.2s ease,box-shadow 1.2s ease';
-          bp.style.transform = 'scale(4)';
-          bp.style.background = 'rgba(240,204,136,.8)';
+          bp.style.transform = 'scale(4)'; bp.style.background = 'rgba(240,204,136,.8)';
           bp.style.boxShadow = '0 0 40px rgba(240,204,136,.6)';
         }
         playDecohereRelease();
       }, 400);
-
-      // Phase 3b: bp contracts to tiny residual glow
       dDelay(() => {
         if (bp) {
           bp.style.transition = 'transform 3s cubic-bezier(.4,0,.2,1),opacity 3s ease,background 3s ease,box-shadow 3s ease';
-          bp.style.transform = 'scale(0.5)';
-          bp.style.opacity = '0.35';
-          bp.style.background = 'rgba(201,169,110,.6)';
-          bp.style.boxShadow = '0 0 8px rgba(201,169,110,.3)';
+          bp.style.transform = 'scale(0.5)'; bp.style.opacity = '0.35';
+          bp.style.background = 'rgba(201,169,110,.6)'; bp.style.boxShadow = '0 0 8px rgba(201,169,110,.3)';
         }
       }, 1800);
-
       dDelay(() => showDecEnd(), 5500);
       return;
     }
     cycle++;
     if (!bp) return;
-
-    const inhaleText = t.decInhale;
-    const exhaleText = t.decExhale;
-
-    // ── INHALE PHASE ──
-    // Show inhale text immediately
-    setBtext(inhaleText);
-
-    // bp expands, warms, brightens — covers word
+    setBtext(t.decInhale);
     dDelay(() => {
-      // Scale grows progressively each cycle: 5 → 7 → 9 — big enough to envelop word
       const maxScale = 5 + cycle * 2;
-      // Warmer and brighter each cycle
-      const r = 190 + cycle * 16, g = 178 + cycle * 10, b = 150 - cycle * 12;
+      const r = 190 + cycle * 16, g2 = 178 + cycle * 10, b2 = 150 - cycle * 12;
       const glowStr = 0.25 + cycle * 0.18;
-      bp.style.transition =
-        'transform 4s cubic-bezier(.35,0,.15,1),' +
-        'filter 4s ease,' +
-        'background 3.5s ease,' +
-        'box-shadow 3.5s ease';
-      bp.style.transform = `scale(${maxScale})`;
-      bp.style.filter = `blur(${3 + cycle * 1.5}px)`;
-      bp.style.background = `rgba(${r},${g},${b},0.65)`;
-      bp.style.boxShadow = `0 0 ${30+cycle*20}px rgba(${r},${g},${b},${glowStr})`;
-      // Pitch up drone
+      bp.style.transition = 'transform 4s cubic-bezier(.35,0,.15,1),filter 4s ease,background 3.5s ease,box-shadow 3.5s ease';
+      bp.style.transform = `scale(${maxScale})`; bp.style.filter = `blur(${3 + cycle * 1.5}px)`;
+      bp.style.background = `rgba(${r},${g2},${b2},0.65)`;
+      bp.style.boxShadow = `0 0 ${30+cycle*20}px rgba(${r},${g2},${b2},${glowStr})`;
       dronePitch(true);
     }, 100);
-
-    // Top-up cue at 2s
     dDelay(() => {
-      // Nudge scale a little more — the "and once more" sip
       const nudge = 5 + cycle * 2 + 0.8;
       bp.style.transition = 'transform 2s cubic-bezier(.4,0,.2,1)';
       bp.style.transform = `scale(${nudge})`;
     }, 2200);
-
-    // ── EXHALE PHASE ──
     dDelay(() => {
-      setBtext(exhaleText);
-      // Haptic pulse on exhale
+      setBtext(t.decExhale);
       if (navigator.vibrate) navigator.vibrate(22);
-      // Fire ripple ring
       fireRipple(cycle - 1);
-      // Pitch down drone
       dronePitch(false);
-
-      // bp contracts — smooth, long ease
-      bp.style.transition =
-        'transform 4.5s cubic-bezier(.4,0,.2,1),' +
-        'filter 4s ease,' +
-        'background 3s ease,' +
-        'box-shadow 3s ease';
-      bp.style.transform = 'scale(1)';
-      bp.style.filter = 'blur(0px)';
-      // After contraction, residual warmth remains
+      bp.style.transition = 'transform 4.5s cubic-bezier(.4,0,.2,1),filter 4s ease,background 3s ease,box-shadow 3s ease';
+      bp.style.transform = 'scale(1)'; bp.style.filter = 'blur(0px)';
       const residR = 180 + cycle * 12, residG = 170 + cycle * 8, residB = 155 - cycle * 8;
       bp.style.background = `rgba(${residR},${residG},${residB},${0.45 + cycle*0.1})`;
       bp.style.boxShadow = `0 0 ${10+cycle*6}px rgba(${residR},${residG},${residB},${0.2+cycle*0.08})`;
-
-      // Word reappears but more dissolved — opacity steps: 1 → 0.62 → 0.28 → 0 (handled at cycle end)
       const wordOpacity = Math.max(0, 1 - cycle * 0.36);
       const wR = 180 + cycle*50, wG = 175 + cycle*35, wB = 165 + cycle*15;
       letters.forEach(span => {
         span.style.opacity = wordOpacity.toFixed(2);
         span.style.color = `rgba(${Math.min(255,wR)},${Math.min(255,wG)},${Math.min(255,wB)},${(wordOpacity+0.05).toFixed(2)})`;
-        // Subtle blur accumulates
         span.style.filter = `blur(${cycle * 0.8}px)`;
       });
     }, 4400);
-
-    // Mark cycle dot done
-    dDelay(() => {
-      const dot = document.getElementById('dec-dot'+(cycle-1));
-      if (dot) dot.classList.add('done');
-    }, 8800);
-
-    // Hide btext, pause before next cycle
+    dDelay(() => { const dot = document.getElementById('dec-dot'+(cycle-1)); if (dot) dot.classList.add('done'); }, 8800);
     dDelay(() => { hideBtext(); }, 8000);
     dDelay(runCycle, 10200);
   }
-
   dDelay(runCycle, 800);
 }
 
-// PHASE 3: End — witnessed sentence, silence, reformation
 function showDecEnd() {
   currentMode = 'decohere-end';
   const t = TRANSLATIONS[lang];
   const nd = parseInt(localStorage.getItem('field_obs_decohere')||'0') + 1;
   localStorage.setItem('field_obs_decohere', nd);
-
-  // Particles bloom outward from centre — reformation
   spParticles = Array.from({length:12}, (_,i) => new SpParticle(i,12));
   spParticles.forEach(p => {
     p.x = innerWidth/2 + (Math.random()-0.5)*20;
     p.y = innerHeight/2 + (Math.random()-0.5)*20;
-    p.targetAlpha = 0;
-    p.targetClarity = 0;
-    p.phV *= 0.5;
+    p.targetAlpha = 0; p.targetClarity = 0; p.phV *= 0.5;
   });
-  // Bloom: particles radiate outward over 2s
-  setTimeout(() => {
-    spParticles.forEach(p => {
-      p.targetAlpha = 0.22 + Math.random()*0.2;
-    });
-  }, 600);
-
-  // Populate content
+  setTimeout(() => { spParticles.forEach(p => { p.targetAlpha = 0.22 + Math.random()*0.2; }); }, 600);
   document.getElementById('decEndLine').textContent = t.decEndLine;
   document.getElementById('decRetBtn').textContent = t.decRetBtn;
   document.getElementById('decAgainBtn').textContent = t.decAgainBtn;
-
-  // Witnessed sentence — unique per state
   const witnessed = document.getElementById('decWitnessed');
   if (witnessed) {
     const sentence = (WITNESSED[lang] && WITNESSED[lang][decStateName]) || '';
-    witnessed.textContent = sentence;
-    witnessed.style.opacity = '0';
+    witnessed.textContent = sentence; witnessed.style.opacity = '0';
   }
-
-  // Hide btns and sub initially
   const btns = document.querySelector('.dec-btns');
   if (btns) { btns.style.opacity='0'; btns.style.transition='opacity 1.4s ease'; btns.style.pointerEvents='none'; }
-
   showScreen('s-dec-end', () => {
-    // Witnessed sentence fades in after 1.5s — let silence settle first
-    setTimeout(() => {
-      if (witnessed) witnessed.style.opacity = '1';
-    }, 1500);
-    // Buttons appear after 8s of silence
-    setTimeout(() => {
-      if (btns) { btns.style.opacity='1'; btns.style.pointerEvents='all'; }
-    }, 8000);
+    setTimeout(() => { if (witnessed) witnessed.style.opacity = '1'; }, 1500);
+    setTimeout(() => { if (btns) { btns.style.opacity='1'; btns.style.pointerEvents='all'; } }, 8000);
   });
 }
 
 function clearAllDec() { decBreathTimers.forEach(clearTimeout); decBreathTimers = []; }
 
-// ── WELCOME INTRO (first launch only) ──
+// ── WELCOME INTRO ──
 let wlcStep = 0;
 const WLC_TOTAL = 3;
 
 function buildWelcome() {
   const t = TRANSLATIONS[lang];
-  // Card 0
   document.getElementById('wlc0-big').innerHTML = t.welcomeCard0Big.replace(/\n/g,'<br>');
   document.getElementById('wlc0-small').innerHTML = t.welcomeCard0Small.replace(/\n/g,'<br>');
-  // Card 1
   document.getElementById('wlc1-big').innerHTML = t.welcomeCard1Big.replace(/\n/g,'<br>');
   document.getElementById('wlc1-small').innerHTML = t.welcomeCard1Small.replace(/\n/g,'<br>');
-  // Card 2
   document.getElementById('wlc2-big').innerHTML = t.welcomeCard2Big.replace(/\n/g,'<br>');
   t.wlcMvLabels.forEach((l,i) => { const el = document.getElementById('wlc-ml'+i); if(el) el.textContent = l; });
   t.wlcMvHints.forEach((h,i) => { const el = document.getElementById('wlc-mh'+i); if(el) el.textContent = h; });
@@ -1404,10 +1552,11 @@ document.getElementById('wlcEnterBtn').addEventListener('click', e => {
 // ── INIT ──
 applyLang();
 
-// First launch: show welcome. Return visits: show home directly.
+// Wire up observe to go to setup
+document.getElementById('mv-observe').onclick = startObserveSetup;
+
 if (!localStorage.getItem('field_welcomed')) {
   buildWelcome();
-  // Start with welcome screen active, home inactive
   document.getElementById('s-home').classList.remove('active');
   document.getElementById('s-welcome').classList.add('active');
   initSpParticles(12);
@@ -1416,7 +1565,6 @@ if (!localStorage.getItem('field_welcomed')) {
   initSpParticles(12);
   tryDrone();
 }
-
 
 window.addEventListener('keydown', e => {
   if (e.key===' '||e.key==='Enter') {
