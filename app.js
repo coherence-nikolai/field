@@ -919,6 +919,9 @@ function startDecohere() {
     });
   }, 300);
   buildShadowGrid();
+  const t = TRANSLATIONS[lang];
+  document.getElementById('decArrivalLine').textContent = t.decArrivalLine;
+  document.getElementById('decArrivalSub').textContent = t.decArrivalSub;
   showScreen('s-decohere');
 }
 
