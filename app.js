@@ -226,6 +226,7 @@ function fadeDrone(out=true, dur=2) {
   if (out) setTimeout(() => { droneNodes.forEach(({o}) => { try{o.stop();}catch(e){} }); droneNodes = []; }, (dur+0.2)*1000);
 }
 function tryDrone() {
+  if (!audioEnabled) return;
   initAudio();
   if (!audioCtx) return;
   if (audioCtx.state === 'suspended') { audioCtx.resume().then(playDrone); return; }
@@ -318,6 +319,14 @@ function playScatterSound() {
 
 // ── SCREEN TRANSITIONS — smooth, no flashes ──
 function showScreen(id, postCb) {
+  // Clear ghost state words whenever leaving collapse/field screens
+  if (id !== 's-collapse' && id !== 's-field') {
+    const gh = document.getElementById('ghosts');
+    if (gh && gh.style.opacity !== '0') {
+      gh.style.opacity = '0';
+      setTimeout(() => { if (gh.innerHTML && id !== 's-collapse') gh.innerHTML = ''; }, 900);
+    }
+  }
   const next = document.getElementById(id);
   const current = document.querySelector('.screen.active');
   if (current === next) { if (postCb) postCb(); return; }
@@ -366,12 +375,19 @@ function toggleAudio() {
 }
 
 // ── FONT SIZE TOGGLE ──
-let fontLarge = false;
+let fontLarge = localStorage.getItem('field_font_large') === '1';
 function toggleFont() {
   fontLarge = !fontLarge;
+  localStorage.setItem('field_font_large', fontLarge ? '1' : '0');
   document.body.classList.toggle('fs-large', fontLarge);
   const btn = document.getElementById('fontBtn');
   if (btn) btn.classList.toggle('active', fontLarge);
+}
+// Apply on load
+if (fontLarge) {
+  document.body.classList.add('fs-large');
+  const btn = document.getElementById('fontBtn');
+  if (btn) btn.classList.add('active');
 }
 
 function toggleLang() {
@@ -406,9 +422,15 @@ function updateHomeCount() {
 }
 
 // ── HOME ──
+function clearGhosts() {
+  const gh = document.getElementById('ghosts');
+  if (gh) { gh.style.opacity = '0'; setTimeout(() => { gh.innerHTML = ''; }, 900); }
+}
 function goHome() {
+  const cameFromDecohere = currentMode === 'decohere-end';
   currentMode = 'home';
   clearAllBreath(); clearObserver(); clearAllDec();
+  clearGhosts();
   fadeDrone(true, 1.5);
   particlesHidden = false; collapseStage = 0; breathRunning = false;
   document.querySelectorAll('.cp-stage').forEach(s => { s.classList.remove('on'); s.style.cssText = ''; });
@@ -416,7 +438,6 @@ function goHome() {
   document.getElementById('backBtn').style.pointerEvents = 'none';
   document.querySelectorAll('.al').forEach(a => a.classList.remove('on'));
   spParticles = []; particleVisible = false;
-  const cameFromDecohere = currentMode === 'decohere-end';
   showScreen('s-home', () => {
     document.querySelectorAll('.al').forEach(a => a.classList.add('on'));
     if (cameFromDecohere) {
@@ -1032,7 +1053,7 @@ function startDecAcknowledge() {
     span.style.cssText = 'display:inline-block;transition:none;';
     wordEl.appendChild(span);
   });
-  ackLine.textContent = lang==='en' ? 'yes. this is real.' : 'sí. esto es real.';
+  ackLine.textContent = lang==='en' ? 'seen.' : 'visto.';
 
   // Reset breath layer elements
   [0,1,2].forEach(i => {
@@ -1287,7 +1308,6 @@ function showDecEnd() {
 
   // Populate content
   document.getElementById('decEndLine').textContent = t.decEndLine;
-  document.getElementById('decEndSub').innerHTML = t.decEndSub.replace(/\n/g,'<br>');
   document.getElementById('decRetBtn').textContent = t.decRetBtn;
   document.getElementById('decAgainBtn').textContent = t.decAgainBtn;
 
@@ -1301,19 +1321,13 @@ function showDecEnd() {
 
   // Hide btns and sub initially
   const btns = document.querySelector('.dec-btns');
-  const sub = document.getElementById('decEndSub');
   if (btns) { btns.style.opacity='0'; btns.style.transition='opacity 1.4s ease'; btns.style.pointerEvents='none'; }
-  if (sub)  { sub.style.opacity='0';  sub.style.transition='opacity 1.4s ease'; }
 
   showScreen('s-dec-end', () => {
     // Witnessed sentence fades in after 1.5s — let silence settle first
     setTimeout(() => {
       if (witnessed) witnessed.style.opacity = '1';
     }, 1500);
-    // Sub text fades in after witnessed sentence
-    setTimeout(() => {
-      if (sub) sub.style.opacity = '1';
-    }, 4500);
     // Buttons appear after 8s of silence
     setTimeout(() => {
       if (btns) { btns.style.opacity='1'; btns.style.pointerEvents='all'; }

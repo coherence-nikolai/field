@@ -17,8 +17,8 @@
   --gold:#c9a96e; --gold-bright:#f0cc88; --gold-dim:rgba(201,169,110,.35);
   --cream:#f0e6d0; --cream-dim:rgba(240,230,208,.72); --cream-ghost:rgba(240,230,208,.38);
   --ascending:#ffe8b0; --bg:#0a0805;
-  --fs:clamp(13px,3.2vw,16px); --fl:clamp(11px,2.8vw,13px);
-  --fb:clamp(14px,3.5vw,17px); --fwm:clamp(26px,7vw,40px); --fh:clamp(20px,5vw,28px);
+  --fs:clamp(16px,4vw,20px); --fl:clamp(14px,3.5vw,17px);
+  --fb:clamp(17px,4.2vw,21px); --fwm:clamp(28px,7vw,42px); --fh:clamp(22px,5.5vw,30px);
   --serif:'Cormorant Garamond',Georgia,serif;
 }
 /* Fix bold weight globally — 400 not 700 */
@@ -77,7 +77,7 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 
 /* ═══ FIELD HOME SCREEN ═══ */
 #s-home{gap:0;justify-content:center;padding-top:80px;}
-.field-title{font-size:clamp(38px,11vw,64px);font-weight:300;letter-spacing:.20em;
+.field-title{font-size:clamp(52px,14vw,80px);font-weight:300;letter-spacing:.20em;
   color:var(--gold);line-height:1;margin-bottom:10px;
   animation:fieldTitleBreathe 6s ease-in-out infinite;}
 @keyframes fieldTitleBreathe{
@@ -86,7 +86,7 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 .field-sub{font-size:var(--fs);color:var(--cream-ghost);letter-spacing:.08em;margin-bottom:48px;}
 
 /* Three movement glyphs */
-.movements{display:flex;gap:clamp(24px,8vw,48px);align-items:flex-start;justify-content:center;margin-top:8px;}
+.movements{display:flex;gap:clamp(32px,10vw,60px);align-items:flex-start;justify-content:center;margin-top:16px;}
 .movement{display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer;
   -webkit-tap-highlight-color:transparent;padding:16px 12px;
   transition:transform .3s ease;}
@@ -96,10 +96,10 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 .movement:hover .mv-glyph,.movement.lit .mv-glyph{
   color:var(--gold-bright);
   text-shadow:0 0 20px rgba(240,204,136,.4);}
-.mv-label{font-size:clamp(14px,3.8vw,18px);letter-spacing:.14em;color:rgba(201,169,110,.65);
+.mv-label{font-size:clamp(18px,4.8vw,22px);letter-spacing:.12em;color:rgba(201,169,110,.70);
   font-weight:300;transition:color .4s ease;}
 .movement:hover .mv-label,.movement.lit .mv-label{color:var(--gold);}
-.mv-hint{font-size:clamp(10px,2.5vw,12px);letter-spacing:.08em;
+.mv-hint{font-size:clamp(13px,3.2vw,16px);letter-spacing:.07em;
   color:rgba(201,169,110,.30);text-align:center;max-width:90px;line-height:1.5;}
 
 .obs-count-home{font-size:var(--fl);color:rgba(201,169,110,.25);letter-spacing:.08em;
@@ -219,7 +219,7 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 .cp-stage.on{opacity:1;pointer-events:all;visibility:visible;z-index:2;}
 .stage-inner{display:flex;flex-direction:column;align-items:center;gap:22px;
   width:100%;max-width:370px;}
-.cword{font-size:clamp(24px,8vw,60px);font-weight:300;letter-spacing:.06em;
+.cword{font-size:clamp(56px,18vw,110px);font-weight:300;letter-spacing:.06em;
   font-family:var(--serif);
   color:var(--ascending);text-shadow:0 0 40px rgba(255,232,176,.60),0 0 80px rgba(255,200,80,.28);
   line-height:1;width:100%;text-align:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
@@ -303,10 +303,10 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 .shadow-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;max-width:380px;}
 .shadow-orb{border:1px solid rgba(140,130,150,.18);border-radius:12px;
   display:flex;align-items:center;justify-content:center;
-  padding:clamp(14px,4vw,20px) clamp(10px,3vw,16px);min-height:clamp(56px,14vw,72px);
+  padding:clamp(18px,5vw,26px) clamp(12px,3vw,18px);min-height:clamp(68px,17vw,86px);
   cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;
   transition:border-color .3s ease,background .3s ease,opacity .3s ease;
-  font-size:clamp(13px,3.5vw,16px);letter-spacing:.06em;color:rgba(160,150,170,.7);
+  font-size:clamp(16px,4.2vw,20px);letter-spacing:.05em;color:rgba(160,150,170,.75);
   font-weight:300;font-style:italic;}
 .shadow-orb:active{border-color:rgba(140,130,150,.4);
   background:radial-gradient(ellipse at center,rgba(140,130,150,.08) 0%,transparent 70%);}
@@ -317,7 +317,7 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
   /* FIXED HEIGHT — never reflows regardless of line count */
   height:72px;display:flex;align-items:center;justify-content:center;
   transition:opacity .5s ease;overflow:hidden;}
-.dec-word{font-size:clamp(28px,8vw,52px);font-weight:300;letter-spacing:.08em;
+.dec-word{font-size:clamp(52px,16vw,100px);font-weight:300;letter-spacing:.08em;
   font-family:var(--serif);
   color:var(--cream-ghost);transition:opacity 2s ease,color 2s ease,
   text-shadow 2s ease,filter 2s ease;}
@@ -325,8 +325,8 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 
 /* Decohere end */
 #s-dec-end{gap:36px;text-align:center;}
-.dec-end-line{font-size:var(--fh);color:var(--cream-dim);line-height:1.6;
-  max-width:300px;font-weight:300;}
+.dec-end-line{font-size:clamp(18px,4.5vw,24px);color:rgba(240,230,208,.50);line-height:1.6;
+  max-width:300px;font-weight:300;letter-spacing:.12em;text-transform:uppercase;}
 .dec-end-sub{font-size:var(--fs);color:var(--cream-ghost);line-height:1.7;
   max-width:280px;}
 .dec-btns{display:flex;flex-direction:column;gap:8px;align-items:center;}
@@ -344,8 +344,10 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
   100%{opacity:0;transform:translate(-50%,-50%) scale(26)}}
 
 /* Witnessed sentence */
-.dec-witnessed{font-size:var(--fs);font-style:italic;color:rgba(240,230,208,.55);
-  letter-spacing:.04em;line-height:1.7;max-width:280px;text-align:center;
+.dec-witnessed{font-size:clamp(28px,8vw,44px);font-style:italic;
+  font-family:'Cormorant Garamond',Georgia,serif;
+  color:rgba(240,230,208,.85);letter-spacing:.02em;line-height:1.4;
+  max-width:340px;text-align:center;
   opacity:0;transition:opacity 2.5s ease;}
 
 
@@ -414,13 +416,25 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 
 /* Audio muted state */
 #audioBtn.muted{opacity:.35;}
+.chrome-icon{font-size:clamp(12px,3vw,15px);padding:10px 10px;min-width:36px;opacity:.6;}
+.chrome-icon:hover{opacity:1;}
 
 /* Font size large mode */
-body.fs-large .mv-label{font-size:clamp(18px,5vw,24px);}
+body.fs-large .mv-label{font-size:clamp(20px,5.5vw,26px);}
 body.fs-large .mv-hint{font-size:clamp(13px,3.5vw,16px);}
-body.fs-large .field-title{font-size:clamp(52px,15vw,90px);}
-body.fs-large .field-sub{font-size:clamp(14px,3.8vw,18px);}
-body.fs-large #revisitHomeBtn{font-size:clamp(12px,3vw,15px);}
+body.fs-large .field-title{font-size:clamp(60px,17vw,96px);}
+body.fs-large .field-sub{font-size:clamp(16px,4.2vw,20px);}
+body.fs-large #revisitHomeBtn{font-size:clamp(13px,3.2vw,16px);}
+body.fs-large .s-main{font-size:clamp(24px,6.5vw,34px);}
+body.fs-large .s-sup{font-size:clamp(16px,4vw,20px);}
+body.fs-large .cword{font-size:clamp(68px,21vw,130px);}
+body.fs-large .dec-word{font-size:clamp(64px,19vw,120px);}
+body.fs-large .dec-witnessed{font-size:clamp(26px,7vw,38px);}
+body.fs-large .dec-end-sub{font-size:clamp(16px,4vw,20px);}
+body.fs-large .shadow-orb{font-size:clamp(16px,4.5vw,20px);}
+body.fs-large .obs-note{font-size:clamp(18px,4.8vw,24px);}
+body.fs-large .btext{font-size:clamp(24px,6.5vw,34px);}
+body.fs-large .imag-prompt{font-size:clamp(18px,4.8vw,24px);}
 #fontBtn.active{color:var(--gold);}
 </style>
 </head>
@@ -437,11 +451,11 @@ body.fs-large #revisitHomeBtn{font-size:clamp(12px,3vw,15px);}
 <!-- CHROME -->
 <div id="chrome">
   <button class="chrome-btn" id="langBtn" onclick="toggleLang()">EN / ES</button>
-  <div style="display:flex;gap:14px;align-items:center;">
-    <button class="chrome-btn" id="audioBtn" onclick="toggleAudio()" title="toggle audio">♪</button>
-    <button class="chrome-btn" id="fontBtn" onclick="toggleFont()" title="larger text">Aa</button>
-    <button class="chrome-btn" id="backBtn" onclick="goHome()" style="opacity:0;pointer-events:none;">←</button>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <button class="chrome-btn chrome-icon" id="audioBtn" onclick="toggleAudio()" title="toggle audio">♪</button>
+    <button class="chrome-btn chrome-icon" id="fontBtn" onclick="toggleFont()" title="larger text">Aa</button>
   </div>
+  <button class="chrome-btn" id="backBtn" onclick="goHome()" style="opacity:0;pointer-events:none;min-width:44px;">←</button>
 </div>
 
 <!-- WELCOME INTRO (first launch only) -->
@@ -544,7 +558,7 @@ body.fs-large #revisitHomeBtn{font-size:clamp(12px,3vw,15px);}
 </div>
 
 <!-- COLLAPSE STAGES -->
-<div class="screen" id="s-collapse" id="s-collapse">
+<div class="screen" id="s-collapse">
   <div id="tapNext" style="opacity:0"></div>
   <div class="cp-stage" id="cs1"><div class="stage-inner">
     <span class="c-confirm-label" id="cLabel1"></span>
@@ -553,10 +567,10 @@ body.fs-large #revisitHomeBtn{font-size:clamp(12px,3vw,15px);}
     <div class="c-eq-note" id="ceqNote"></div>
   </div></div>
   <div class="cp-stage" id="cs2"><div class="stage-inner">
+    <span class="c-confirm-label" id="imagLabel3"></span>
     <div class="imag-prompt" id="imagPrompt"></div>
   </div></div>
   <div class="cp-stage" id="cs3"><div class="stage-inner">
-    <span class="c-confirm-label" id="imagLabel3"></span>
     <div class="obs-note" id="obsNote"></div>
   </div></div>
   <div class="cp-stage" id="cs4"><div class="stage-inner">
@@ -635,7 +649,7 @@ body.fs-large #revisitHomeBtn{font-size:clamp(12px,3vw,15px);}
   <!-- Word lives in breath layer — not fixed, so display:none on parent hides it properly -->
   <div id="dec-word-wrap" style="position:absolute;top:50%;left:50%;
     transform:translate(-50%,-50%);text-align:center;pointer-events:none;z-index:15;">
-    <div id="dec-word" style="font-size:clamp(32px,9vw,52px);font-weight:300;
+    <div id="dec-word" style="font-size:clamp(52px,16vw,100px);font-weight:300;
       font-family:'Cormorant Garamond',Georgia,serif;
       letter-spacing:.10em;color:rgba(180,175,165,.65);white-space:nowrap;
       transition:color 3s ease,text-shadow 3s ease,opacity 2s ease;opacity:0;"></div>
@@ -646,7 +660,6 @@ body.fs-large #revisitHomeBtn{font-size:clamp(12px,3vw,15px);}
 <div class="screen" id="s-dec-end">
   <div class="dec-end-line" id="decEndLine"></div>
   <div class="dec-witnessed" id="decWitnessed"></div>
-  <div class="dec-end-sub" id="decEndSub"></div>
   <div class="dec-btns">
     <button class="dec-btn" id="decRetBtn" onclick="goHome()"></button>
     <button class="dec-btn" id="decAgainBtn" onclick="startDecohere()"></button>
