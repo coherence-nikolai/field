@@ -54,10 +54,13 @@ class Pt {
     this.targetAlpha = this.alpha;
   }
   update() { this.y += this.vy; if (this.y < -5) this.reset(false); this.alpha += (this.targetAlpha - this.alpha) * 0.04; }
-  draw() { cx.globalAlpha = this.alpha; cx.fillStyle = '#f0cc88';
-    cx.beginPath(); cx.arc(this.x, this.y, this.r, 0, Math.PI*2); cx.fill(); cx.globalAlpha = 1; }
+  draw() {
+    cx.globalAlpha = this.alpha * bgDimLevel; cx.fillStyle = '#f0cc88';
+    cx.beginPath(); cx.arc(this.x, this.y, this.r, 0, Math.PI*2); cx.fill(); cx.globalAlpha = 1;
+  }
 }
 const bgPts = Array.from({length:70}, () => new Pt());
+let bgDimTarget = 1; let bgDimLevel = 1;
 
 // ── SUPERPOSITION PARTICLES ──
 class SpParticle {
@@ -93,7 +96,7 @@ class SpParticle {
     }
   }
   draw() {
-    if (this.alpha < 0.01 || particlesHidden) return;
+    if (this.alpha < 0.01) return;
     // Blur matching original Collapse: (1-clarity)*14 + 2 for full superposition feel
     const blur = (1-this.clarity)*20 + 4;
     const glow = 10 + this.clarity*28;
@@ -124,7 +127,7 @@ let kasinaParticle = null;
 class KasinaParticle {
   constructor() {
     this.x = innerWidth * 0.5;
-    this.y = innerHeight * 0.5;
+    this.y = innerHeight * 0.38;
     this.r = 7;
     this.alpha = 0; this.targetAlpha = 1;
     this.breathPh = 0;
@@ -244,6 +247,7 @@ class ObsParticle {
 function loop() {
   try {
     cx.clearRect(0, 0, cv.width, cv.height);
+    bgDimLevel += (bgDimTarget - bgDimLevel) * 0.03;
     bgPts.forEach(p => { p.update(); p.draw(); });
     if (currentMode === 'observe' && particleVisible) {
       if (obsMode === 'kasina' && kasinaParticle) {
@@ -490,12 +494,13 @@ function clearGhosts() {
   if (gh) { gh.style.opacity = '0'; setTimeout(() => { gh.innerHTML = ''; }, 900); }
 }
 function goHome() {
+  bgDimTarget = 1;
   const cameFromDecohere = currentMode === 'decohere-end';
   currentMode = 'home';
   clearAllBreath(); clearObserver(); clearAllDec();
   clearGhosts();
   fadeDrone(true, 1.5);
-  particlesHidden = false; collapseStage = 0; breathRunning = false;
+  particlesHidden = false; collapseStage = 0; breathRunning = false; bgDimTarget = 1;
   document.querySelectorAll('.cp-stage').forEach(s => { s.classList.remove('on'); s.style.cssText = ''; });
   document.getElementById('backBtn').style.opacity = '0';
   document.getElementById('backBtn').style.pointerEvents = 'none';
@@ -1189,7 +1194,7 @@ function buildGhosts(chosen) {
 }
 function showCollapseStage(n) {
   const current = document.querySelector('.cp-stage.on');
-  if (n===4) { particlesHidden = true; }
+  if (n===4) { particlesHidden = true; bgDimTarget = 0.3; }
   else if (n===5) {
     const bp = document.getElementById('bp');
     const chosen = spParticles[spChosen%Math.max(spParticles.length,1)];
@@ -1380,6 +1385,7 @@ function startDecAcknowledge() {
 
 // PHASE 2: Breath cycles — all 10 improvements
 function startDecBreath(displayName) {
+  bgDimTarget = 0.25;
   const t = TRANSLATIONS[lang];
   const ackLayer    = document.getElementById('dec-ack-layer');
   const breathLayer = document.getElementById('dec-breath-layer');
