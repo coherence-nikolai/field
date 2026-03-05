@@ -5,6 +5,16 @@
 
 const TRANSLATIONS = {
   en: {
+    // Welcome intro (first launch only)
+    welcomeCard0Big: 'You exist in\n<b>superposition.</b>',
+    welcomeCard0Small: 'Every version of you is real right now.\nCalm. Brave. Clear. Stuck. Afraid.\nAll equally present. None more true than another.',
+    welcomeCard1Big: 'The state you <b>observe</b>\nbecomes the state you inhabit.',
+    welcomeCard1Small: 'This is not metaphor.\nIt is the physics of attention.\nWhat you measure, you create.',
+    welcomeCard2Big: 'Three practices.\nOne field.',
+    wlcMvLabels: ['Observe','Collapse','Decohere'],
+    wlcMvHints: ['train attention','choose a state','release what you carry'],
+    wlcEnterBtn: 'enter the field',
+    wlcTapHint: 'tap to continue',
     // Field arrival
     fieldArrival: 'The field is open.',
     fieldSub: 'Choose your practice.',
@@ -38,7 +48,7 @@ const TRANSLATIONS = {
     obsHint: 'tap to begin',
     obsScatter: 'the field reforms — begin again',
     obsCoherenceWord: 'S T I L L N E S S',
-    obsCoherenceLine: 'This is what sustained\nattention feels like.',
+    obsCoherenceLine: 'The field responded.\nThis is what collapse feels like\nbefore you choose a state.',
     obsCoherenceTap: 'tap to continue',
     obsStillWord: 'Still',
     obsStillSub: 'You held it.\nThe particle knows.',
@@ -57,6 +67,16 @@ const TRANSLATIONS = {
     decAgainBtn: 'release another',
   },
   es: {
+    // Welcome intro (first launch only)
+    welcomeCard0Big: 'Existes en\n<b>superposición.</b>',
+    welcomeCard0Small: 'Cada versión tuya es real ahora mismo.\nSereno. Valiente. Claro. Bloqueado. Asustado.\nTodas igualmente presentes. Ninguna más verdadera que otra.',
+    welcomeCard1Big: 'El estado que <b>observas</b>\nes el estado que habitas.',
+    welcomeCard1Small: 'Esto no es metáfora.\nEs la física de la atención.\nLo que mides, lo creas.',
+    welcomeCard2Big: 'Tres prácticas.\nUn campo.',
+    wlcMvLabels: ['Observar','Colapsar','Disipar'],
+    wlcMvHints: ['entrenar la atención','elegir un estado','soltar lo que cargas'],
+    wlcEnterBtn: 'entrar al campo',
+    wlcTapHint: 'toca para continuar',
     // Field arrival
     fieldArrival: 'El campo está abierto.',
     fieldSub: 'Elige tu práctica.',
@@ -90,7 +110,7 @@ const TRANSLATIONS = {
     obsHint: 'toca para comenzar',
     obsScatter: 'el campo se reforma — comienza de nuevo',
     obsCoherenceWord: 'Q U I E T U D',
-    obsCoherenceLine: 'Así se siente\nla atención sostenida.',
+    obsCoherenceLine: 'El campo respondió.\nAsí se siente el colapso\nantes de elegir un estado.',
     obsCoherenceTap: 'toca para continuar',
     obsStillWord: 'Quieto',
     obsStillSub: 'Lo sostuviste.\nLa partícula lo sabe.',
