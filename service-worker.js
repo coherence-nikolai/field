@@ -1,4 +1,4 @@
-const CACHE = 'field-v1';
+const CACHE = 'field-v3b';
 const ASSETS = [
   './',
   './index.html',
