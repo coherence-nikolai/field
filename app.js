@@ -63,14 +63,15 @@ const bgPts = Array.from({length:70}, () => new Pt());
 class SpParticle {
   constructor(i, total) {
     this.idx = i;
-    const angle = (Math.PI*2/total)*i + Math.random()*0.3;
-    const r = 0.25 + Math.random()*0.12;
-    this.cx = 0.5 + Math.cos(angle)*r; this.cy = 0.5 + Math.sin(angle)*r;
+    // Full screen distribution — field surrounds you, not just above
+    const angle = (Math.PI*2/total)*i + Math.random()*0.5;
+    const r = 0.28 + Math.random()*0.18;
+    this.cx = 0.5 + Math.cos(angle)*r; this.cy = 0.45 + Math.sin(angle)*r;
     this.targetCx = this.cx; this.targetCy = this.cy;
     this.x = this.cx*innerWidth; this.y = this.cy*innerHeight;
     this.ph = Math.random()*Math.PI*2;
-    this.phV = 0.006 + Math.random()*0.005;
-    this.driftR = 18 + Math.random()*14;
+    this.phV = 0.005 + Math.random()*0.005;
+    this.driftR = 20 + Math.random()*18;
     this.r = 2.2 + Math.random()*1.2;
     this.alpha = 0; this.targetAlpha = 0.55;
     this.clarity = 0; this.targetClarity = 0;
@@ -81,10 +82,9 @@ class SpParticle {
     this.cx += (this.targetCx - this.cx) * 0.018;
     this.cy += (this.targetCy - this.cy) * 0.018;
     const ds = Math.min(innerWidth, innerHeight);
+    // Full screen — no clamping to top quarter
     this.x = this.cx*innerWidth + Math.cos(this.ph)*this.driftR*(ds/500);
     this.y = this.cy*innerHeight + Math.sin(this.ph*0.73)*this.driftR*0.65*(ds/500);
-    const maxY = cv.height*(isIOS?1:1/((window.devicePixelRatio||1)))*0.24;
-    if (this.y > maxY && this.targetCy < 0.22) this.targetCy -= 0.001;
     this.alpha += (this.targetAlpha - this.alpha) * 0.025;
     this.clarity += (this.targetClarity - this.clarity) * 0.03;
     if (this._flickering) {
@@ -94,18 +94,18 @@ class SpParticle {
   }
   draw() {
     if (this.alpha < 0.01 || particlesHidden) return;
-    const blur = (1-this.clarity)*4.5;
+    // Blur matching original Collapse: (1-clarity)*14 + 2 for full superposition feel
+    const blur = (1-this.clarity)*13 + 2;
     const glow = 10 + this.clarity*28;
     cx.save();
-    if (blur > 0.3) cx.filter = `blur(${blur.toFixed(1)}px)`;
+    cx.filter = `blur(${blur.toFixed(1)}px)`;
     const grad = cx.createRadialGradient(this.x,this.y,0,this.x,this.y,glow);
     grad.addColorStop(0, `rgba(240,204,136,${(this.alpha*0.45).toFixed(3)})`);
     grad.addColorStop(1, 'rgba(240,204,136,0)');
     cx.fillStyle = grad;
     cx.beginPath(); cx.arc(this.x,this.y,glow,0,Math.PI*2); cx.fill();
-    cx.filter = 'none';
     cx.globalAlpha = this.alpha;
-    cx.fillStyle = `rgba(240,204,136,${0.6+this.clarity*0.4})`;
+    cx.fillStyle = `rgba(240,204,136,${(0.5+this.clarity*0.5).toFixed(3)})`;
     cx.beginPath(); cx.arc(this.x,this.y,this.r,0,Math.PI*2); cx.fill();
     cx.restore();
   }
@@ -396,8 +396,19 @@ function goHome() {
     document.querySelectorAll('.al').forEach(a => a.classList.add('on'));
   });
   updateHomeCount();
-}
-function initSpParticles(n) {
+  // Clear all lit states then glow most-used movement
+  document.querySelectorAll('.movement').forEach(m => m.classList.remove('lit'));
+  setTimeout(() => {
+    const obs = parseInt(localStorage.getItem('field_obs')||'0');
+    const dec = parseInt(localStorage.getItem('field_obs_decohere')||'0');
+    const obv = parseInt(localStorage.getItem('field_obs_observe')||'0');
+    const max = Math.max(obs, dec, obv);
+    if (max === 0) return;
+    const mvId = max === obs ? 'mv-collapse' : max === dec ? 'mv-decohere' : 'mv-observe';
+    const el = document.getElementById(mvId);
+    if (el) el.classList.add('lit');
+  }, 800);
+}(n) {
   spParticles = Array.from({length:n}, (_,i) => new SpParticle(i,n));
   spParticles.forEach(p => { p.targetAlpha = 0.4+Math.random()*0.3; p.targetClarity = 0; });
 }
@@ -492,6 +503,7 @@ function updateClarityRing() {
 }
 
 function startObserve() {
+  if (navigator.vibrate) navigator.vibrate(18);
   currentMode = 'observe'; showBackBtn(); initAudio();
   if (audioCtx.state === 'suspended') audioCtx.resume();
   fadeDrone(true, 1); spParticles = [];
@@ -616,9 +628,11 @@ function reachObsCoherence() {
   ['obs-signals','meter','affirmBtn','scatter-text','obs-hint-txt'].forEach(id => {
     const el = document.getElementById(id); if (el) { el.style.transition = 'opacity 1.5s ease'; el.style.opacity = '0'; }
   });
-  // Count
+  // Count both total and observe-specific
   const n = parseInt(localStorage.getItem('field_obs')||'0') + 1;
   localStorage.setItem('field_obs', n); totalObs = n;
+  const no = parseInt(localStorage.getItem('field_obs_observe')||'0') + 1;
+  localStorage.setItem('field_obs_observe', no);
   setTimeout(() => {
     particleVisible = false;
     document.getElementById('obsCohWord').textContent = TRANSLATIONS[lang].obsCoherenceWord;
@@ -667,6 +681,7 @@ document.getElementById('s-observe').addEventListener('touchend', e => {
 // ══════════════════════════════════════
 let stepIndex = 0;
 function startCollapse() {
+  if (navigator.vibrate) navigator.vibrate(18);
   currentMode = 'collapse'; showBackBtn();
   spParticles = []; fadeDrone(true, 1);
   const visited = localStorage.getItem('field_visited');
@@ -907,6 +922,7 @@ function goStill() {
 // ══════════════════════════════════════
 
 function startDecohere() {
+  if (navigator.vibrate) navigator.vibrate(18);
   currentMode = 'decohere'; showBackBtn();
   fadeDrone(true, 1.5); spParticles = [];
   // Weight the field — slow heavy particles
@@ -942,133 +958,158 @@ function buildShadowGrid() {
 function startDecAcknowledge() {
   const displayName = lang==='en' ? decStateName : decStateNameES;
   const t = TRANSLATIONS[lang];
-  // Build acknowledge screen dynamically
-  const screen = document.getElementById('s-dec-breath');
-  screen.innerHTML = `
-    <div id="dec-ack-word" style="font-size:clamp(34px,10vw,58px);font-weight:300;letter-spacing:.08em;
-      color:rgba(180,175,165,.65);text-align:center;opacity:0;transition:opacity 1.8s ease;
-      text-shadow:0 0 40px rgba(150,145,135,.2);">${displayName}</div>
-    <div id="dec-ack-line" style="font-size:var(--fs);letter-spacing:.10em;color:rgba(240,230,208,.28);
-      margin-top:20px;opacity:0;transition:opacity 1.4s ease;text-align:center;">
-      ${lang==='en'?'yes. this is real.':'sí. esto es real.'}
-    </div>
-  `;
+
+  // Reset all layers to zero — clean slate, no flash
+  const ackLayer   = document.getElementById('dec-ack-layer');
+  const breathLayer= document.getElementById('dec-breath-layer');
+  const wordEl     = document.getElementById('dec-word');
+  const ackLine    = document.getElementById('dec-ack-line');
+  const btext      = document.getElementById('dec-btext');
+  const bp         = document.getElementById('dec-bp');
+
+  // Kill transitions temporarily so reset is instant
+  [ackLayer, breathLayer, wordEl, ackLine, btext, bp].forEach(el => {
+    if (el) { el.style.transition = 'none'; el.style.opacity = '0'; }
+  });
+
+  // Set content before anything is visible
+  wordEl.innerHTML = '';
+  displayName.split('').forEach(ch => {
+    const span = document.createElement('span');
+    span.textContent = ch === ' ' ? '\u00a0' : ch;
+    span.style.cssText = 'display:inline-block;transition:none;';
+    wordEl.appendChild(span);
+  });
+  ackLine.textContent = lang==='en' ? 'yes. this is real.' : 'sí. esto es real.';
+
+  // Reset breath layer elements
+  [0,1,2].forEach(i => {
+    const d = document.getElementById('dec-dot'+i);
+    if (d) d.classList.remove('done');
+  });
+  if (bp) { bp.style.transform='scale(1)'; bp.style.filter=''; bp.style.background='rgba(180,175,165,.5)'; }
+
   showScreen('s-dec-breath', () => {
-    // Word fades in slowly
-    setTimeout(() => {
-      const w = document.getElementById('dec-ack-word');
-      const l = document.getElementById('dec-ack-line');
-      if (w) w.style.opacity = '1';
-      setTimeout(() => { if (l) l.style.opacity = '1'; }, 1200);
-    }, 400);
-    // Hold for 4 seconds, then begin breath
-    setTimeout(() => startDecBreath(displayName), 5000);
+    // Re-enable transitions after screen is visible
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      wordEl.style.transition = 'color 3s ease, opacity 2s ease';
+      ackLayer.style.transition = 'opacity 1s ease';
+      ackLine.style.transition = 'opacity 1.4s ease';
+
+      // Fade word in
+      setTimeout(() => { wordEl.style.opacity = '1'; }, 100);
+      // Fade ack layer in (contains "yes. this is real.")
+      setTimeout(() => { ackLayer.style.opacity = '1'; }, 200);
+      // Fade ack line in after word settles
+      setTimeout(() => { ackLine.style.opacity = '1'; }, 1400);
+
+      // After 5s — cross-fade: ack layer out, breath layer in (word stays put)
+      setTimeout(() => startDecBreath(displayName), 5000);
+    }));
   });
 }
 
-// PHASE 2: Breath cycles — physiological, letter dissolution
+// PHASE 2: Breath cycles — word already in DOM, just cross-fade layers
 function startDecBreath(displayName) {
   const t = TRANSLATIONS[lang];
-  const screen = document.getElementById('s-dec-breath');
-  // Build breath UI
-  screen.innerHTML = `
-    <div id="dec-btext" style="font-size:var(--fh);font-weight:300;letter-spacing:.10em;
-      color:rgba(240,230,208,.45);text-align:center;min-height:44px;
-      transition:opacity 0.7s ease;opacity:0;"></div>
-    <div id="dec-word-wrap" style="position:relative;text-align:center;margin:12px 0;">
-      <div id="dec-word" style="font-size:clamp(32px,9vw,52px);font-weight:300;letter-spacing:.10em;
-        color:rgba(180,175,165,.6);transition:color 3s ease,text-shadow 3s ease;"></div>
-    </div>
-    <div id="dec-bp-wrap" style="position:relative;width:80px;height:80px;display:flex;align-items:center;justify-content:center;margin-top:8px;">
-      <div id="dec-bp" style="width:16px;height:16px;border-radius:50%;
-        background:rgba(180,175,165,.5);box-shadow:0 0 12px rgba(160,155,145,.25);
-        transition:transform 4s cubic-bezier(.4,0,.2,1),filter 4s ease,background 3s ease,box-shadow 3s ease;"></div>
-    </div>
-    <div id="dec-bdots" style="display:flex;gap:12px;margin-top:28px;">
-      <div class="bdot" id="dec-dot0"></div>
-      <div class="bdot" id="dec-dot1"></div>
-      <div class="bdot" id="dec-dot2"></div>
-    </div>
-  `;
-  // Render word as spans for letter dissolution
-  const wordEl = document.getElementById('dec-word');
-  const letters = displayName.split('').map((ch, i) => {
-    const span = document.createElement('span');
-    span.textContent = ch === ' ' ? '\u00a0' : ch;
-    span.style.display = 'inline-block';
-    span.style.transition = `opacity ${1.5+Math.random()*2}s ease ${Math.random()*0.8}s, transform ${2+Math.random()*2}s ease ${Math.random()*0.6}s, filter ${2+Math.random()*1.5}s ease`;
-    wordEl.appendChild(span);
-    return span;
+  const ackLayer    = document.getElementById('dec-ack-layer');
+  const breathLayer = document.getElementById('dec-breath-layer');
+  const wordEl      = document.getElementById('dec-word');
+  const btext       = document.getElementById('dec-btext');
+  const bp          = document.getElementById('dec-bp');
+  const letters     = Array.from(wordEl.querySelectorAll('span'));
+
+  // Re-enable smooth transitions on letter spans now
+  letters.forEach((span, i) => {
+    span.style.transition =
+      `opacity ${1.5+Math.random()*2}s ease ${Math.random()*0.8}s,` +
+      `transform ${2+Math.random()*2}s ease ${Math.random()*0.6}s,` +
+      `filter ${2+Math.random()*1.5}s ease`;
   });
+
+  // Cross-fade: ack layer out, breath layer + bp in
+  ackLayer.style.transition = 'opacity 1.2s ease';
+  ackLayer.style.opacity = '0';
+  setTimeout(() => { ackLayer.style.pointerEvents = 'none'; }, 1200);
+
+  breathLayer.style.transition = 'opacity 1.2s ease';
+  setTimeout(() => {
+    breathLayer.style.opacity = '1';
+    breathLayer.style.pointerEvents = 'all';
+    // bp fades in
+    if (bp) { bp.style.transition = 'opacity 1s ease'; bp.style.opacity = '1'; }
+  }, 400);
 
   let cycle = 0;
   function dDelay(fn,ms){ const id=setTimeout(fn,ms); decBreathTimers.push(id); }
+
   function showBtext(txt, delayMs) {
     dDelay(() => {
-      const el = document.getElementById('dec-btext');
-      if (!el) return;
-      el.style.transition = 'opacity 0.7s ease'; el.style.opacity = '0';
-      dDelay(() => { el.textContent = txt; el.style.opacity = '1'; }, 750);
+      if (!btext) return;
+      btext.style.transition = 'opacity 0.7s ease'; btext.style.opacity = '0';
+      dDelay(() => { btext.textContent = txt; btext.style.opacity = '1'; }, 750);
     }, delayMs||0);
   }
   function hideBtext(delayMs) {
     dDelay(() => {
-      const el = document.getElementById('dec-btext'); if (!el) return;
-      el.style.transition = 'opacity 0.8s ease'; el.style.opacity = '0';
+      if (!btext) return;
+      btext.style.transition = 'opacity 0.8s ease'; btext.style.opacity = '0';
     }, delayMs||0);
   }
-
-  // Fade in breath UI smoothly
-  dDelay(() => {
-    const bt = document.getElementById('dec-btext');
-    if (bt) { bt.style.transition = 'opacity 1s ease'; bt.style.opacity = '1'; }
-  }, 200);
 
   function runCycle() {
     if (cycle >= 3) {
       // Full dissolution — letters drift away
       dDelay(() => {
-        letters.forEach((span, i) => {
+        letters.forEach(span => {
           const tx = (Math.random()-0.5)*60;
           const ty = -30 - Math.random()*50;
           span.style.opacity = '0';
-          span.style.transform = `translate(${tx}px, ${ty}px) rotate(${(Math.random()-0.5)*20}deg)`;
+          span.style.transform = `translate(${tx}px,${ty}px) rotate(${(Math.random()-0.5)*20}deg)`;
           span.style.filter = 'blur(8px)';
         });
+        // word wrapper fades too
+        wordEl.style.transition = 'opacity 2.5s ease';
         playDecohereRelease();
-        const bp = document.getElementById('dec-bp');
-        if (bp) { bp.style.transform='scale(0.3)'; bp.style.opacity='0'; }
+        if (bp) { bp.style.transition = 'opacity 0.8s ease,transform 0.8s ease'; bp.style.transform='scale(0.3)'; bp.style.opacity='0'; }
         hideBtext(0);
       }, 600);
-      // 4 seconds of silence — just particles
       dDelay(() => showDecEnd(), 5000);
       return;
     }
     cycle++;
-    const bp = document.getElementById('dec-bp');
-    // Double inhale (sniff sniff) — physiological sigh
+    if (!bp) return;
+
     const inhaleText = lang==='en' ? 'inhale — sniff in once more' : 'inhala — otro sorbo de aire';
-    const holdText = lang==='en' ? '...' : '...';
     const exhaleText = lang==='en' ? `exhale slowly — release ${displayName}` : `exhala despacio — suelta ${displayName}`;
-    showBtext(lang==='en'?'inhale':'inhala', 0);
-    dDelay(() => { if (bp) { bp.style.transform='scale(2.8)'; bp.style.filter='blur(3px)'; bp.style.background='rgba(190,185,175,.55)'; } }, 100);
+
+    showBtext(lang==='en' ? 'inhale' : 'inhala', 0);
+    dDelay(() => {
+      bp.style.transition = 'transform 4s cubic-bezier(.4,0,.2,1),filter 4s ease,background 3s ease';
+      bp.style.transform='scale(2.8)'; bp.style.filter='blur(3px)'; bp.style.background='rgba(190,185,175,.55)';
+    }, 100);
     showBtext(inhaleText, 2000);
-    dDelay(() => { if (bp) { bp.style.transform='scale(3.2)'; } }, 2000); // second sniff
+    dDelay(() => { bp.style.transform='scale(3.2)'; }, 2000);
     showBtext(exhaleText, 4200);
     dDelay(() => {
-      if (bp) { bp.style.transform='scale(1)'; bp.style.filter='blur(0)'; bp.style.background='rgba(180,175,165,.5)'; }
-      // Word loses substance each exhale — warmth builds
+      bp.style.transition = 'transform 4s cubic-bezier(.4,0,.2,1),filter 4s ease,background 3s ease';
+      bp.style.transform='scale(1)'; bp.style.filter='blur(0)';
+      // Warm bp colour toward gold as cycles progress — tracking the word's warmth shift
+      const warmAlpha = 0.5 + cycle * 0.12;
+      const warmR = 180 + cycle * 20, warmG = 175 + cycle * 10, warmB = 165 - cycle * 15;
+      bp.style.background = `rgba(${warmR},${warmG},${warmB},${warmAlpha})`;
+      bp.style.boxShadow = `0 0 ${12 + cycle*8}px rgba(${warmR},${warmG},${warmB},${0.25 + cycle*0.1})`;
       const opacity = 1 - (cycle * 0.3);
-      const warmth = cycle * 60; // RGB shift toward gold
+      const warmth = cycle * 60;
       letters.forEach(span => {
         span.style.opacity = opacity.toString();
-        span.style.color = `rgba(${180+warmth},${175+warmth*0.7},${165+warmth*0.2},${opacity+0.1})`;
+        span.style.color = `rgba(${180+warmth},${175+Math.floor(warmth*0.7)},${165+Math.floor(warmth*0.2)},${(opacity+0.1).toFixed(2)})`;
       });
     }, 4200);
     hideBtext(8800);
     dDelay(() => {
       const dot = document.getElementById('dec-dot'+(cycle-1)); if (dot) dot.classList.add('done');
-      if (bp) { bp.style.transform='scale(1)'; bp.style.filter=''; }
+      bp.style.transform='scale(1)'; bp.style.filter='';
     }, 9500);
     dDelay(runCycle, 10500);
   }
@@ -1079,7 +1120,9 @@ function startDecBreath(displayName) {
 // PHASE 3: End — silence then reformation
 function showDecEnd() {
   const t = TRANSLATIONS[lang];
-  // Show Collapse states faintly — superposition restored
+  // Increment decohere count
+  const nd = parseInt(localStorage.getItem('field_obs_decohere')||'0') + 1;
+  localStorage.setItem('field_obs_decohere', nd);
   spParticles = Array.from({length:8}, (_,i) => new SpParticle(i,8));
   spParticles.forEach(p => { p.targetAlpha=0; p.targetClarity=0; p.phV *= 0.6; });
   setTimeout(() => {
@@ -1089,15 +1132,96 @@ function showDecEnd() {
   document.getElementById('decEndSub').innerHTML = t.decEndSub.replace(/\n/g,'<br>');
   document.getElementById('decRetBtn').textContent = t.decRetBtn;
   document.getElementById('decAgainBtn').textContent = t.decAgainBtn;
-  showScreen('s-dec-end');
+  // Hide buttons initially — let silence breathe for 8 seconds
+  const btns = document.querySelector('.dec-btns');
+  if (btns) { btns.style.opacity = '0'; btns.style.transition = 'opacity 1.2s ease'; }
+  showScreen('s-dec-end', () => {
+    setTimeout(() => { if (btns) btns.style.opacity = '1'; }, 8000);
+  });
 }
 
 function clearAllDec() { decBreathTimers.forEach(clearTimeout); decBreathTimers = []; }
 
+// ── WELCOME INTRO (first launch only) ──
+let wlcStep = 0;
+const WLC_TOTAL = 3;
+
+function buildWelcome() {
+  const t = TRANSLATIONS[lang];
+  // Card 0
+  document.getElementById('wlc0-big').innerHTML = t.welcomeCard0Big.replace(/\n/g,'<br>');
+  document.getElementById('wlc0-small').innerHTML = t.welcomeCard0Small.replace(/\n/g,'<br>');
+  // Card 1
+  document.getElementById('wlc1-big').innerHTML = t.welcomeCard1Big.replace(/\n/g,'<br>');
+  document.getElementById('wlc1-small').innerHTML = t.welcomeCard1Small.replace(/\n/g,'<br>');
+  // Card 2
+  document.getElementById('wlc2-big').innerHTML = t.welcomeCard2Big.replace(/\n/g,'<br>');
+  t.wlcMvLabels.forEach((l,i) => { const el = document.getElementById('wlc-ml'+i); if(el) el.textContent = l; });
+  t.wlcMvHints.forEach((h,i) => { const el = document.getElementById('wlc-mh'+i); if(el) el.textContent = h; });
+  document.getElementById('wlcEnterBtn').textContent = t.wlcEnterBtn;
+  document.getElementById('wlcTapHint').textContent = t.wlcTapHint;
+  wlcStep = 0;
+  updateWlcDots();
+}
+
+function updateWlcDots() {
+  for (let i = 0; i < WLC_TOTAL; i++) {
+    const d = document.getElementById('wdot'+i);
+    if (d) d.classList.toggle('on', i <= wlcStep);
+  }
+  const hint = document.getElementById('wlcTapHint');
+  if (hint) hint.style.opacity = wlcStep === WLC_TOTAL - 1 ? '0' : '1';
+}
+
+function advanceWelcome() {
+  if (wlcStep >= WLC_TOTAL - 1) return;
+  const cur = document.getElementById('wlc' + wlcStep);
+  if (!cur) return;
+  cur.style.transition = 'opacity 0.8s ease'; cur.style.opacity = '0';
+  setTimeout(() => {
+    cur.classList.remove('on');
+    wlcStep++;
+    const next = document.getElementById('wlc' + wlcStep);
+    if (next) {
+      next.style.opacity = '0'; next.style.transition = 'none'; next.classList.add('on');
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        next.style.transition = 'opacity 1.1s ease'; next.style.opacity = '1';
+      }));
+    }
+    updateWlcDots();
+  }, 800);
+}
+
+function enterFromWelcome() {
+  localStorage.setItem('field_welcomed', '1');
+  showScreen('s-home', () => { initSpParticles(12); tryDrone(); });
+}
+
+document.getElementById('s-welcome').addEventListener('click', e => {
+  if (e.target.id === 'wlcEnterBtn' || e.target.classList.contains('wlc-enter')) return;
+  advanceWelcome();
+});
+document.getElementById('wlcEnterBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  enterFromWelcome();
+});
+
 // ── INIT ──
 applyLang();
-initSpParticles(12);
-tryDrone();
+
+// First launch: show welcome. Return visits: show home directly.
+if (!localStorage.getItem('field_welcomed')) {
+  buildWelcome();
+  // Start with welcome screen active, home inactive
+  document.getElementById('s-home').classList.remove('active');
+  document.getElementById('s-welcome').classList.add('active');
+  initSpParticles(12);
+  tryDrone();
+} else {
+  initSpParticles(12);
+  tryDrone();
+}
+
 
 window.addEventListener('keydown', e => {
   if (e.key===' '||e.key==='Enter') {

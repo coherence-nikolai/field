@@ -9,7 +9,7 @@
 <title>Field</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
@@ -19,7 +19,10 @@
   --ascending:#ffe8b0; --bg:#0a0805;
   --fs:clamp(13px,3.2vw,16px); --fl:clamp(11px,2.8vw,13px);
   --fb:clamp(14px,3.5vw,17px); --fwm:clamp(26px,7vw,40px); --fh:clamp(20px,5vw,28px);
+  --serif:'Cormorant Garamond',Georgia,serif;
 }
+/* Fix bold weight globally — 400 not 700 */
+b, strong { font-weight:400; }
 html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
   font-family:'Plus Jakarta Sans','Segoe UI',system-ui,-apple-system,sans-serif;
   font-weight:300;color:var(--cream);overflow:hidden;
@@ -42,9 +45,11 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 /* SCREENS */
 .screen{position:fixed;inset:0;z-index:10;display:none;flex-direction:column;
   align-items:center;justify-content:center;
-  padding:clamp(24px,6vw,48px) clamp(20px,5vw,36px);}
+  padding:clamp(24px,6vw,48px) clamp(20px,5vw,36px);
+  transition:opacity .8s ease, transform .8s ease;}
 .screen.active{display:flex;}
-.screen.fading{opacity:0;} .screen.visible{opacity:1;}
+.screen.fading{opacity:0;transform:scale(.97);}
+.screen.visible{opacity:1;transform:scale(1.00);}
 
 /* DESKTOP PANEL */
 @media(min-width:600px){
@@ -73,7 +78,11 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 /* ═══ FIELD HOME SCREEN ═══ */
 #s-home{gap:0;justify-content:center;padding-top:80px;}
 .field-title{font-size:clamp(38px,11vw,64px);font-weight:300;letter-spacing:.20em;
-  color:var(--gold);line-height:1;margin-bottom:10px;}
+  color:var(--gold);line-height:1;margin-bottom:10px;
+  animation:fieldTitleBreathe 6s ease-in-out infinite;}
+@keyframes fieldTitleBreathe{
+  0%,100%{text-shadow:0 0 20px rgba(201,169,110,.15),0 0 40px rgba(201,169,110,.06);}
+  50%{text-shadow:0 0 30px rgba(240,204,136,.35),0 0 70px rgba(201,169,110,.18),0 0 120px rgba(201,169,110,.08);}}
 .field-sub{font-size:var(--fs);color:var(--cream-ghost);letter-spacing:.08em;margin-bottom:48px;}
 
 /* Three movement glyphs */
@@ -211,6 +220,7 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 .stage-inner{display:flex;flex-direction:column;align-items:center;gap:22px;
   width:100%;max-width:370px;}
 .cword{font-size:clamp(24px,8vw,60px);font-weight:300;letter-spacing:.06em;
+  font-family:var(--serif);
   color:var(--ascending);text-shadow:0 0 40px rgba(255,232,176,.60),0 0 80px rgba(255,200,80,.28);
   line-height:1;width:100%;text-align:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
 .c-confirm-label{font-size:var(--fl);letter-spacing:.14em;color:var(--gold);display:block;
@@ -304,8 +314,11 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 /* Decohere breath */
 #s-dec-breath{gap:28px;text-align:center;cursor:default;}
 .dec-btext{font-size:var(--fh);color:var(--cream-dim);letter-spacing:.08em;
-  transition:opacity .5s ease;min-height:40px;}
+  /* FIXED HEIGHT — never reflows regardless of line count */
+  height:72px;display:flex;align-items:center;justify-content:center;
+  transition:opacity .5s ease;overflow:hidden;}
 .dec-word{font-size:clamp(28px,8vw,52px);font-weight:300;letter-spacing:.08em;
+  font-family:var(--serif);
   color:var(--cream-ghost);transition:opacity 2s ease,color 2s ease,
   text-shadow 2s ease,filter 2s ease;}
 .dec-word.dissolving{color:rgba(240,230,208,.08);filter:blur(6px);}
@@ -330,6 +343,43 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 @keyframes gd{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
 
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+/* ═══ WELCOME INTRO ═══ */
+#s-welcome{gap:0;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.wlc-card{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:28px;padding:clamp(40px,10vw,72px) clamp(28px,7vw,52px);
+  text-align:center;opacity:0;pointer-events:none;transition:opacity 1.1s ease;}
+.wlc-card.on{opacity:1;pointer-events:all;}
+.wlc-glyph{font-size:clamp(32px,9vw,48px);color:rgba(201,169,110,.28);line-height:1;
+  transition:color 1s ease;}
+.wlc-card.on .wlc-glyph{color:rgba(201,169,110,.55);}
+.wlc-big{font-size:clamp(22px,6vw,32px);font-weight:300;letter-spacing:.06em;
+  color:var(--cream-dim);line-height:1.55;max-width:320px;}
+.wlc-big b{color:var(--gold);font-weight:400;}
+.wlc-small{font-size:var(--fs);color:var(--cream-ghost);letter-spacing:.04em;
+  line-height:1.7;max-width:280px;}
+.wlc-movements{display:flex;gap:clamp(20px,7vw,40px);align-items:flex-start;
+  justify-content:center;margin-top:8px;}
+.wlc-mv{display:flex;flex-direction:column;align-items:center;gap:8px;}
+.wlc-mv-glyph{font-size:clamp(22px,6vw,30px);color:rgba(201,169,110,.4);}
+.wlc-mv-label{font-size:var(--fl);letter-spacing:.14em;color:rgba(201,169,110,.45);}
+.wlc-mv-hint{font-size:clamp(9px,2vw,11px);letter-spacing:.08em;
+  color:rgba(201,169,110,.22);text-align:center;max-width:72px;line-height:1.55;}
+.wlc-enter{background:none;border:1px solid rgba(201,169,110,.22);
+  font-family:'Plus Jakarta Sans',sans-serif;font-size:var(--fl);letter-spacing:.16em;
+  color:rgba(201,169,110,.55);cursor:pointer;padding:16px 36px;min-height:52px;
+  border-radius:4px;-webkit-tap-highlight-color:transparent;
+  transition:color .4s ease,border-color .4s ease;font-weight:300;margin-top:12px;}
+.wlc-enter:hover{color:var(--gold);border-color:rgba(201,169,110,.5);}
+.wlc-dots{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  display:flex;gap:8px;align-items:center;}
+.wlc-dot{width:5px;height:5px;border-radius:50%;
+  background:rgba(201,169,110,.18);transition:background .5s ease,box-shadow .5s ease;}
+.wlc-dot.on{background:rgba(201,169,110,.55);
+  box-shadow:0 0 6px rgba(201,169,110,.3);}
+.wlc-tap-hint{position:fixed;bottom:52px;left:50%;transform:translateX(-50%);
+  font-size:var(--fl);letter-spacing:.14em;color:rgba(201,169,110,.30);
+  animation:pulse 2.8s ease-in-out infinite;pointer-events:none;white-space:nowrap;font-weight:300;}
 </style>
 </head>
 <body>
@@ -346,6 +396,48 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 <div id="chrome">
   <button class="chrome-btn" id="langBtn" onclick="toggleLang()">EN / ES</button>
   <button class="chrome-btn" id="backBtn" onclick="goHome()" style="opacity:0;pointer-events:none;">←</button>
+</div>
+
+<!-- WELCOME INTRO (first launch only) -->
+<div class="screen" id="s-welcome">
+  <!-- Card 1: What this is -->
+  <div class="wlc-card on" id="wlc0">
+    <div class="wlc-big" id="wlc0-big"></div>
+    <div class="wlc-small" id="wlc0-small"></div>
+  </div>
+  <!-- Card 2: The physics -->
+  <div class="wlc-card" id="wlc1">
+    <div class="wlc-big" id="wlc1-big"></div>
+    <div class="wlc-small" id="wlc1-small"></div>
+  </div>
+  <!-- Card 3: The three movements -->
+  <div class="wlc-card" id="wlc2">
+    <div class="wlc-big" id="wlc2-big"></div>
+    <div class="wlc-movements">
+      <div class="wlc-mv">
+        <div class="wlc-mv-glyph">◎</div>
+        <div class="wlc-mv-label" id="wlc-ml0"></div>
+        <div class="wlc-mv-hint" id="wlc-mh0"></div>
+      </div>
+      <div class="wlc-mv">
+        <div class="wlc-mv-glyph">↑</div>
+        <div class="wlc-mv-label" id="wlc-ml1"></div>
+        <div class="wlc-mv-hint" id="wlc-mh1"></div>
+      </div>
+      <div class="wlc-mv">
+        <div class="wlc-mv-glyph">◯</div>
+        <div class="wlc-mv-label" id="wlc-ml2"></div>
+        <div class="wlc-mv-hint" id="wlc-mh2"></div>
+      </div>
+    </div>
+    <button class="wlc-enter" id="wlcEnterBtn"></button>
+  </div>
+  <div class="wlc-dots">
+    <div class="wlc-dot on" id="wdot0"></div>
+    <div class="wlc-dot" id="wdot1"></div>
+    <div class="wlc-dot" id="wdot2"></div>
+  </div>
+  <div class="wlc-tap-hint" id="wlcTapHint"></div>
 </div>
 
 <!-- HOME -->
@@ -459,10 +551,45 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
   <div class="shadow-grid" id="shadowGrid"></div>
 </div>
 
-<!-- DECOHERE BREATH -->
+<!-- DECOHERE BREATH — static layout, never rebuilt -->
 <div class="screen" id="s-dec-breath">
-  <div class="dec-btext" id="decBtext"></div>
-  <div class="dec-word" id="decWord"></div>
+  <!-- Acknowledge layer -->
+  <div id="dec-ack-layer" style="position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:20px;padding:clamp(24px,6vw,48px);
+    text-align:center;opacity:0;transition:opacity 1s ease;pointer-events:none;">
+    <div id="dec-ack-line" style="font-size:var(--fs);letter-spacing:.10em;
+      color:rgba(240,230,208,.28);transition:opacity 1.4s ease;opacity:0;"></div>
+  </div>
+  <!-- Breath layer — fixed height btext so nothing ever reflows -->
+  <div id="dec-breath-layer" style="position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:20px;padding:clamp(24px,6vw,48px);
+    text-align:center;opacity:0;transition:opacity 1s ease;pointer-events:none;">
+    <div id="dec-btext" style="font-size:var(--fh);font-weight:300;letter-spacing:.10em;
+      color:rgba(240,230,208,.45);
+      height:72px;display:flex;align-items:center;justify-content:center;
+      width:100%;max-width:320px;text-align:center;
+      transition:opacity 0.7s ease;opacity:0;overflow:hidden;line-height:1.4;"></div>
+    <div id="dec-bp-wrap" style="width:80px;height:80px;display:flex;align-items:center;
+      justify-content:center;">
+      <div id="dec-bp" style="width:16px;height:16px;border-radius:50%;
+        background:rgba(180,175,165,.5);box-shadow:0 0 12px rgba(160,155,145,.25);
+        transition:transform 4s cubic-bezier(.4,0,.2,1),filter 4s ease,
+        background 3s ease,box-shadow 3s ease,opacity 1s ease;opacity:0;"></div>
+    </div>
+    <div id="dec-bdots" style="display:flex;gap:12px;">
+      <div class="bdot" id="dec-dot0"></div>
+      <div class="bdot" id="dec-dot1"></div>
+      <div class="bdot" id="dec-dot2"></div>
+    </div>
+  </div>
+  <!-- Word — truly independent, fixed position, serif, never moves -->
+  <div id="dec-word-wrap" style="position:fixed;top:50%;left:50%;
+    transform:translate(-50%,-50%);text-align:center;pointer-events:none;z-index:15;">
+    <div id="dec-word" style="font-size:clamp(32px,9vw,52px);font-weight:300;
+      font-family:'Cormorant Garamond',Georgia,serif;
+      letter-spacing:.10em;color:rgba(180,175,165,.65);white-space:nowrap;
+      transition:color 3s ease,text-shadow 3s ease,opacity 2s ease;opacity:0;"></div>
+  </div>
 </div>
 
 <!-- DECOHERE END -->
