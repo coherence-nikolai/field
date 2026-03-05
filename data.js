@@ -58,9 +58,8 @@ const TRANSLATIONS = {
     // Decohere
     decArrivalLine: 'What are you carrying right now?',
     decArrivalSub: 'Choose what wants to be released.',
-    decBreatheLine: s => `inhale — acknowledge ${s}`,
-    decExhaleLine: s => `exhale — release ${s}`,
-    decDissolveText: s => `${s} is returning to the field.`,
+    decInhale: 'inhale · and once more',
+    decExhale: 'exhale slowly',
     decEndLine: 'The field is clear.',
     decEndSub: 'What was heavy is back in superposition.\nReady to collapse into something new.',
     decRetBtn: 'return to field',
@@ -120,11 +119,10 @@ const TRANSLATIONS = {
     // Decohere
     decArrivalLine: '¿Qué estás cargando ahora mismo?',
     decArrivalSub: 'Elige lo que quiere ser liberado.',
-    decBreatheLine: s => `inhala — reconoce ${s}`,
-    decExhaleLine: s => `exhala — libera ${s}`,
-    decDissolveText: s => `${s} está volviendo al campo.`,
+    decInhale: 'inhala · y una vez más',
+    decExhale: 'exhala despacio',
     decEndLine: 'El campo está despejado.',
-    decEndSub: 'Lo pesado ha vuelto a la superposición.\nListo para colapsar en algo nuevo.',
+    decEndSub: 'Lo que era pesado está de vuelta en superposición.\nListo para colapsar en algo nuevo.',
     decRetBtn: 'volver al campo',
     decAgainBtn: 'liberar otro',
   }
@@ -211,3 +209,30 @@ function getImagination(lang, stateName) {
   if (!pool) return '';
   return pool[Math.floor(Math.random() * pool.length)];
 }
+
+const WITNESSED = {
+  en: {
+    Anxious:      "You were never meant to hold all of it.",
+    Heavy:        "It was real. It doesn't have to stay.",
+    Stuck:        "The field always had more directions than one.",
+    Numb:         "Feeling less was how you survived. You can feel more now.",
+    Scattered:    "Every part of you was trying. That was enough.",
+    Angry:        "The anger knew something. Now the field holds it.",
+    Tired:        "Rest is not failure. It is the field restoring itself.",
+    Overwhelmed:  "You carried more than anyone should. It's back in the field now.",
+    Disconnected: "You were never actually separate. Only unobserved.",
+    Afraid:       "The field held you through it."
+  },
+  es: {
+    Angustiado:   "Nunca tuviste que cargar con todo eso.",
+    Agobiado:     "Era real. No tiene que quedarse.",
+    Bloqueado:    "El campo siempre tuvo más direcciones que una.",
+    Apagado:      "Sentir menos era como sobrevivías. Ahora puedes sentir más.",
+    Disperso:     "Cada parte de ti lo intentaba. Eso fue suficiente.",
+    Enojado:      "La ira sabía algo. Ahora el campo lo sostiene.",
+    Agotado:      "El descanso no es fracaso. Es el campo restaurándose.",
+    Sobrepasado:  "Cargaste más de lo que nadie debería. Está de vuelta en el campo.",
+    Desconectado: "Nunca estuviste realmente separado. Solo no observado.",
+    Asustado:     "El campo te sostuvo durante todo."
+  }
+};

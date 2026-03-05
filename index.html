@@ -335,6 +335,19 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
   cursor:pointer;padding:14px 28px;min-height:48px;
   -webkit-tap-highlight-color:transparent;transition:color .4s ease;font-weight:300;}
 .dec-btn:hover{color:var(--gold);}
+/* Dec ripple — exhale ring */
+.dec-ripple{position:absolute;top:50%;left:50%;width:16px;height:16px;
+  border-radius:50%;border:1px solid rgba(201,169,110,.35);
+  transform:translate(-50%,-50%) scale(1);opacity:0;pointer-events:none;z-index:12;}
+.dec-ripple.go{animation:decRipOut 4.5s cubic-bezier(.2,0,.8,1) forwards;}
+@keyframes decRipOut{0%{opacity:.45;transform:translate(-50%,-50%) scale(1)}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(26)}}
+
+/* Witnessed sentence */
+.dec-witnessed{font-size:var(--fs);font-style:italic;color:rgba(240,230,208,.55);
+  letter-spacing:.04em;line-height:1.7;max-width:280px;text-align:center;
+  opacity:0;transition:opacity 2.5s ease;}
+
 
 /* Ghosts */
 #ghosts{position:fixed;inset:0;pointer-events:none;z-index:5;opacity:0;transition:opacity 1.4s ease;}
@@ -380,6 +393,17 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 .wlc-tap-hint{position:absolute;bottom:52px;left:50%;transform:translateX(-50%);
   font-size:var(--fl);letter-spacing:.14em;color:rgba(201,169,110,.30);
   animation:pulse 2.8s ease-in-out infinite;pointer-events:none;white-space:nowrap;font-weight:300;}
+
+/* Movement glow states */
+.movement.lit .mv-glyph{color:rgba(201,169,110,.75);text-shadow:0 0 14px rgba(201,169,110,.35);}
+.movement.just-released .mv-glyph{
+  color:rgba(201,169,110,.85);
+  text-shadow:0 0 20px rgba(201,169,110,.5), 0 0 40px rgba(201,169,110,.2);
+  animation:releasedPulse 3s ease-in-out infinite;}
+@keyframes releasedPulse{
+  0%,100%{text-shadow:0 0 16px rgba(201,169,110,.4),0 0 32px rgba(201,169,110,.15);}
+  50%{text-shadow:0 0 24px rgba(201,169,110,.65),0 0 48px rgba(201,169,110,.3);}
+}
 </style>
 </head>
 <body>
@@ -569,8 +593,11 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
       height:72px;display:flex;align-items:center;justify-content:center;
       width:100%;max-width:320px;text-align:center;
       transition:opacity 0.7s ease;opacity:0;overflow:hidden;line-height:1.4;"></div>
-    <div id="dec-bp-wrap" style="width:80px;height:80px;display:flex;align-items:center;
+    <div id="dec-bp-wrap" style="position:relative;width:80px;height:80px;display:flex;align-items:center;
       justify-content:center;">
+      <div class="dec-ripple" id="dec-rip0"></div>
+      <div class="dec-ripple" id="dec-rip1"></div>
+      <div class="dec-ripple" id="dec-rip2"></div>
       <div id="dec-bp" style="width:16px;height:16px;border-radius:50%;
         background:rgba(180,175,165,.5);box-shadow:0 0 12px rgba(160,155,145,.25);
         transition:transform 4s cubic-bezier(.4,0,.2,1),filter 4s ease,
@@ -595,6 +622,7 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 <!-- DECOHERE END -->
 <div class="screen" id="s-dec-end">
   <div class="dec-end-line" id="decEndLine"></div>
+  <div class="dec-witnessed" id="decWitnessed"></div>
   <div class="dec-end-sub" id="decEndSub"></div>
   <div class="dec-btns">
     <button class="dec-btn" id="decRetBtn" onclick="goHome()"></button>

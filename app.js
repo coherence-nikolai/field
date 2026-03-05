@@ -391,12 +391,30 @@ function goHome() {
   document.getElementById('backBtn').style.pointerEvents = 'none';
   document.querySelectorAll('.al').forEach(a => a.classList.remove('on'));
   spParticles = []; particleVisible = false;
+  const cameFromDecohere = currentMode === 'decohere-end';
   showScreen('s-home', () => {
-    setTimeout(() => { initSpParticles(12); tryDrone(); }, 200);
     document.querySelectorAll('.al').forEach(a => a.classList.add('on'));
+    if (cameFromDecohere) {
+      // Particles bloom from centre — dissolved state rejoining the field
+      setTimeout(() => {
+        spParticles = Array.from({length:12}, (_,i) => new SpParticle(i,12));
+        spParticles.forEach(p => {
+          p.x = innerWidth/2 + (Math.random()-0.5)*30;
+          p.y = innerHeight/2 + (Math.random()-0.5)*30;
+          p.targetAlpha = 0;
+          p.targetClarity = 0;
+        });
+        setTimeout(() => {
+          spParticles.forEach(p => { p.targetAlpha = 0.4+Math.random()*0.3; });
+        }, 300);
+      }, 100);
+    } else {
+      setTimeout(() => { initSpParticles(12); tryDrone(); }, 200);
+    }
+    tryDrone();
   });
   updateHomeCount();
-  // Clear all lit states then glow most-used movement
+  // Clear all lit states
   document.querySelectorAll('.movement').forEach(m => m.classList.remove('lit'));
   setTimeout(() => {
     const obs = parseInt(localStorage.getItem('field_obs')||'0');
@@ -407,6 +425,14 @@ function goHome() {
     const mvId = max === obs ? 'mv-collapse' : max === dec ? 'mv-decohere' : 'mv-observe';
     const el = document.getElementById(mvId);
     if (el) el.classList.add('lit');
+    // After Decohere: ◯ glyph glows for 3 minutes
+    if (cameFromDecohere) {
+      const decEl = document.getElementById('mv-decohere');
+      if (decEl) {
+        decEl.classList.add('just-released');
+        setTimeout(() => { if (decEl) decEl.classList.remove('just-released'); }, 180000);
+      }
+    }
   }, 800);
 }
 function initSpParticles(n) {
@@ -1010,7 +1036,7 @@ function startDecAcknowledge() {
   });
 }
 
-// PHASE 2: Breath cycles — word already in DOM, just cross-fade layers
+// PHASE 2: Breath cycles — all 10 improvements
 function startDecBreath(displayName) {
   const t = TRANSLATIONS[lang];
   const ackLayer    = document.getElementById('dec-ack-layer');
@@ -1020,15 +1046,21 @@ function startDecBreath(displayName) {
   const bp          = document.getElementById('dec-bp');
   const letters     = Array.from(wordEl.querySelectorAll('span'));
 
-  // Re-enable smooth transitions on letter spans now
+  // Assign per-letter stagger transitions — smooth, no jank
   letters.forEach((span, i) => {
+    const dur  = (1.8 + Math.random()*1.4).toFixed(2);
+    const dly  = (Math.random()*0.6).toFixed(2);
     span.style.transition =
-      `opacity ${1.5+Math.random()*2}s ease ${Math.random()*0.8}s,` +
-      `transform ${2+Math.random()*2}s ease ${Math.random()*0.6}s,` +
-      `filter ${2+Math.random()*1.5}s ease`;
+      `opacity ${dur}s ease ${dly}s,` +
+      `transform ${(parseFloat(dur)+0.4).toFixed(2)}s ease ${dly}s,` +
+      `color 2s ease,filter ${dur}s ease ${dly}s`;
   });
 
-  // Cross-fade: ack layer out, breath layer + bp in
+  // Hide back button during dissolution — no escape affordance
+  const backBtn = document.getElementById('backBtn');
+  if (backBtn) { backBtn.style.opacity='0'; backBtn.style.pointerEvents='none'; }
+
+  // Cross-fade: ack layer out, breath layer in — word stays put
   ackLayer.style.transition = 'opacity 1.2s ease';
   ackLayer.style.opacity = '0';
   setTimeout(() => { ackLayer.style.pointerEvents = 'none'; }, 1200);
@@ -1037,107 +1069,230 @@ function startDecBreath(displayName) {
   setTimeout(() => {
     breathLayer.style.opacity = '1';
     breathLayer.style.pointerEvents = 'all';
-    // bp fades in
-    if (bp) { bp.style.transition = 'opacity 1s ease'; bp.style.opacity = '1'; }
+    if (bp) { bp.style.transition = 'opacity 1.2s ease'; bp.style.opacity = '1'; }
   }, 400);
 
   let cycle = 0;
-  function dDelay(fn,ms){ const id=setTimeout(fn,ms); decBreathTimers.push(id); }
+  function dDelay(fn,ms){ const id=setTimeout(fn,ms); decBreathTimers.push(id); return id; }
 
-  function showBtext(txt, delayMs) {
-    dDelay(() => {
-      if (!btext) return;
-      btext.style.transition = 'opacity 0.7s ease'; btext.style.opacity = '0';
-      dDelay(() => { btext.textContent = txt; btext.style.opacity = '1'; }, 750);
-    }, delayMs||0);
+  function setBtext(txt) {
+    if (!btext) return;
+    btext.style.transition = 'opacity 0.6s ease';
+    btext.style.opacity = '0';
+    const id = setTimeout(() => {
+      btext.textContent = txt;
+      btext.style.opacity = '1';
+    }, 650);
+    decBreathTimers.push(id);
   }
-  function hideBtext(delayMs) {
-    dDelay(() => {
-      if (!btext) return;
-      btext.style.transition = 'opacity 0.8s ease'; btext.style.opacity = '0';
-    }, delayMs||0);
+  function hideBtext() {
+    if (!btext) return;
+    btext.style.transition = 'opacity 0.8s ease';
+    btext.style.opacity = '0';
+  }
+
+  // Fire exhale ripple on a given cycle index
+  function fireRipple(idx) {
+    const rip = document.getElementById('dec-rip'+idx);
+    if (!rip) return;
+    rip.classList.remove('go');
+    void rip.offsetWidth; // force reflow
+    rip.classList.add('go');
+  }
+
+  // Modulate drone pitch subtly on inhale/exhale
+  function dronePitch(up) {
+    if (!droneNodes.length) return;
+    droneNodes.forEach(n => {
+      if (n.frequency) {
+        const base = n.frequency.value;
+        n.frequency.setTargetAtTime(up ? base*1.018 : base/1.018, audioCtx.currentTime, 2);
+      }
+    });
   }
 
   function runCycle() {
     if (cycle >= 3) {
-      // Full dissolution — letters drift away
+      // Restore back button
+      if (backBtn) { backBtn.style.opacity='1'; backBtn.style.pointerEvents='all'; }
+
+      // Phase 3a: letter fragmentation — drift apart before dissolving
       dDelay(() => {
-        letters.forEach(span => {
-          const tx = (Math.random()-0.5)*60;
-          const ty = -30 - Math.random()*50;
+        hideBtext();
+        letters.forEach((span, i) => {
+          const tx = (Math.random()-0.5)*80;
+          const ty = (Math.random()-0.5)*60 - 20;
+          const rot = (Math.random()-0.5)*25;
           span.style.opacity = '0';
-          span.style.transform = `translate(${tx}px,${ty}px) rotate(${(Math.random()-0.5)*20}deg)`;
-          span.style.filter = 'blur(8px)';
+          span.style.transform = `translate(${tx}px,${ty}px) rotate(${rot}deg)`;
+          span.style.filter = 'blur(10px)';
         });
-        // word wrapper fades too
-        wordEl.style.transition = 'opacity 2.5s ease';
+        // bp particle pulses bright then fades — becomes the residual glow
+        if (bp) {
+          bp.style.transition = 'transform 1.2s cubic-bezier(.4,0,.2,1),opacity 1.8s ease,background 1.2s ease,box-shadow 1.2s ease';
+          bp.style.transform = 'scale(4)';
+          bp.style.background = 'rgba(240,204,136,.8)';
+          bp.style.boxShadow = '0 0 40px rgba(240,204,136,.6)';
+        }
         playDecohereRelease();
-        if (bp) { bp.style.transition = 'opacity 0.8s ease,transform 0.8s ease'; bp.style.transform='scale(0.3)'; bp.style.opacity='0'; }
-        hideBtext(0);
-      }, 600);
-      dDelay(() => showDecEnd(), 5000);
+      }, 400);
+
+      // Phase 3b: bp contracts to tiny residual glow
+      dDelay(() => {
+        if (bp) {
+          bp.style.transition = 'transform 3s cubic-bezier(.4,0,.2,1),opacity 3s ease,background 3s ease,box-shadow 3s ease';
+          bp.style.transform = 'scale(0.5)';
+          bp.style.opacity = '0.35';
+          bp.style.background = 'rgba(201,169,110,.6)';
+          bp.style.boxShadow = '0 0 8px rgba(201,169,110,.3)';
+        }
+      }, 1800);
+
+      dDelay(() => showDecEnd(), 5500);
       return;
     }
     cycle++;
     if (!bp) return;
 
-    const inhaleText = lang==='en' ? 'inhale — sniff in once more' : 'inhala — otro sorbo de aire';
-    const exhaleText = lang==='en' ? `exhale slowly — release ${displayName}` : `exhala despacio — suelta ${displayName}`;
+    const inhaleText = t.decInhale;
+    const exhaleText = t.decExhale;
 
-    showBtext(lang==='en' ? 'inhale' : 'inhala', 0);
+    // ── INHALE PHASE ──
+    // Show inhale text immediately
+    setBtext(inhaleText);
+
+    // bp expands, warms, brightens — covers word
     dDelay(() => {
-      bp.style.transition = 'transform 4s cubic-bezier(.4,0,.2,1),filter 4s ease,background 3s ease';
-      bp.style.transform='scale(2.8)'; bp.style.filter='blur(3px)'; bp.style.background='rgba(190,185,175,.55)';
+      // Scale grows progressively each cycle: 5 → 7 → 9 — big enough to envelop word
+      const maxScale = 5 + cycle * 2;
+      // Warmer and brighter each cycle
+      const r = 190 + cycle * 16, g = 178 + cycle * 10, b = 150 - cycle * 12;
+      const glowStr = 0.25 + cycle * 0.18;
+      bp.style.transition =
+        'transform 4s cubic-bezier(.35,0,.15,1),' +
+        'filter 4s ease,' +
+        'background 3.5s ease,' +
+        'box-shadow 3.5s ease';
+      bp.style.transform = `scale(${maxScale})`;
+      bp.style.filter = `blur(${3 + cycle * 1.5}px)`;
+      bp.style.background = `rgba(${r},${g},${b},0.65)`;
+      bp.style.boxShadow = `0 0 ${30+cycle*20}px rgba(${r},${g},${b},${glowStr})`;
+      // Pitch up drone
+      dronePitch(true);
     }, 100);
-    showBtext(inhaleText, 2000);
-    dDelay(() => { bp.style.transform='scale(3.2)'; }, 2000);
-    showBtext(exhaleText, 4200);
+
+    // Top-up cue at 2s
     dDelay(() => {
-      bp.style.transition = 'transform 4s cubic-bezier(.4,0,.2,1),filter 4s ease,background 3s ease';
-      bp.style.transform='scale(1)'; bp.style.filter='blur(0)';
-      // Warm bp colour toward gold as cycles progress — tracking the word's warmth shift
-      const warmAlpha = 0.5 + cycle * 0.12;
-      const warmR = 180 + cycle * 20, warmG = 175 + cycle * 10, warmB = 165 - cycle * 15;
-      bp.style.background = `rgba(${warmR},${warmG},${warmB},${warmAlpha})`;
-      bp.style.boxShadow = `0 0 ${12 + cycle*8}px rgba(${warmR},${warmG},${warmB},${0.25 + cycle*0.1})`;
-      const opacity = 1 - (cycle * 0.3);
-      const warmth = cycle * 60;
+      // Nudge scale a little more — the "and once more" sip
+      const nudge = 5 + cycle * 2 + 0.8;
+      bp.style.transition = 'transform 2s cubic-bezier(.4,0,.2,1)';
+      bp.style.transform = `scale(${nudge})`;
+    }, 2200);
+
+    // ── EXHALE PHASE ──
+    dDelay(() => {
+      setBtext(exhaleText);
+      // Haptic pulse on exhale
+      if (navigator.vibrate) navigator.vibrate(22);
+      // Fire ripple ring
+      fireRipple(cycle - 1);
+      // Pitch down drone
+      dronePitch(false);
+
+      // bp contracts — smooth, long ease
+      bp.style.transition =
+        'transform 4.5s cubic-bezier(.4,0,.2,1),' +
+        'filter 4s ease,' +
+        'background 3s ease,' +
+        'box-shadow 3s ease';
+      bp.style.transform = 'scale(1)';
+      bp.style.filter = 'blur(0px)';
+      // After contraction, residual warmth remains
+      const residR = 180 + cycle * 12, residG = 170 + cycle * 8, residB = 155 - cycle * 8;
+      bp.style.background = `rgba(${residR},${residG},${residB},${0.45 + cycle*0.1})`;
+      bp.style.boxShadow = `0 0 ${10+cycle*6}px rgba(${residR},${residG},${residB},${0.2+cycle*0.08})`;
+
+      // Word reappears but more dissolved — opacity steps: 1 → 0.62 → 0.28 → 0 (handled at cycle end)
+      const wordOpacity = Math.max(0, 1 - cycle * 0.36);
+      const wR = 180 + cycle*50, wG = 175 + cycle*35, wB = 165 + cycle*15;
       letters.forEach(span => {
-        span.style.opacity = opacity.toString();
-        span.style.color = `rgba(${180+warmth},${175+Math.floor(warmth*0.7)},${165+Math.floor(warmth*0.2)},${(opacity+0.1).toFixed(2)})`;
+        span.style.opacity = wordOpacity.toFixed(2);
+        span.style.color = `rgba(${Math.min(255,wR)},${Math.min(255,wG)},${Math.min(255,wB)},${(wordOpacity+0.05).toFixed(2)})`;
+        // Subtle blur accumulates
+        span.style.filter = `blur(${cycle * 0.8}px)`;
       });
-    }, 4200);
-    hideBtext(8800);
+    }, 4400);
+
+    // Mark cycle dot done
     dDelay(() => {
-      const dot = document.getElementById('dec-dot'+(cycle-1)); if (dot) dot.classList.add('done');
-      bp.style.transform='scale(1)'; bp.style.filter='';
-    }, 9500);
-    dDelay(runCycle, 10500);
+      const dot = document.getElementById('dec-dot'+(cycle-1));
+      if (dot) dot.classList.add('done');
+    }, 8800);
+
+    // Hide btext, pause before next cycle
+    dDelay(() => { hideBtext(); }, 8000);
+    dDelay(runCycle, 10200);
   }
 
   dDelay(runCycle, 800);
 }
 
-// PHASE 3: End — silence then reformation
+// PHASE 3: End — witnessed sentence, silence, reformation
 function showDecEnd() {
+  currentMode = 'decohere-end';
   const t = TRANSLATIONS[lang];
-  // Increment decohere count
   const nd = parseInt(localStorage.getItem('field_obs_decohere')||'0') + 1;
   localStorage.setItem('field_obs_decohere', nd);
-  spParticles = Array.from({length:8}, (_,i) => new SpParticle(i,8));
-  spParticles.forEach(p => { p.targetAlpha=0; p.targetClarity=0; p.phV *= 0.6; });
+
+  // Particles bloom outward from centre — reformation
+  spParticles = Array.from({length:12}, (_,i) => new SpParticle(i,12));
+  spParticles.forEach(p => {
+    p.x = innerWidth/2 + (Math.random()-0.5)*20;
+    p.y = innerHeight/2 + (Math.random()-0.5)*20;
+    p.targetAlpha = 0;
+    p.targetClarity = 0;
+    p.phV *= 0.5;
+  });
+  // Bloom: particles radiate outward over 2s
   setTimeout(() => {
-    spParticles.forEach(p => { p.targetAlpha=0.2+Math.random()*0.18; p.targetClarity=0; });
-  }, 1500);
+    spParticles.forEach(p => {
+      p.targetAlpha = 0.22 + Math.random()*0.2;
+    });
+  }, 600);
+
+  // Populate content
   document.getElementById('decEndLine').textContent = t.decEndLine;
   document.getElementById('decEndSub').innerHTML = t.decEndSub.replace(/\n/g,'<br>');
   document.getElementById('decRetBtn').textContent = t.decRetBtn;
   document.getElementById('decAgainBtn').textContent = t.decAgainBtn;
-  // Hide buttons initially — let silence breathe for 8 seconds
+
+  // Witnessed sentence — unique per state
+  const witnessed = document.getElementById('decWitnessed');
+  if (witnessed) {
+    const sentence = (WITNESSED[lang] && WITNESSED[lang][decStateName]) || '';
+    witnessed.textContent = sentence;
+    witnessed.style.opacity = '0';
+  }
+
+  // Hide btns and sub initially
   const btns = document.querySelector('.dec-btns');
-  if (btns) { btns.style.opacity = '0'; btns.style.transition = 'opacity 1.2s ease'; }
+  const sub = document.getElementById('decEndSub');
+  if (btns) { btns.style.opacity='0'; btns.style.transition='opacity 1.4s ease'; btns.style.pointerEvents='none'; }
+  if (sub)  { sub.style.opacity='0';  sub.style.transition='opacity 1.4s ease'; }
+
   showScreen('s-dec-end', () => {
-    setTimeout(() => { if (btns) btns.style.opacity = '1'; }, 8000);
+    // Witnessed sentence fades in after 1.5s — let silence settle first
+    setTimeout(() => {
+      if (witnessed) witnessed.style.opacity = '1';
+    }, 1500);
+    // Sub text fades in after witnessed sentence
+    setTimeout(() => {
+      if (sub) sub.style.opacity = '1';
+    }, 4500);
+    // Buttons appear after 8s of silence
+    setTimeout(() => {
+      if (btns) { btns.style.opacity='1'; btns.style.pointerEvents='all'; }
+    }, 8000);
   });
 }
 

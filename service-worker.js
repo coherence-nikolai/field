@@ -1,5 +1,5 @@
 // Network-first — always fetch live, no stale cache ever
-const CACHE = 'field-v3f';
+const CACHE = 'field-v4';
 
 self.addEventListener('install', e => {
   self.skipWaiting();
