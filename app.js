@@ -408,7 +408,8 @@ function goHome() {
     const el = document.getElementById(mvId);
     if (el) el.classList.add('lit');
   }, 800);
-}(n) {
+}
+function initSpParticles(n) {
   spParticles = Array.from({length:n}, (_,i) => new SpParticle(i,n));
   spParticles.forEach(p => { p.targetAlpha = 0.4+Math.random()*0.3; p.targetClarity = 0; });
 }
