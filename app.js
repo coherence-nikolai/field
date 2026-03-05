@@ -95,7 +95,7 @@ class SpParticle {
   draw() {
     if (this.alpha < 0.01 || particlesHidden) return;
     // Blur matching original Collapse: (1-clarity)*14 + 2 for full superposition feel
-    const blur = (1-this.clarity)*13 + 2;
+    const blur = (1-this.clarity)*20 + 4;
     const glow = 10 + this.clarity*28;
     cx.save();
     cx.filter = `blur(${blur.toFixed(1)}px)`;
@@ -349,6 +349,31 @@ function showScreen(id, postCb) {
 }
 
 // ── LANG ──
+// ── AUDIO TOGGLE ──
+let audioEnabled = true;
+function toggleAudio() {
+  audioEnabled = !audioEnabled;
+  const btn = document.getElementById('audioBtn');
+  if (audioEnabled) {
+    btn.classList.remove('muted');
+    btn.title = 'toggle audio';
+    tryDrone();
+  } else {
+    btn.classList.add('muted');
+    btn.title = 'audio off';
+    fadeDrone(true, 0.8);
+  }
+}
+
+// ── FONT SIZE TOGGLE ──
+let fontLarge = false;
+function toggleFont() {
+  fontLarge = !fontLarge;
+  document.body.classList.toggle('fs-large', fontLarge);
+  const btn = document.getElementById('fontBtn');
+  if (btn) btn.classList.toggle('active', fontLarge);
+}
+
 function toggleLang() {
   lang = lang === 'en' ? 'es' : 'en';
   localStorage.setItem('field_lang', lang);

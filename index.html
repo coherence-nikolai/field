@@ -91,16 +91,16 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
   -webkit-tap-highlight-color:transparent;padding:16px 12px;
   transition:transform .3s ease;}
 .movement:active{transform:scale(.95);}
-.mv-glyph{font-size:clamp(28px,8vw,40px);color:rgba(201,169,110,.35);
+.mv-glyph{font-size:clamp(36px,10vw,52px);color:rgba(201,169,110,.45);
   transition:color .5s ease,text-shadow .5s ease;line-height:1;}
 .movement:hover .mv-glyph,.movement.lit .mv-glyph{
   color:var(--gold-bright);
   text-shadow:0 0 20px rgba(240,204,136,.4);}
-.mv-label{font-size:var(--fl);letter-spacing:.16em;color:rgba(201,169,110,.45);
-  transition:color .4s ease;}
+.mv-label{font-size:clamp(14px,3.8vw,18px);letter-spacing:.14em;color:rgba(201,169,110,.65);
+  font-weight:300;transition:color .4s ease;}
 .movement:hover .mv-label,.movement.lit .mv-label{color:var(--gold);}
-.mv-hint{font-size:clamp(9px,2.2vw,11px);letter-spacing:.10em;
-  color:rgba(201,169,110,.22);text-align:center;max-width:80px;line-height:1.5;}
+.mv-hint{font-size:clamp(10px,2.5vw,12px);letter-spacing:.08em;
+  color:rgba(201,169,110,.30);text-align:center;max-width:90px;line-height:1.5;}
 
 .obs-count-home{font-size:var(--fl);color:rgba(201,169,110,.25);letter-spacing:.08em;
   position:absolute;bottom:36px;left:50%;transform:translateX(-50%);white-space:nowrap;}
@@ -404,6 +404,24 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
   0%,100%{text-shadow:0 0 16px rgba(201,169,110,.4),0 0 32px rgba(201,169,110,.15);}
   50%{text-shadow:0 0 24px rgba(201,169,110,.65),0 0 48px rgba(201,169,110,.3);}
 }
+
+/* Revisit intro button on home */
+#revisitHomeBtn{background:none;border:none;font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:clamp(10px,2.5vw,12px);letter-spacing:.14em;color:rgba(201,169,110,.28);
+  cursor:pointer;padding:14px 20px;min-height:44px;margin-top:8px;
+  -webkit-tap-highlight-color:transparent;transition:color .4s ease;font-weight:300;}
+#revisitHomeBtn:hover{color:rgba(201,169,110,.55);}
+
+/* Audio muted state */
+#audioBtn.muted{opacity:.35;}
+
+/* Font size large mode */
+body.fs-large .mv-label{font-size:clamp(18px,5vw,24px);}
+body.fs-large .mv-hint{font-size:clamp(13px,3.5vw,16px);}
+body.fs-large .field-title{font-size:clamp(52px,15vw,90px);}
+body.fs-large .field-sub{font-size:clamp(14px,3.8vw,18px);}
+body.fs-large #revisitHomeBtn{font-size:clamp(12px,3vw,15px);}
+#fontBtn.active{color:var(--gold);}
 </style>
 </head>
 <body>
@@ -419,7 +437,11 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 <!-- CHROME -->
 <div id="chrome">
   <button class="chrome-btn" id="langBtn" onclick="toggleLang()">EN / ES</button>
-  <button class="chrome-btn" id="backBtn" onclick="goHome()" style="opacity:0;pointer-events:none;">←</button>
+  <div style="display:flex;gap:14px;align-items:center;">
+    <button class="chrome-btn" id="audioBtn" onclick="toggleAudio()" title="toggle audio">♪</button>
+    <button class="chrome-btn" id="fontBtn" onclick="toggleFont()" title="larger text">Aa</button>
+    <button class="chrome-btn" id="backBtn" onclick="goHome()" style="opacity:0;pointer-events:none;">←</button>
+  </div>
 </div>
 
 <!-- WELCOME INTRO (first launch only) -->
@@ -486,6 +508,7 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
     </div>
   </div>
   <div class="obs-count-home" id="homeCount"></div>
+  <button id="revisitHomeBtn" onclick="revisitIntro()">revisit introduction</button>
 </div>
 
 <!-- OBSERVE -->
