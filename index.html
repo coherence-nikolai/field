@@ -119,7 +119,7 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 #clarity-ring{position:fixed;width:100px;height:100px;border-radius:50%;
   border:1px solid rgba(201,169,110,0);top:38%;left:50%;
   margin-left:-50px;margin-top:-50px;
-  pointer-events:none;z-index:2;
+  pointer-events:none;z-index:2;display:none;
   transition:border-color 2.5s ease,box-shadow 2.5s ease,width 2.5s ease,height 2.5s ease,margin 2.5s ease,top 1s ease;}
 
 /* Signal dots */
@@ -235,10 +235,16 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 .cp-stage.on{opacity:1;pointer-events:all;visibility:visible;z-index:2;}
 .stage-inner{display:flex;flex-direction:column;align-items:center;gap:22px;
   width:100%;max-width:370px;}
-.cword{font-size:clamp(56px,18vw,110px);font-weight:300;letter-spacing:.06em;
+.cword{font-size:clamp(64px,20vw,120px);font-weight:300;letter-spacing:.06em;
   font-family:var(--serif);
-  color:var(--ascending);text-shadow:0 0 40px rgba(255,232,176,.60),0 0 80px rgba(255,200,80,.28);
-  line-height:1;width:100%;text-align:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+  color:var(--ascending);
+  text-shadow:0 0 40px rgba(255,232,176,.60),0 0 80px rgba(255,200,80,.28);
+  line-height:1;width:100%;text-align:center;
+  white-space:normal;word-break:break-word;
+  transition:text-shadow 2s ease,transform 2s ease,color 2s ease,font-size 0.1s;}
+.cword.exhaling{
+  text-shadow:0 0 60px rgba(255,240,180,1),0 0 120px rgba(255,210,80,.7),0 0 200px rgba(255,180,40,.4);
+  transform:scale(1.06);color:rgba(255,240,180,1);}
 .c-confirm-label{font-size:var(--fl);letter-spacing:.14em;color:var(--gold);display:block;
   font-weight:300;margin-bottom:4px;}
 .c-confirm-sub{font-size:var(--fs);color:var(--cream-ghost);font-weight:300;}
@@ -248,10 +254,12 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 
 /* Breath */
 .bwrap{display:flex;flex-direction:column;align-items:center;gap:20px;width:100%;}
-.btext-slot{height:clamp(40px,10vw,56px);display:flex;align-items:center;
-  justify-content:center;width:100%;position:relative;}
+.btext-slot{height:clamp(64px,16vw,88px);display:flex;align-items:center;
+  justify-content:center;width:100%;position:relative;overflow:hidden;}
 .btext{font-size:var(--fh);font-weight:300;letter-spacing:.14em;color:var(--cream-dim);
-  position:absolute;transition:opacity .5s ease;text-align:center;}
+  position:absolute;left:50%;transform:translateX(-50%);
+  width:90vw;max-width:340px;
+  transition:opacity .5s ease;text-align:center;white-space:normal;line-height:1.4;}
 .btext.gold{color:var(--gold-bright);font-size:clamp(26px,7vw,44px);
   text-shadow:0 0 30px rgba(240,204,136,.5);}
 .btext.dim{font-size:var(--fs);letter-spacing:.06em;}
@@ -638,7 +646,7 @@ body.fs-large .imag-prompt{font-size:clamp(18px,4.8vw,24px);}
 </div>
 
 <!-- DECOHERE BREATH — static layout, never rebuilt -->
-<div class="screen" id="s-dec-breath" style="position:relative;overflow:hidden;">
+<div class="screen" id="s-dec-breath" style="position:relative;overflow:hidden;padding-top:64px;">
   <!-- Acknowledge layer -->
   <div id="dec-ack-layer" style="position:absolute;inset:0;display:flex;flex-direction:column;
     align-items:center;justify-content:center;gap:20px;padding:clamp(24px,6vw,48px);
@@ -674,10 +682,10 @@ body.fs-large .imag-prompt{font-size:clamp(18px,4.8vw,24px);}
     </div>
   </div>
   <!-- Word lives in breath layer — not fixed, so display:none on parent hides it properly -->
-  <div id="dec-word-wrap" style="position:absolute;top:52%;left:50%;
+  <div id="dec-word-wrap" style="position:absolute;top:50%;left:50%;
     transform:translate(-50%,-50%);text-align:center;pointer-events:none;z-index:15;
-    max-width:90vw;">
-    <div id="dec-word" style="font-size:clamp(38px,10vw,68px);font-weight:300;
+    max-width:88vw;">
+    <div id="dec-word" style="font-size:clamp(34px,9vw,58px);font-weight:300;
       font-family:'Cormorant Garamond',Georgia,serif;
       letter-spacing:.10em;color:rgba(180,175,165,.65);
       white-space:normal;word-break:break-word;

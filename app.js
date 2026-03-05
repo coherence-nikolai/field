@@ -581,40 +581,38 @@ function buildObsScreen() {
     <div id="obs-timer" style="position:fixed;top:72px;left:50%;transform:translateX(-50%);
       font-size:clamp(14px,3.5vw,17px);letter-spacing:.14em;color:rgba(201,169,110,.3);
       z-index:20;opacity:0;transition:opacity 1.5s ease;font-weight:300;pointer-events:none;"></div>
-    <div id="obs-signals" style="position:fixed;bottom:clamp(90px,20vw,120px);left:50%;
-      transform:translateX(-50%);display:flex;gap:24px;align-items:flex-end;
+    <!-- Signals row + i am here inline -->
+    <div id="obs-signals" style="position:fixed;bottom:clamp(52px,12vw,72px);left:50%;
+      transform:translateX(-50%);display:flex;gap:20px;align-items:center;
       opacity:0;transition:opacity 1.5s ease;z-index:20;">
-      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
         <div class="sig-dot" id="sig-still"></div>
         <div class="sig-label">${t?'still':'quieto'}</div>
       </div>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
         <div class="sig-dot" id="sig-present"></div>
         <div class="sig-label">${t?'present':'presente'}</div>
       </div>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
         <div class="sig-dot" id="sig-affirm"></div>
         <div class="sig-label">${t?'here':'aquí'}</div>
       </div>
+      <button id="affirmBtn" onclick="doAffirm()"
+        style="background:none;border:1px solid rgba(201,169,110,.22);border-radius:30px;
+        padding:8px 18px;cursor:pointer;margin-left:8px;
+        -webkit-tap-highlight-color:transparent;touch-action:manipulation;
+        font-family:inherit;font-size:clamp(10px,2.5vw,12px);letter-spacing:.16em;
+        color:rgba(201,169,110,.45);transition:border-color .3s ease,color .3s ease;
+        min-height:36px;white-space:nowrap;">
+        ${t?'i am here':'estoy aquí'}
+      </button>
     </div>
-    <div id="meter" style="position:fixed;bottom:clamp(48px,10vw,64px);left:50%;
+    <div id="meter" style="position:fixed;bottom:clamp(112px,24vw,140px);left:50%;
       transform:translateX(-50%);display:flex;gap:6px;align-items:center;
       z-index:20;opacity:0;transition:opacity 1.5s ease;"></div>
     <div id="scatter-text" style="position:fixed;top:36%;left:50%;transform:translateX(-50%);
       font-size:clamp(13px,3.2vw,16px);letter-spacing:.14em;color:rgba(240,230,208,.45);
       white-space:nowrap;opacity:0;transition:opacity 1s ease;z-index:20;pointer-events:none;"></div>
-    <button id="affirmBtn" onclick="doAffirm()"
-      style="position:fixed;bottom:clamp(100px,22vw,140px);left:50%;
-      transform:translateX(-50%);
-      background:none;border:1px solid rgba(201,169,110,.22);border-radius:40px;
-      padding:14px 36px;cursor:pointer;
-      -webkit-tap-highlight-color:transparent;touch-action:manipulation;
-      font-family:inherit;font-size:clamp(12px,3vw,15px);letter-spacing:.18em;
-      color:rgba(201,169,110,.45);opacity:0;transition:opacity 1.5s ease,
-      border-color .3s ease,color .3s ease;z-index:30;min-height:48px;
-      animation:affirmPulse 4s ease-in-out infinite;">
-      ${t?'i am here':'estoy aquí'}
-    </button>
     <div id="affirmWrap" style="display:none;"></div>
   `;
   buildObsMeter();
@@ -675,6 +673,8 @@ function updateClarityRing() {
 function startObserve() {
   if (navigator.vibrate) navigator.vibrate(18);
   currentMode = 'observe'; showBackBtn(); initAudio();
+  const ring = document.getElementById('clarity-ring');
+  if (ring) ring.style.display = 'block';
   // Spawn particle immediately at alpha 0 — already running behind setup screen
   isCoherent = false; fieldActive = false; attentionSec = 0;
   affirmBonus = 0; clarityLevel = 0; isStill = true; lastAffirmTime = 0;
@@ -882,10 +882,8 @@ function enterObserve() {
       startObsTimer();
       const sigs = document.getElementById('obs-signals');
       const meter = document.getElementById('meter');
-      const affBtn = document.getElementById('affirmBtn');
       if (sigs) { sigs.style.transition = 'opacity 1.5s ease'; sigs.style.opacity = '1'; }
       if (meter) { meter.style.transition = 'opacity 1.5s ease'; meter.style.opacity = '1'; }
-      if (affBtn) { affBtn.style.transition = 'opacity 1.5s ease'; affBtn.style.opacity = '1'; }
     }, 4500);
   }, 900);
 }
@@ -914,9 +912,9 @@ function startAttentionTimer() {
   attentionTimer = setInterval(() => {
     if (!fieldActive || isCoherent) return;
     if (isStill) attentionSec++;
-    // Meter only advances when still
     updateObsMeter();
-    if (attentionSec + affirmBonus >= COHERENCE_SEC) reachObsCoherence();
+    // Only auto-end via COHERENCE_SEC if no real timer is set (obsMinutes=0 fallback)
+    if (obsMinutes === 0 && attentionSec + affirmBonus >= COHERENCE_SEC) reachObsCoherence();
   }, 1000);
 }
 
@@ -961,7 +959,7 @@ function doAffirm() {
     updateSignalDots();
   }, 600);
   updateObsMeter();
-  if (attentionSec + affirmBonus >= COHERENCE_SEC) reachObsCoherence();
+  if (obsMinutes === 0 && attentionSec + affirmBonus >= COHERENCE_SEC) reachObsCoherence();
 }
 
 function obsScatter() {
@@ -980,7 +978,7 @@ function reachObsCoherence() {
   isCoherent = true; clearInterval(attentionTimer); clearInterval(microToneTimer); clearInterval(motionCheckInterval);
   clarityLevel = 1; updateClarityRing(); playObsCoherenceTone(); fadeDrone(true, 3);
   // Hide signals
-  ['obs-signals','meter','affirmBtn','scatter-text','obs-hint-txt','obs-timer'].forEach(id => {
+  ['obs-signals','meter','scatter-text','obs-hint-txt','obs-timer'].forEach(id => {
     const el = document.getElementById(id); if (el) { el.style.transition = 'opacity 1.5s ease'; el.style.opacity = '0'; }
   });
   // Count both total and observe-specific
@@ -1004,6 +1002,8 @@ function clearObserver() {
   particleVisible = false; attentionSec = 0; affirmBonus = 0; clarityLevel = 0;
   isStill = true; kasinaParticle = null;
   clearTimeout(scatterTO);
+  const ring = document.getElementById('clarity-ring');
+  if (ring) { ring.style.display = 'none'; ring.style.borderColor = 'rgba(201,169,110,0)'; ring.style.boxShadow = 'none'; }
 }
 
 // Device motion
@@ -1281,7 +1281,8 @@ function startBreath() {
     showText(t.breathHold,'',4500);
     bDelay(()=>{ p.className='bp holding'; },4500);
     showText(stateName,'gold',7300);
-    bDelay(()=>{ p.className='bp exhaling'; ripple.classList.remove('expand'); void ripple.offsetWidth; ripple.classList.add('expand'); playExhaleCollapse(); },7300);
+    bDelay(()=>{ p.className='bp exhaling'; ripple.classList.remove('expand'); void ripple.offsetWidth; ripple.classList.add('expand'); playExhaleCollapse(); const cw=document.getElementById('cword'); if(cw) cw.classList.add('exhaling'); },7300);
+    bDelay(()=>{ const cw=document.getElementById('cword'); if(cw) cw.classList.remove('exhaling'); },11800);
     hideText(11800);
     bDelay(()=>{ const dot=document.getElementById('bdot'+(breathCycle-1)); if(dot) dot.classList.add('done'); p.className='bp neutral'; },11800);
     bDelay(cycle,12800);
