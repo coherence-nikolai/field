@@ -98,13 +98,9 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 
 /* ═══ OBSERVE SCREEN ═══ */
 #s-observe{cursor:default;padding:0;}
-.obs-train-hint{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
-  font-size:var(--fl);color:var(--cream-ghost);letter-spacing:.08em;line-height:1.7;
-  text-align:center;z-index:20;opacity:0;transition:opacity 2s ease;width:80%;max-width:320px;}
 
 /* Meter */
-#meter{position:fixed;bottom:44px;left:50%;transform:translateX(-50%);
-  display:flex;gap:6px;align-items:center;z-index:20;opacity:0;transition:opacity 2s ease;}
+#meter{display:flex;gap:6px;align-items:center;z-index:20;}
 .mdot{width:4px;height:4px;border-radius:50%;background:rgba(201,169,110,.18);
   transition:background 1.5s ease,box-shadow 1.5s ease;}
 .mdot.lit{background:var(--gold);box-shadow:0 0 6px rgba(201,169,110,.6);}
@@ -114,12 +110,23 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
   border:1px solid rgba(201,169,110,0);top:50%;left:50%;
   margin-left:-50px;margin-top:-50px;
   pointer-events:none;z-index:2;
-  transition:border-color 2s ease,box-shadow 2s ease,width 2s ease,height 2s ease,margin 2s ease;}
+  transition:border-color 2.5s ease,box-shadow 2.5s ease,width 2.5s ease,height 2.5s ease,margin 2.5s ease;}
 
-/* Scatter text */
-#scatter-text{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
-  font-size:var(--fl);letter-spacing:.14em;color:var(--cream-ghost);
-  white-space:nowrap;opacity:0;transition:opacity 1s ease;z-index:20;}
+/* Signal dots */
+.sig-dot{width:8px;height:8px;border-radius:50%;background:rgba(201,169,110,.18);
+  transition:background .6s ease,box-shadow .6s ease;}
+.sig-label{font-size:clamp(9px,2.2vw,10px);letter-spacing:.12em;color:rgba(201,169,110,.28);
+  text-align:center;font-weight:300;}
+
+/* Affirmation button pulse */
+@keyframes affirmPulse{0%,100%{opacity:.4;transform:scale(1)}50%{opacity:.8;transform:scale(1.3)}}
+
+/* Clarity ring — positioned globally */
+#clarity-ring{position:fixed;width:100px;height:100px;border-radius:50%;
+  border:1px solid rgba(201,169,110,0);top:50%;left:50%;
+  margin-left:-50px;margin-top:-50px;
+  pointer-events:none;z-index:2;
+  transition:border-color 2s ease,box-shadow 2s ease,width 2s ease,height 2s ease,margin 2s ease;}
 
 /* Observe coherence */
 #s-obs-coherence{gap:40px;text-align:center;cursor:pointer;}
@@ -367,10 +374,6 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 
 <!-- OBSERVE -->
 <div class="screen" id="s-observe"></div>
-<div id="clarity-ring"></div>
-<div id="meter"></div>
-<div id="scatter-text"></div>
-<div class="obs-train-hint" id="obsTrainHint"></div>
 
 <!-- OBSERVE COHERENCE -->
 <div class="screen" id="s-obs-coherence" onclick="goHome()">
