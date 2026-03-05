@@ -21,6 +21,7 @@
   --fb:clamp(17px,4.2vw,21px); --fwm:clamp(28px,7vw,42px); --fh:clamp(22px,5.5vw,30px);
   --serif:'Cormorant Garamond',Georgia,serif;
 }
+/* Fix bold weight globally — 400 not 700 */
 b, strong { font-weight:400; }
 html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
   font-family:'Plus Jakarta Sans','Segoe UI',system-ui,-apple-system,sans-serif;
@@ -29,8 +30,10 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
   user-select:none;-webkit-user-select:none; }
 *{box-sizing:border-box;} a{color:inherit;text-decoration:none;}
 
+/* CANVAS */
 #cv{position:fixed;inset:0;z-index:1;pointer-events:none;}
 
+/* AURORA */
 .aurora{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
 .al{position:absolute;border-radius:50%;filter:blur(90px);opacity:0;transition:opacity 4s ease;}
 .al.on{opacity:1;}
@@ -39,6 +42,7 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 @keyframes d1{0%,100%{transform:translate(0,0)}50%{transform:translate(8vw,5vw)}}
 @keyframes d2{0%,100%{transform:translate(0,0)}50%{transform:translate(-5vw,-7vw)}}
 
+/* SCREENS */
 .screen{position:fixed;inset:0;z-index:10;display:none;flex-direction:column;
   align-items:center;justify-content:center;
   padding:clamp(24px,6vw,48px) clamp(20px,5vw,36px);
@@ -47,20 +51,24 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 .screen.fading{opacity:0;}
 .screen.visible{opacity:1;}
 
+/* DESKTOP PANEL */
 @media(min-width:600px){
   .screen.active{left:50%;transform:translateX(-50%);width:min(480px,100vw);right:auto;
     border-left:1px solid rgba(201,169,110,.04);border-right:1px solid rgba(201,169,110,.04);}
   #chrome{left:50%;transform:translateX(-50%);width:min(480px,100vw);}
 }
 
+/* CHROME */
 #chrome{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;
   align-items:center;padding:18px 22px;z-index:300;}
 .chrome-btn{font-family:inherit;font-size:var(--fl);letter-spacing:.10em;
   color:rgba(201,169,110,.45);background:none;border:none;cursor:pointer;
-  padding:10px 14px;min-height:44px;min-width:52px;
-  -webkit-tap-highlight-color:transparent;transition:color .4s ease;font-weight:300;}
+  padding:10px 14px;min-height:44px;min-width:44px;
+  -webkit-tap-highlight-color:transparent;transition:color .4s ease,opacity .4s ease;font-weight:300;}
 .chrome-btn:hover{color:var(--gold-bright);}
+#backBtn{min-width:52px;text-align:right;}
 
+/* BURST */
 .burst-el{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
   width:0;height:0;border-radius:50%;
   background:radial-gradient(circle,rgba(255,232,176,.60) 0%,rgba(255,200,80,.22) 30%,transparent 70%);
@@ -69,7 +77,7 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 @keyframes bx{0%{width:0;height:0;opacity:.85;margin:0}100%{width:200vmax;height:200vmax;margin:-100vmax;opacity:0}}
 
 /* ═══ FIELD HOME SCREEN ═══ */
-#s-home{gap:0;justify-content:center;padding-top:80px;padding-left:0;padding-right:0;}
+#s-home{gap:0;justify-content:center;padding-top:80px;}
 .field-title{font-size:clamp(52px,14vw,80px);font-weight:300;letter-spacing:.20em;
   color:var(--gold);line-height:1;margin-bottom:10px;
   animation:fieldTitleBreathe 6s ease-in-out infinite;}
@@ -78,56 +86,22 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
   50%{text-shadow:0 0 30px rgba(240,204,136,.35),0 0 70px rgba(201,169,110,.18),0 0 120px rgba(201,169,110,.08);}}
 .field-sub{font-size:var(--fs);color:var(--cream-ghost);letter-spacing:.08em;margin-bottom:48px;}
 
-/* ── FIXED: movements fit on screen ── */
-.movements{
-  display:flex;
-  gap:0;
-  align-items:flex-start;
-  justify-content:center;
-  margin-top:16px;
-  width:100%;
-  max-width:100vw;
-  padding:0 8px;
-}
-.movement{
-  display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;
-  -webkit-tap-highlight-color:transparent;
-  padding:16px 0;
-  flex:1;
-  min-width:0;
-  max-width:33.33%;
-  transition:transform .3s ease;
-}
+/* Three movement glyphs */
+.movements{display:flex;gap:0;align-items:flex-start;justify-content:center;margin-top:16px;width:100%;max-width:420px;justify-content:space-evenly;}
+.movement{display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;padding:16px 8px;
+  transition:transform .3s ease;flex:1;max-width:130px;}
 .movement:active{transform:scale(.95);}
-.mv-glyph{font-size:clamp(28px,8vw,48px);color:rgba(201,169,110,.45);
+.mv-glyph{font-size:clamp(36px,10vw,52px);color:rgba(201,169,110,.45);
   transition:color .5s ease,text-shadow .5s ease;line-height:1;}
 .movement:hover .mv-glyph,.movement.lit .mv-glyph{
   color:var(--gold-bright);
   text-shadow:0 0 20px rgba(240,204,136,.4);}
-.mv-label{
-  font-size:clamp(14px,3.8vw,20px);
-  letter-spacing:.08em;
-  color:rgba(201,169,110,.70);
-  font-weight:300;
-  transition:color .4s ease;
-  text-align:center;
-  width:100%;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  padding:0 4px;
-}
+.mv-label{font-size:clamp(15px,4vw,19px);letter-spacing:.08em;color:rgba(201,169,110,.70);
+  font-weight:300;transition:color .4s ease;text-align:center;white-space:nowrap;}
 .movement:hover .mv-label,.movement.lit .mv-label{color:var(--gold);}
-.mv-hint{
-  font-size:clamp(10px,2.6vw,13px);
-  letter-spacing:.04em;
-  color:rgba(201,169,110,.30);
-  text-align:center;
-  max-width:90px;
-  line-height:1.5;
-  word-break:break-word;
-  padding:0 2px;
-}
+.mv-hint{font-size:clamp(12px,2.8vw,14px);letter-spacing:.05em;
+  color:rgba(201,169,110,.30);text-align:center;max-width:90px;line-height:1.5;}
 
 .obs-count-home{font-size:var(--fl);color:rgba(201,169,110,.25);letter-spacing:.08em;
   position:absolute;bottom:36px;left:50%;transform:translateX(-50%);white-space:nowrap;}
@@ -135,24 +109,36 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 /* ═══ OBSERVE SCREEN ═══ */
 #s-observe{cursor:default;padding:0;}
 
+/* Meter */
 #meter{display:flex;gap:6px;align-items:center;z-index:20;}
 .mdot{width:4px;height:4px;border-radius:50%;background:rgba(201,169,110,.18);
   transition:background 1.5s ease,box-shadow 1.5s ease;}
 .mdot.lit{background:var(--gold);box-shadow:0 0 6px rgba(201,169,110,.6);}
 
+/* Clarity ring */
 #clarity-ring{position:fixed;width:100px;height:100px;border-radius:50%;
   border:1px solid rgba(201,169,110,0);top:50%;left:50%;
   margin-left:-50px;margin-top:-50px;
   pointer-events:none;z-index:2;
   transition:border-color 2.5s ease,box-shadow 2.5s ease,width 2.5s ease,height 2.5s ease,margin 2.5s ease;}
 
+/* Signal dots */
 .sig-dot{width:8px;height:8px;border-radius:50%;background:rgba(201,169,110,.18);
   transition:background .6s ease,box-shadow .6s ease;}
 .sig-label{font-size:clamp(9px,2.2vw,10px);letter-spacing:.12em;color:rgba(201,169,110,.28);
   text-align:center;font-weight:300;}
 
+/* Affirmation button pulse */
 @keyframes affirmPulse{0%,100%{opacity:.4;transform:scale(1)}50%{opacity:.8;transform:scale(1.3)}}
 
+/* Clarity ring — positioned globally */
+#clarity-ring{position:fixed;width:100px;height:100px;border-radius:50%;
+  border:1px solid rgba(201,169,110,0);top:50%;left:50%;
+  margin-left:-50px;margin-top:-50px;
+  pointer-events:none;z-index:2;
+  transition:border-color 2s ease,box-shadow 2s ease,width 2s ease,height 2s ease,margin 2s ease;}
+
+/* Observe coherence */
 #s-obs-coherence{gap:40px;text-align:center;cursor:pointer;}
 .obs-coh-word{font-size:clamp(14px,4vw,20px);font-weight:300;letter-spacing:.26em;
   color:rgba(201,169,110,.55);}
@@ -161,7 +147,7 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 .obs-coh-tap{font-size:var(--fl);letter-spacing:.14em;color:rgba(201,169,110,.35);
   animation:pulse 2.8s ease-in-out infinite;}
 
-/* ═══ COLLAPSE INTRO ═══ */
+/* ═══ COLLAPSE INTRO SCREENS ═══ */
 #s-init{justify-content:flex-end;gap:0;padding-bottom:clamp(80px,20vw,130px);}
 .step{display:none;flex-direction:column;align-items:center;gap:clamp(20px,5vw,28px);width:100%;}
 .step.on{display:flex;}
@@ -245,6 +231,7 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 .imag-prompt{font-size:var(--fb);color:var(--cream-dim);line-height:1.82;font-style:italic;
   max-width:330px;font-weight:300;}
 
+/* Breath */
 .bwrap{display:flex;flex-direction:column;align-items:center;gap:20px;width:100%;}
 .btext-slot{height:clamp(40px,10vw,56px);display:flex;align-items:center;
   justify-content:center;width:100%;position:relative;}
@@ -325,44 +312,19 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 .shadow-orb:active{border-color:rgba(140,130,150,.4);
   background:radial-gradient(ellipse at center,rgba(140,130,150,.08) 0%,transparent 70%);}
 
-/* ── DECOHERE BREATH ── */
+/* Decohere breath */
 #s-dec-breath{gap:28px;text-align:center;cursor:default;}
 .dec-btext{font-size:var(--fh);color:var(--cream-dim);letter-spacing:.08em;
+  /* FIXED HEIGHT — never reflows regardless of line count */
   height:72px;display:flex;align-items:center;justify-content:center;
   transition:opacity .5s ease;overflow:hidden;}
-
-/* ── FIXED: "seen." sits ABOVE the word, never behind it ── */
-#dec-ack-layer{
-  position:absolute;
-  /* Place it in the upper portion of screen — word is at vertical centre */
-  top:0; left:0; right:0;
-  /* Height covers top 40% — safely above the centred word */
-  height:42%;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:flex-end; /* pushes "seen." to bottom of this zone = just above word */
-  padding-bottom:clamp(20px,5vw,32px);
-  text-align:center;
-  opacity:0;
-  transition:opacity 1s ease;
-  pointer-events:none;
-  z-index:16; /* above word-wrap's z-index:15 */
-}
-#dec-ack-line{
-  font-size:clamp(13px,3.2vw,16px);
-  letter-spacing:.14em;
-  color:rgba(240,230,208,.35);
-  transition:opacity 1.4s ease;
-  opacity:0;
-}
-
 .dec-word{font-size:clamp(52px,16vw,100px);font-weight:300;letter-spacing:.08em;
   font-family:var(--serif);
   color:var(--cream-ghost);transition:opacity 2s ease,color 2s ease,
   text-shadow 2s ease,filter 2s ease;}
 .dec-word.dissolving{color:rgba(240,230,208,.08);filter:blur(6px);}
 
+/* Decohere end */
 #s-dec-end{gap:36px;text-align:center;}
 .dec-end-line{font-size:clamp(18px,4.5vw,24px);color:rgba(240,230,208,.50);line-height:1.6;
   max-width:300px;font-weight:300;letter-spacing:.12em;text-transform:uppercase;}
@@ -374,6 +336,7 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
   cursor:pointer;padding:14px 28px;min-height:48px;
   -webkit-tap-highlight-color:transparent;transition:color .4s ease;font-weight:300;}
 .dec-btn:hover{color:var(--gold);}
+/* Dec ripple — exhale ring */
 .dec-ripple{position:absolute;top:50%;left:50%;width:16px;height:16px;
   border-radius:50%;border:1px solid rgba(201,169,110,.35);
   transform:translate(-50%,-50%) scale(1);opacity:0;pointer-events:none;z-index:12;}
@@ -381,16 +344,20 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 @keyframes decRipOut{0%{opacity:.45;transform:translate(-50%,-50%) scale(1)}
   100%{opacity:0;transform:translate(-50%,-50%) scale(26)}}
 
+/* Witnessed sentence */
 .dec-witnessed{font-size:clamp(28px,8vw,44px);font-style:italic;
   font-family:'Cormorant Garamond',Georgia,serif;
   color:rgba(240,230,208,.85);letter-spacing:.02em;line-height:1.4;
   max-width:340px;text-align:center;
   opacity:0;transition:opacity 2.5s ease;}
 
+
+/* Ghosts */
 #ghosts{position:fixed;inset:0;pointer-events:none;z-index:5;opacity:0;transition:opacity 1.4s ease;}
 .gst{position:absolute;font-size:var(--fl);letter-spacing:.12em;
   color:rgba(201,169,110,.10);animation:gd 9s ease-in-out infinite;font-weight:300;}
 @keyframes gd{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 
 /* ═══ WELCOME INTRO ═══ */
@@ -430,6 +397,7 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
   font-size:var(--fl);letter-spacing:.14em;color:rgba(201,169,110,.30);
   animation:pulse 2.8s ease-in-out infinite;pointer-events:none;white-space:nowrap;font-weight:300;}
 
+/* Movement glow states */
 .movement.lit .mv-glyph{color:rgba(201,169,110,.75);text-shadow:0 0 14px rgba(201,169,110,.35);}
 .movement.just-released .mv-glyph{
   color:rgba(201,169,110,.85);
@@ -440,18 +408,21 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
   50%{text-shadow:0 0 24px rgba(201,169,110,.65),0 0 48px rgba(201,169,110,.3);}
 }
 
+/* Revisit intro button on home */
 #revisitHomeBtn{background:none;border:none;font-family:'Plus Jakarta Sans',sans-serif;
   font-size:clamp(10px,2.5vw,12px);letter-spacing:.14em;color:rgba(201,169,110,.28);
   cursor:pointer;padding:14px 20px;min-height:44px;margin-top:8px;
   -webkit-tap-highlight-color:transparent;transition:color .4s ease;font-weight:300;}
 #revisitHomeBtn:hover{color:rgba(201,169,110,.55);}
 
+/* Audio muted state */
 #audioBtn.muted{opacity:.35;}
 .chrome-icon{font-size:clamp(12px,3vw,15px);padding:10px 10px;min-width:36px;opacity:.6;}
 .chrome-icon:hover{opacity:1;}
 
-body.fs-large .mv-label{font-size:clamp(16px,4.5vw,22px);}
-body.fs-large .mv-hint{font-size:clamp(11px,2.8vw,14px);}
+/* Font size large mode */
+body.fs-large .mv-label{font-size:clamp(20px,5.5vw,26px);}
+body.fs-large .mv-hint{font-size:clamp(13px,3.5vw,16px);}
 body.fs-large .field-title{font-size:clamp(60px,17vw,96px);}
 body.fs-large .field-sub{font-size:clamp(16px,4.2vw,20px);}
 body.fs-large #revisitHomeBtn{font-size:clamp(13px,3.2vw,16px);}
@@ -466,31 +437,6 @@ body.fs-large .obs-note{font-size:clamp(18px,4.8vw,24px);}
 body.fs-large .btext{font-size:clamp(24px,6.5vw,34px);}
 body.fs-large .imag-prompt{font-size:clamp(18px,4.8vw,24px);}
 #fontBtn.active{color:var(--gold);}
-
-/* ── OBSERVE SETUP ── */
-#s-observe-setup{gap:0;justify-content:center;}
-.obs-setup-btn{
-  background:rgba(201,169,110,0.04);
-  border:1px solid rgba(201,169,110,0.14);
-  border-radius:10px;
-  font-family:'Plus Jakarta Sans',sans-serif;
-  font-size:clamp(12px,3vw,14px);
-  letter-spacing:.10em;
-  color:rgba(201,169,110,0.45);
-  cursor:pointer;
-  padding:14px 10px;
-  min-height:48px;
-  -webkit-tap-highlight-color:transparent;
-  transition:color .3s ease,border-color .3s ease,background .3s ease,box-shadow .3s ease;
-  font-weight:300;
-}
-.obs-setup-btn.active{
-  color:var(--gold);
-  border-color:rgba(201,169,110,0.50);
-  background:rgba(201,169,110,0.10);
-  box-shadow:0 0 14px rgba(201,169,110,0.15);
-}
-.obs-setup-btn:active{transform:scale(.97);}
 </style>
 </head>
 <body>
@@ -510,19 +456,22 @@ body.fs-large .imag-prompt{font-size:clamp(18px,4.8vw,24px);}
     <button class="chrome-btn chrome-icon" id="audioBtn" onclick="toggleAudio()" title="toggle audio">♪</button>
     <button class="chrome-btn chrome-icon" id="fontBtn" onclick="toggleFont()" title="larger text">Aa</button>
   </div>
-  <button class="chrome-btn" id="backBtn" onclick="goHome()" style="opacity:0;pointer-events:none;min-width:44px;">←</button>
+  <button class="chrome-btn" id="backBtn" onclick="goHome()" style="opacity:0;pointer-events:none;min-width:52px;visibility:visible;">←</button>
 </div>
 
-<!-- WELCOME INTRO -->
+<!-- WELCOME INTRO (first launch only) -->
 <div class="screen" id="s-welcome">
+  <!-- Card 1: What this is -->
   <div class="wlc-card on" id="wlc0">
     <div class="wlc-big" id="wlc0-big"></div>
     <div class="wlc-small" id="wlc0-small"></div>
   </div>
+  <!-- Card 2: The physics -->
   <div class="wlc-card" id="wlc1">
     <div class="wlc-big" id="wlc1-big"></div>
     <div class="wlc-small" id="wlc1-small"></div>
   </div>
+  <!-- Card 3: The three movements -->
   <div class="wlc-card" id="wlc2">
     <div class="wlc-big" id="wlc2-big"></div>
     <div class="wlc-movements">
@@ -557,7 +506,7 @@ body.fs-large .imag-prompt{font-size:clamp(18px,4.8vw,24px);}
   <div class="field-title">Field</div>
   <div class="field-sub" id="homeFieldSub"></div>
   <div class="movements">
-    <div class="movement" id="mv-observe">
+    <div class="movement" id="mv-observe" onclick="startObserve()">
       <div class="mv-glyph">◎</div>
       <div class="mv-label" id="mvObserveLabel"></div>
       <div class="mv-hint" id="mvObserveHint"></div>
@@ -577,10 +526,8 @@ body.fs-large .imag-prompt{font-size:clamp(18px,4.8vw,24px);}
   <button id="revisitHomeBtn" onclick="revisitIntro()">revisit introduction</button>
 </div>
 
-<!-- OBSERVE SETUP -->
-<div class="screen" id="s-observe-setup"></div>
-
 <!-- OBSERVE -->
+<div class="screen" id="s-observe"></div>
 
 <!-- OBSERVE COHERENCE -->
 <div class="screen" id="s-obs-coherence" onclick="goHome()">
@@ -666,15 +613,17 @@ body.fs-large .imag-prompt{font-size:clamp(18px,4.8vw,24px);}
   <div class="shadow-grid" id="shadowGrid"></div>
 </div>
 
-<!-- DECOHERE BREATH — static layout -->
+<!-- DECOHERE BREATH — static layout, never rebuilt -->
 <div class="screen" id="s-dec-breath">
-
-  <!-- ── FIX: ack-layer now in upper 42% of screen, word centred below ── -->
-  <div id="dec-ack-layer">
-    <div id="dec-ack-line"></div>
+  <!-- Acknowledge layer -->
+  <div id="dec-ack-layer" style="position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:20px;padding:clamp(24px,6vw,48px);
+    text-align:center;opacity:0;transition:opacity 1s ease;pointer-events:none;z-index:20;">
+    <div id="dec-ack-line" style="font-size:clamp(18px,5vw,26px);letter-spacing:.18em;
+      font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;
+      color:rgba(240,230,208,.55);transition:opacity 1.8s ease;opacity:0;"></div>
   </div>
-
-  <!-- Breath layer -->
+  <!-- Breath layer — fixed height btext so nothing ever reflows -->
   <div id="dec-breath-layer" style="position:absolute;inset:0;display:flex;flex-direction:column;
     align-items:center;justify-content:center;gap:20px;padding:clamp(24px,6vw,48px);
     text-align:center;opacity:0;transition:opacity 1s ease;pointer-events:none;">
@@ -699,8 +648,7 @@ body.fs-large .imag-prompt{font-size:clamp(18px,4.8vw,24px);}
       <div class="bdot" id="dec-dot2"></div>
     </div>
   </div>
-
-  <!-- Word — centred, z-index 15, below ack-layer's z-index 16 -->
+  <!-- Word lives in breath layer — not fixed, so display:none on parent hides it properly -->
   <div id="dec-word-wrap" style="position:absolute;top:50%;left:50%;
     transform:translate(-50%,-50%);text-align:center;pointer-events:none;z-index:15;">
     <div id="dec-word" style="font-size:clamp(52px,16vw,100px);font-weight:300;

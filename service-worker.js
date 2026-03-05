@@ -6,6 +6,7 @@ self.addEventListener('install', e => {
 });
 
 self.addEventListener('activate', e => {
+  // Nuke ALL caches unconditionally
   e.waitUntil(
     caches.keys().then(keys =>
       Promise.all(keys.map(k => caches.delete(k)))
@@ -14,5 +15,6 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  // Always network — never cache
   e.respondWith(fetch(e.request));
 });
