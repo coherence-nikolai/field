@@ -385,14 +385,12 @@ function playScatterSound() {
 
 // ── SCREEN TRANSITIONS — smooth, no flashes ──
 function showScreen(id, postCb) {
-  // Always clear ghost words unless entering collapse/field screens
-  if (id !== 's-collapse' && id !== 's-field') {
-    const gh = document.getElementById('ghosts');
-    if (gh) {
-      gh.style.transition = 'opacity 0.6s ease';
-      gh.style.opacity = '0';
-      setTimeout(() => { gh.innerHTML = ''; }, 700);
-    }
+  // Clear ghosts on every screen change except field selection (s-field keeps them visible)
+  const gh = document.getElementById('ghosts');
+  if (gh && id !== 's-field') {
+    gh.style.transition = 'opacity 0.5s ease';
+    gh.style.opacity = '0';
+    setTimeout(() => { if (id !== 's-field') gh.innerHTML = ''; }, 600);
   }
   const next = document.getElementById(id);
   const current = document.querySelector('.screen.active');
@@ -602,23 +600,19 @@ function buildObsScreen() {
     <div id="scatter-text" style="position:fixed;top:36%;left:50%;transform:translateX(-50%);
       font-size:clamp(13px,3.2vw,16px);letter-spacing:.14em;color:rgba(240,230,208,.45);
       white-space:nowrap;opacity:0;transition:opacity 1s ease;z-index:20;pointer-events:none;"></div>
-    <div id="affirmWrap" style="position:fixed;bottom:clamp(140px,32vw,190px);left:50%;
-      transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;
-      gap:14px;opacity:0;transition:opacity 1.5s ease;z-index:30;">
-      <button id="affirmBtn" onclick="doAffirm()"
-        style="width:88px;height:88px;border-radius:50%;background:none;
-        border:1.5px solid rgba(201,169,110,.35);cursor:pointer;
-        -webkit-tap-highlight-color:transparent;
-        display:flex;align-items:center;justify-content:center;
-        transition:border-color .3s ease,box-shadow .3s ease;
-        animation:affirmPulse 4s ease-in-out infinite;">
-        <div id="affirmDot" style="width:14px;height:14px;border-radius:50%;
-          background:rgba(201,169,110,.55);
-          transition:transform .25s ease,background .25s ease;"></div>
-      </button>
-      <div style="font-size:clamp(11px,2.8vw,14px);letter-spacing:.16em;
-        color:rgba(201,169,110,.38);">${t?'i am here':'estoy aquí'}</div>
-    </div>
+    <button id="affirmBtn" onclick="doAffirm()"
+      style="position:fixed;bottom:clamp(100px,22vw,140px);left:50%;
+      transform:translateX(-50%);
+      background:none;border:1px solid rgba(201,169,110,.22);border-radius:40px;
+      padding:14px 36px;cursor:pointer;
+      -webkit-tap-highlight-color:transparent;touch-action:manipulation;
+      font-family:inherit;font-size:clamp(12px,3vw,15px);letter-spacing:.18em;
+      color:rgba(201,169,110,.45);opacity:0;transition:opacity 1.5s ease,
+      border-color .3s ease,color .3s ease;z-index:30;min-height:48px;
+      animation:affirmPulse 4s ease-in-out infinite;">
+      ${t?'i am here':'estoy aquí'}
+    </button>
+    <div id="affirmWrap" style="display:none;"></div>
   `;
   buildObsMeter();
   setTimeout(() => {
@@ -885,10 +879,10 @@ function enterObserve() {
       startObsTimer();
       const sigs = document.getElementById('obs-signals');
       const meter = document.getElementById('meter');
-      const wrap = document.getElementById('affirmWrap');
+      const affBtn = document.getElementById('affirmBtn');
       if (sigs) { sigs.style.transition = 'opacity 1.5s ease'; sigs.style.opacity = '1'; }
       if (meter) { meter.style.transition = 'opacity 1.5s ease'; meter.style.opacity = '1'; }
-      if (wrap) { wrap.style.transition = 'opacity 1.5s ease'; wrap.style.opacity = '1'; }
+      if (affBtn) { affBtn.style.transition = 'opacity 1.5s ease'; affBtn.style.opacity = '1'; }
     }, 4500);
   }, 900);
 }
@@ -954,15 +948,12 @@ function doAffirm() {
   if (navigator.vibrate) navigator.vibrate(18);
   // Visual bloom on button
   const btn = document.getElementById('affirmBtn');
-  const dot = document.getElementById('affirmDot');
-  if (btn) { btn.style.borderColor = 'rgba(201,169,110,.6)'; btn.style.boxShadow = '0 0 16px rgba(201,169,110,.35)'; }
-  if (dot) { dot.style.transform = 'scale(2.2)'; dot.style.background = 'rgba(240,204,136,.9)'; }
+  if (btn) { btn.style.borderColor = 'rgba(201,169,110,.7)'; btn.style.color = 'rgba(240,210,140,.9)'; btn.style.boxShadow = '0 0 20px rgba(201,169,110,.3)'; }
   // Clarity ring flash
   const ring = document.getElementById('clarity-ring');
   if (ring) { ring.style.boxShadow = `0 0 ${40+clarityLevel*60}px rgba(201,169,110,.4)`; }
   setTimeout(() => {
-    if (btn) { btn.style.borderColor = ''; btn.style.boxShadow = ''; }
-    if (dot) { dot.style.transform = ''; dot.style.background = ''; }
+    if (btn) { btn.style.borderColor = ''; btn.style.color = ''; btn.style.boxShadow = ''; }
     if (ring) ring.style.boxShadow = '';
     updateSignalDots();
   }, 600);
@@ -986,7 +977,7 @@ function reachObsCoherence() {
   isCoherent = true; clearInterval(attentionTimer); clearInterval(microToneTimer); clearInterval(motionCheckInterval);
   clarityLevel = 1; updateClarityRing(); playObsCoherenceTone(); fadeDrone(true, 3);
   // Hide signals
-  ['obs-signals','meter','affirmWrap','scatter-text','obs-hint-txt','obs-timer'].forEach(id => {
+  ['obs-signals','meter','affirmBtn','scatter-text','obs-hint-txt','obs-timer'].forEach(id => {
     const el = document.getElementById(id); if (el) { el.style.transition = 'opacity 1.5s ease'; el.style.opacity = '0'; }
   });
   // Count both total and observe-specific
@@ -1123,7 +1114,7 @@ function buildCollapseField() {
     const orbpDelay = (-Math.random()*6).toFixed(2)+'s';
     o.style.cssText = `--drift-dur:${driftDur};animation-delay:${orbpDelay};`;
     const len = st.name.length;
-    const size = len<=5?'var(--fwm)':len<=7?'clamp(22px,5.5vw,30px)':len<=8?'clamp(18px,4.6vw,25px)':'clamp(15px,3.8vw,20px)';
+    const size = len<=5?'clamp(32px,9vw,46px)':len<=7?'clamp(28px,7.5vw,38px)':len<=8?'clamp(24px,6.5vw,32px)':len<=10?'clamp(20px,5.5vw,28px)':'clamp(18px,4.8vw,24px)';
     o.innerHTML = `<div class="oname" style="font-size:${size}">${st.name}</div>`;
     const go = () => {
       document.querySelectorAll('.orb').forEach(el => { el.classList.remove('collapsing'); el.classList.add('fading'); });
@@ -1320,6 +1311,8 @@ function buildShadowGrid() {
   const en = SHADOW_STATES.en, es = SHADOW_STATES.es;
   en.forEach((name,i) => {
     const o = document.createElement('div'); o.className = 'shadow-orb';
+    o.style.setProperty('--shadow-dur', (3.5+Math.random()*3).toFixed(2)+'s');
+    o.style.animationDelay = (-Math.random()*4).toFixed(2)+'s';
     o.textContent = lang==='en' ? name : es[i];
     const go = () => { decStateName=name; decStateNameES=es[i]; startDecAcknowledge(); };
     o.addEventListener('click', go);
