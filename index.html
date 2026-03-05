@@ -184,10 +184,11 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
   filter:blur(1.5px);opacity:0.7;
   animation:orbShimmer var(--drift-dur,4s) ease-in-out infinite,
             orbShudder calc(var(--drift-dur,4s) * 0.7) ease-in-out infinite;}
-.oname{font-family:'Cormorant Garamond',Georgia,serif;font-weight:400;letter-spacing:.08em;
-  font-size:clamp(26px,7.5vw,40px);
+.oname{font-family:'Cormorant Garamond',Georgia,serif;font-weight:400;letter-spacing:.06em;
+  font-size:clamp(22px,6vw,36px);
   color:rgba(240,210,140,.82);position:relative;z-index:1;
   text-align:center;line-height:1.1;
+  word-break:break-word;overflow-wrap:break-word;
   text-shadow:0 0 18px rgba(240,190,80,.35),0 0 40px rgba(240,190,80,.15);
   transition:color .3s ease,text-shadow .3s ease;}
 .orb:hover .oname,.orb:active .oname{
@@ -311,7 +312,7 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 .still-back:hover{color:var(--gold);}
 
 /* ═══ DECOHERE SCREENS ═══ */
-#s-decohere{gap:28px;text-align:center;padding-top:80px;}
+#s-decohere{gap:20px;text-align:center;padding-top:clamp(72px,18vw,96px);}
 .dec-line{font-size:var(--fh);color:var(--cream-dim);line-height:1.55;
   max-width:300px;font-weight:300;}
 .dec-sub{font-size:var(--fs);color:var(--cream-ghost);letter-spacing:.04em;}
@@ -637,14 +638,15 @@ body.fs-large .imag-prompt{font-size:clamp(18px,4.8vw,24px);}
 </div>
 
 <!-- DECOHERE BREATH — static layout, never rebuilt -->
-<div class="screen" id="s-dec-breath" style="position:relative;">
+<div class="screen" id="s-dec-breath" style="position:relative;overflow:hidden;">
   <!-- Acknowledge layer -->
   <div id="dec-ack-layer" style="position:absolute;inset:0;display:flex;flex-direction:column;
     align-items:center;justify-content:center;gap:20px;padding:clamp(24px,6vw,48px);
     text-align:center;opacity:0;transition:opacity 1s ease;pointer-events:none;z-index:50;">
-    <div id="dec-ack-line" style="font-size:clamp(18px,5vw,26px);letter-spacing:.18em;
+    <div id="dec-ack-line" style="font-size:clamp(20px,5.5vw,28px);letter-spacing:.20em;
       font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;
-      color:rgba(240,230,208,.55);transition:opacity 1.8s ease;opacity:0;"></div>
+      color:rgba(240,230,208,.65);transition:opacity 1.8s ease;opacity:0;
+      text-shadow:0 0 20px rgba(240,220,180,.25);margin-top:8px;"></div>
   </div>
   <!-- Breath layer — fixed height btext so nothing ever reflows -->
   <div id="dec-breath-layer" style="position:absolute;inset:0;display:flex;flex-direction:column;
@@ -672,11 +674,13 @@ body.fs-large .imag-prompt{font-size:clamp(18px,4.8vw,24px);}
     </div>
   </div>
   <!-- Word lives in breath layer — not fixed, so display:none on parent hides it properly -->
-  <div id="dec-word-wrap" style="position:absolute;top:50%;left:50%;
-    transform:translate(-50%,-50%);text-align:center;pointer-events:none;z-index:15;">
-    <div id="dec-word" style="font-size:clamp(52px,16vw,100px);font-weight:300;
+  <div id="dec-word-wrap" style="position:absolute;top:52%;left:50%;
+    transform:translate(-50%,-50%);text-align:center;pointer-events:none;z-index:15;
+    max-width:90vw;">
+    <div id="dec-word" style="font-size:clamp(38px,10vw,68px);font-weight:300;
       font-family:'Cormorant Garamond',Georgia,serif;
-      letter-spacing:.10em;color:rgba(180,175,165,.65);white-space:nowrap;
+      letter-spacing:.10em;color:rgba(180,175,165,.65);
+      white-space:normal;word-break:break-word;
       transition:color 3s ease,text-shadow 3s ease,opacity 2s ease;opacity:0;"></div>
   </div>
 </div>

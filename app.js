@@ -385,12 +385,14 @@ function playScatterSound() {
 
 // ── SCREEN TRANSITIONS — smooth, no flashes ──
 function showScreen(id, postCb) {
-  // Clear ghosts on every screen change except field selection (s-field keeps them visible)
+  // Hard-clear ghosts instantly on any screen except s-collapse/s-field (which own them)
   const gh = document.getElementById('ghosts');
-  if (gh && id !== 's-field') {
-    gh.style.transition = 'opacity 0.5s ease';
-    gh.style.opacity = '0';
-    setTimeout(() => { if (id !== 's-field') gh.innerHTML = ''; }, 600);
+  if (gh) {
+    if (id !== 's-collapse' && id !== 's-field') {
+      gh.style.transition = 'none';
+      gh.style.opacity = '0';
+      gh.innerHTML = ''; // immediate — no bleed-through possible
+    }
   }
   const next = document.getElementById(id);
   const current = document.querySelector('.screen.active');
@@ -489,7 +491,8 @@ function updateHomeCount() {
 // ── HOME ──
 function clearGhosts() {
   const gh = document.getElementById('ghosts');
-  if (gh) { gh.style.opacity = '0'; setTimeout(() => { gh.innerHTML = ''; }, 900); }
+  if (gh) { gh.style.transition = 'opacity 0.4s ease'; gh.style.opacity = '0';
+    setTimeout(() => { gh.innerHTML = ''; gh.style.transition = ''; }, 450); }
 }
 function goHome() {
   bgDimTarget = 1;
@@ -1165,12 +1168,15 @@ function selectState(state) {
   particlesHidden = false;
   fadeDrone(true, 1.5);
   showScreen('s-collapse', () => {
-    // Brief delay before showing ghosts so screen fade completes first
+    // Build ghosts at opacity:0 first, then fade in — no flash
     setTimeout(() => {
-      document.getElementById('ghosts').style.transition = 'opacity 1.2s ease';
-      document.getElementById('ghosts').style.opacity = '1';
+      const gh = document.getElementById('ghosts');
+      gh.style.transition = 'none'; gh.style.opacity = '0';
       buildGhosts(state.name);
-    }, 200);
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        gh.style.transition = 'opacity 1.4s ease'; gh.style.opacity = '1';
+      }));
+    }, 300);
     setTimeout(() => showCollapseStage(1), 300);
   });
 }
@@ -1185,7 +1191,13 @@ function buildGhosts(chosen) {
 }
 function showCollapseStage(n) {
   const current = document.querySelector('.cp-stage.on');
-  if (n===4) { particlesHidden = true; bgDimTarget = 0.3; }
+  if (n===4) {
+    particlesHidden = true; bgDimTarget = 0.3;
+    // Hard-clear ghosts immediately — no bleed through breath screen
+    const gh = document.getElementById('ghosts');
+    if (gh) { gh.style.transition = 'opacity 0.3s ease'; gh.style.opacity = '0';
+      setTimeout(() => { gh.innerHTML = ''; }, 350); }
+  }
   else if (n===5) {
     const bp = document.getElementById('bp');
     const chosen = spParticles[spChosen%Math.max(spParticles.length,1)];
@@ -1235,7 +1247,9 @@ function startBreath() {
   const stateName=curStateName, t=TRANSLATIONS[lang];
   const p=document.getElementById('bp'), ripple=document.getElementById('bripple');
   const btext=document.getElementById('btext');
-  p.className='bp neutral'; btext.style.opacity='0'; btext.textContent=''; btext.className='btext';
+  p.className='bp neutral';
+  btext.style.transition='none'; btext.style.opacity='0';
+  btext.textContent=''; btext.className='btext';
   ripple.classList.remove('expand');
   [0,1,2].forEach(i=>{ const d=document.getElementById('bdot'+i); if(d) d.classList.remove('done'); });
   function showText(text,cls,delayMs){
