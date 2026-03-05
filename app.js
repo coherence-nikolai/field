@@ -114,6 +114,62 @@ let spParticles = [];
 
 // ── OBSERVE PARTICLE ──
 let clarityLevel = 0, particleVisible = false;
+let obsMode = 'drift'; // 'drift' | 'kasina'
+let obsMinutes = 5;    // 1 | 5 | 10
+let obsTimerEnd = 0;   // epoch ms when session ends
+let obsTimerInterval = null;
+let kasinaParticle = null;
+
+// ── KASINA PARTICLE — fixed centre, pulses / shudders / vibrates ──
+class KasinaParticle {
+  constructor() {
+    this.x = innerWidth * 0.5;
+    this.y = innerHeight * 0.5;
+    this.r = 7;
+    this.alpha = 0; this.targetAlpha = 1;
+    this.breathPh = 0;
+    this.shudderX = 0; this.shudderY = 0;
+    this.shudderIntensity = 0; // 0..1, rises when phone moves
+    this.pulsePh = 0;
+    this.shudderPh = 0;
+  }
+  update() {
+    this.breathPh  += 0.018; // ~5.8s breath cycle
+    this.pulsePh   += 0.06;  // faster micro-pulse
+    this.shudderPh += 0.22;
+    // Shudder — tiny random displacement, intensity from motion
+    const shudderAmp = isStill ? 0.8 + 1.2*Math.sin(this.shudderPh)*Math.cos(this.shudderPh*1.3)
+                                : 3 + 6*Math.random();
+    this.shudderX = (Math.random()-0.5) * shudderAmp;
+    this.shudderY = (Math.random()-0.5) * shudderAmp;
+    this.shudderIntensity += ((!isStill ? 1 : 0) - this.shudderIntensity) * 0.08;
+    this.alpha += (this.targetAlpha - this.alpha) * 0.025;
+  }
+  draw() {
+    if (this.alpha < 0.01) return;
+    const px = this.x + this.shudderX;
+    const py = this.y + this.shudderY;
+    const breathFactor = 0.72 + 0.28 * Math.sin(this.breathPh);
+    const microPulse   = 1 + 0.04 * Math.sin(this.pulsePh);
+    const blur = (1 - clarityLevel) * 10 + 2;
+    const r    = (this.r + clarityLevel * 3) * microPulse;
+    const glow = (24 + clarityLevel * 50) * breathFactor;
+    const ga   = (0.18 + clarityLevel * 0.4) * this.alpha;
+    cx.save();
+    cx.filter = `blur(${blur.toFixed(1)}px)`;
+    const grad = cx.createRadialGradient(px, py, 0, px, py, glow);
+    grad.addColorStop(0, `rgba(240,204,136,${(ga).toFixed(3)})`);
+    grad.addColorStop(0.5, `rgba(240,180,90,${(ga*0.4).toFixed(3)})`);
+    grad.addColorStop(1, 'rgba(240,204,136,0)');
+    cx.fillStyle = grad;
+    cx.beginPath(); cx.arc(px, py, glow, 0, Math.PI*2); cx.fill();
+    cx.filter = 'none';
+    cx.globalAlpha = this.alpha;
+    cx.fillStyle = `rgba(240,210,140,${0.75 + clarityLevel*0.25})`;
+    cx.beginPath(); cx.arc(px, py, r, 0, Math.PI*2); cx.fill();
+    cx.restore();
+  }
+}
 class ObsParticle {
   constructor() {
     this.cx = 0.5; this.cy = 0.5;
@@ -188,10 +244,14 @@ class ObsParticle {
 function loop() {
   cx.clearRect(0, 0, cv.width, cv.height);
   bgPts.forEach(p => { p.update(); p.draw(); });
-  if (currentMode === 'observe' && particleVisible && observeParticle) {
-    observeParticle.update();
-    if (observeParticle.scattering) observeParticle.drawScatter();
-    else observeParticle.draw();
+  if (currentMode === 'observe' && particleVisible) {
+    if (obsMode === 'kasina' && kasinaParticle) {
+      kasinaParticle.update(); kasinaParticle.draw();
+    } else if (obsMode === 'drift' && observeParticle) {
+      observeParticle.update();
+      if (observeParticle.scattering) observeParticle.drawScatter();
+      else observeParticle.draw();
+    }
   }
   if ((currentMode === 'collapse' || currentMode === 'home' || currentMode === 'decohere') && spParticles.length) {
     spParticles.forEach(p => { p.update(); p.draw(); });
@@ -497,35 +557,67 @@ function showBackBtn() {
 
 function buildObsScreen() {
   const screen = document.getElementById('s-observe');
+  const t = lang === 'en';
+  const modeHint = obsMode === 'kasina'
+    ? (t ? 'One point.<br>Hold it gently.' : 'Un punto.<br>Sostenlo suavemente.')
+    : (t ? 'One particle.<br>Just watch it.' : 'Una partícula.<br>Solo obsérvala.');
   screen.innerHTML = `
-    <div id="obs-hint-txt" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;opacity:0;transition:opacity 2s ease;z-index:20;">
-      <div style="font-size:clamp(26px,7vw,38px);font-weight:300;letter-spacing:.12em;color:rgba(201,169,110,.55);margin-bottom:16px;">◎</div>
-      <div style="font-size:clamp(11px,2.8vw,14px);letter-spacing:.12em;color:rgba(240,230,208,.45);line-height:1.8;">
-        ${lang==='en'?'One particle.<br>Just watch it.':'Una partícula.<br>Solo obsérvala.'}
-      </div>
+    <div id="obs-hint-txt" style="position:fixed;top:42%;left:50%;transform:translate(-50%,-50%);
+      text-align:center;opacity:0;transition:opacity 1.5s ease;z-index:20;pointer-events:none;">
+      <div style="font-size:clamp(22px,6vw,30px);font-weight:300;letter-spacing:.12em;
+        color:rgba(201,169,110,.5);margin-bottom:18px;">${obsMode==='kasina'?'·':'◎'}</div>
+      <div style="font-size:clamp(15px,3.8vw,19px);letter-spacing:.10em;
+        color:rgba(240,230,208,.5);line-height:1.9;">${modeHint}</div>
     </div>
     <div id="clarity-ring"></div>
-    <div id="obs-signals" style="position:fixed;bottom:90px;left:50%;transform:translateX(-50%);display:flex;gap:20px;align-items:flex-end;opacity:0;transition:opacity 2s ease;z-index:20;">
-      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+    <div id="obs-timer" style="position:fixed;top:72px;left:50%;transform:translateX(-50%);
+      font-size:clamp(14px,3.5vw,17px);letter-spacing:.14em;color:rgba(201,169,110,.3);
+      z-index:20;opacity:0;transition:opacity 1.5s ease;font-weight:300;pointer-events:none;"></div>
+    <div id="obs-signals" style="position:fixed;bottom:clamp(90px,20vw,120px);left:50%;
+      transform:translateX(-50%);display:flex;gap:24px;align-items:flex-end;
+      opacity:0;transition:opacity 1.5s ease;z-index:20;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
         <div class="sig-dot" id="sig-still"></div>
-        <div class="sig-label">${lang==='en'?'still':'quieto'}</div>
+        <div class="sig-label">${t?'still':'quieto'}</div>
       </div>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
         <div class="sig-dot" id="sig-present"></div>
-        <div class="sig-label">${lang==='en'?'present':'presente'}</div>
+        <div class="sig-label">${t?'present':'presente'}</div>
       </div>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
         <div class="sig-dot" id="sig-affirm"></div>
-        <div class="sig-label">${lang==='en'?'here':'aquí'}</div>
+        <div class="sig-label">${t?'here':'aquí'}</div>
       </div>
     </div>
-    <div id="meter" style="position:fixed;bottom:46px;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center;z-index:20;opacity:0;transition:opacity 2s ease;"></div>
-    <div id="scatter-text" style="position:fixed;top:38%;left:50%;transform:translateX(-50%);font-size:clamp(11px,2.8vw,13px);letter-spacing:.14em;color:rgba(240,230,208,.45);white-space:nowrap;opacity:0;transition:opacity 1s ease;z-index:20;"></div>
-    <button id="affirmBtn" onclick="doAffirm()" style="position:fixed;bottom:130px;right:clamp(24px,6vw,48px);width:48px;height:48px;border-radius:50%;background:none;border:1px solid rgba(201,169,110,.15);cursor:pointer;-webkit-tap-highlight-color:transparent;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 2s ease,border-color .3s ease,box-shadow .3s ease;z-index:30;">
-      <div id="affirmDot" style="width:8px;height:8px;border-radius:50%;background:rgba(201,169,110,.4);transition:transform .3s ease,background .3s ease;animation:affirmPulse 3s ease-in-out infinite;"></div>
-    </button>
+    <div id="meter" style="position:fixed;bottom:clamp(48px,10vw,64px);left:50%;
+      transform:translateX(-50%);display:flex;gap:6px;align-items:center;
+      z-index:20;opacity:0;transition:opacity 1.5s ease;"></div>
+    <div id="scatter-text" style="position:fixed;top:36%;left:50%;transform:translateX(-50%);
+      font-size:clamp(13px,3.2vw,16px);letter-spacing:.14em;color:rgba(240,230,208,.45);
+      white-space:nowrap;opacity:0;transition:opacity 1s ease;z-index:20;pointer-events:none;"></div>
+    <div id="affirmWrap" style="position:fixed;bottom:clamp(140px,32vw,190px);left:50%;
+      transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;
+      gap:14px;opacity:0;transition:opacity 1.5s ease;z-index:30;">
+      <button id="affirmBtn" onclick="doAffirm()"
+        style="width:88px;height:88px;border-radius:50%;background:none;
+        border:1.5px solid rgba(201,169,110,.35);cursor:pointer;
+        -webkit-tap-highlight-color:transparent;
+        display:flex;align-items:center;justify-content:center;
+        transition:border-color .3s ease,box-shadow .3s ease;
+        animation:affirmPulse 4s ease-in-out infinite;">
+        <div id="affirmDot" style="width:14px;height:14px;border-radius:50%;
+          background:rgba(201,169,110,.55);
+          transition:transform .25s ease,background .25s ease;"></div>
+      </button>
+      <div style="font-size:clamp(11px,2.8vw,14px);letter-spacing:.16em;
+        color:rgba(201,169,110,.38);">${t?'i am here':'estoy aquí'}</div>
+    </div>
   `;
   buildObsMeter();
+  setTimeout(() => {
+    const timerEl = document.getElementById('obs-timer');
+    if (timerEl) { timerEl.style.transition = 'opacity 1.5s ease'; timerEl.style.opacity = '1'; }
+  }, 1000);
 }
 
 function buildObsMeter() {
@@ -579,11 +671,126 @@ function updateClarityRing() {
 function startObserve() {
   if (navigator.vibrate) navigator.vibrate(18);
   currentMode = 'observe'; showBackBtn(); initAudio();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
+  buildObsSetupScreen();
+  showScreen('s-observe');
+}
+
+function buildObsSetupScreen() {
+  const t = lang === 'en';
+  const screen = document.getElementById('s-observe');
+  screen.innerHTML = `
+    <div id="obs-setup" style="display:flex;flex-direction:column;align-items:center;
+      justify-content:center;gap:clamp(28px,7vw,44px);padding:clamp(24px,6vw,48px);
+      width:100%;max-width:400px;margin:auto;opacity:0;transition:opacity 1.2s ease;">
+
+      <div style="font-size:clamp(13px,3.2vw,16px);letter-spacing:.18em;
+        color:rgba(201,169,110,.45);text-transform:uppercase;">
+        ${t ? 'observe' : 'observar'}
+      </div>
+
+      <!-- Mode selection -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;">
+        <div style="font-size:clamp(11px,2.8vw,14px);letter-spacing:.14em;
+          color:rgba(240,230,208,.35);">${t ? 'particle' : 'partícula'}</div>
+        <div style="display:flex;gap:12px;width:100%;max-width:320px;">
+          <button id="obs-mode-drift" onclick="setObsMode('drift')"
+            style="flex:1;padding:18px 8px;background:none;border:1px solid rgba(201,169,110,.35);
+            border-radius:12px;color:rgba(240,204,136,.8);font-family:inherit;
+            font-size:clamp(14px,3.5vw,17px);letter-spacing:.08em;cursor:pointer;
+            -webkit-tap-highlight-color:transparent;transition:all .3s ease;">
+            ${t ? 'drift' : 'deriva'}
+          </button>
+          <button id="obs-mode-kasina" onclick="setObsMode('kasina')"
+            style="flex:1;padding:18px 8px;background:none;border:1px solid rgba(201,169,110,.18);
+            border-radius:12px;color:rgba(240,230,208,.45);font-family:inherit;
+            font-size:clamp(14px,3.5vw,17px);letter-spacing:.08em;cursor:pointer;
+            -webkit-tap-highlight-color:transparent;transition:all .3s ease;">
+            kasina
+          </button>
+        </div>
+      </div>
+
+      <!-- Timer selection -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;">
+        <div style="font-size:clamp(11px,2.8vw,14px);letter-spacing:.14em;
+          color:rgba(240,230,208,.35);">${t ? 'duration' : 'duración'}</div>
+        <div style="display:flex;gap:10px;width:100%;max-width:320px;">
+          <button id="obs-time-1" onclick="setObsTime(1)"
+            style="flex:1;padding:18px 6px;background:none;border:1px solid rgba(201,169,110,.18);
+            border-radius:12px;color:rgba(240,230,208,.45);font-family:inherit;
+            font-size:clamp(13px,3.2vw,16px);letter-spacing:.06em;cursor:pointer;
+            -webkit-tap-highlight-color:transparent;transition:all .3s ease;">1m</button>
+          <button id="obs-time-5" onclick="setObsTime(5)"
+            style="flex:1;padding:18px 6px;background:none;border:1px solid rgba(201,169,110,.35);
+            border-radius:12px;color:rgba(240,204,136,.8);font-family:inherit;
+            font-size:clamp(13px,3.2vw,16px);letter-spacing:.06em;cursor:pointer;
+            -webkit-tap-highlight-color:transparent;transition:all .3s ease;">5m</button>
+          <button id="obs-time-10" onclick="setObsTime(10)"
+            style="flex:1;padding:18px 6px;background:none;border:1px solid rgba(201,169,110,.18);
+            border-radius:12px;color:rgba(240,230,208,.45);font-family:inherit;
+            font-size:clamp(13px,3.2vw,16px);letter-spacing:.06em;cursor:pointer;
+            -webkit-tap-highlight-color:transparent;transition:all .3s ease;">10m</button>
+        </div>
+      </div>
+
+      <!-- Enter button -->
+      <button onclick="enterObserve()"
+        style="background:none;border:none;font-family:inherit;
+        font-size:clamp(13px,3.2vw,16px);letter-spacing:.18em;
+        color:rgba(201,169,110,.55);cursor:pointer;padding:20px 40px;
+        -webkit-tap-highlight-color:transparent;transition:color .4s ease;">
+        ${t ? 'enter' : 'entrar'}
+      </button>
+    </div>
+  `;
+  // Fade setup in
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const s = document.getElementById('obs-setup');
+    if (s) s.style.opacity = '1';
+  }));
+  // Apply current selections visually
+  setObsMode(obsMode); setObsTime(obsMinutes);
+}
+
+function setObsMode(mode) {
+  obsMode = mode;
+  const drift  = document.getElementById('obs-mode-drift');
+  const kasina = document.getElementById('obs-mode-kasina');
+  if (!drift || !kasina) return;
+  drift.style.borderColor  = mode==='drift'  ? 'rgba(201,169,110,.7)' : 'rgba(201,169,110,.18)';
+  drift.style.color        = mode==='drift'  ? 'rgba(240,204,136,.9)' : 'rgba(240,230,208,.4)';
+  kasina.style.borderColor = mode==='kasina' ? 'rgba(201,169,110,.7)' : 'rgba(201,169,110,.18)';
+  kasina.style.color       = mode==='kasina' ? 'rgba(240,204,136,.9)' : 'rgba(240,230,208,.4)';
+}
+
+function setObsTime(mins) {
+  obsMinutes = mins;
+  [1,5,10].forEach(m => {
+    const btn = document.getElementById('obs-time-'+m);
+    if (!btn) return;
+    btn.style.borderColor = m===mins ? 'rgba(201,169,110,.7)' : 'rgba(201,169,110,.18)';
+    btn.style.color       = m===mins ? 'rgba(240,204,136,.9)' : 'rgba(240,230,208,.4)';
+  });
+}
+
+function enterObserve() {
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
   fadeDrone(true, 1); spParticles = [];
-  buildObsScreen();
-  // Subtle observe drone
+  // Fade out setup, build observe screen
+  const setup = document.getElementById('obs-setup');
+  if (setup) { setup.style.transition = 'opacity 0.8s ease'; setup.style.opacity = '0'; }
   setTimeout(() => {
+    buildObsScreen();
+    isCoherent = false; fieldActive = false; attentionSec = 0;
+    affirmBonus = 0; clarityLevel = 0; isStill = true; lastAffirmTime = 0;
+    // Spawn correct particle type
+    if (obsMode === 'kasina') {
+      kasinaParticle = new KasinaParticle(); observeParticle = null;
+    } else {
+      observeParticle = new ObsParticle(); kasinaParticle = null;
+    }
+    particleVisible = true;
+    // Subtle observe drone
     if (!droneNodes.length && currentMode === 'observe') {
       [40,80,120].forEach((f,i) => {
         const o = audioCtx.createOscillator(), g = audioCtx.createGain();
@@ -591,20 +798,16 @@ function startObserve() {
         g.gain.setValueAtTime(0, audioCtx.currentTime);
         g.gain.linearRampToValueAtTime(0.015-i*0.004, audioCtx.currentTime+3);
         o.connect(g); g.connect(audioCtx.destination); o.start();
-        droneNodes.push({o, g});
+        droneNodes.push({o, g, frequency: o.frequency});
       });
     }
-  }, 1200);
-  isCoherent = false; fieldActive = false; attentionSec = 0; affirmBonus = 0; clarityLevel = 0;
-  isStill = true; lastAffirmTime = 0;
-  observeParticle = new ObsParticle(); particleVisible = true;
-  showScreen('s-observe', () => {
+    // Set timer end
+    obsTimerEnd = Date.now() + obsMinutes * 60 * 1000;
     // Fade in hint
     setTimeout(() => {
       const hint = document.getElementById('obs-hint-txt');
-      if (hint) hint.style.opacity = '1';
-    }, 600);
-    // Fade hint out, show signals and meter
+      if (hint) { hint.style.transition = 'opacity 1.5s ease'; hint.style.opacity = '1'; }
+    }, 300);
     setTimeout(() => {
       const hint = document.getElementById('obs-hint-txt');
       if (hint) { hint.style.transition = 'opacity 1.5s ease'; hint.style.opacity = '0'; }
@@ -615,14 +818,34 @@ function startObserve() {
       startAttentionTimer();
       startMicroTones();
       startMotionCheck();
+      startObsTimer();
       const sigs = document.getElementById('obs-signals');
       const meter = document.getElementById('meter');
-      const btn = document.getElementById('affirmBtn');
-      if (sigs) sigs.style.opacity = '1';
-      if (meter) meter.style.opacity = '1';
-      if (btn) btn.style.opacity = '1';
+      const wrap = document.getElementById('affirmWrap');
+      if (sigs) { sigs.style.transition = 'opacity 1.5s ease'; sigs.style.opacity = '1'; }
+      if (meter) { meter.style.transition = 'opacity 1.5s ease'; meter.style.opacity = '1'; }
+      if (wrap) { wrap.style.transition = 'opacity 1.5s ease'; wrap.style.opacity = '1'; }
     }, 4500);
-  });
+  }, 900);
+}
+
+function startObsTimer() {
+  clearInterval(obsTimerInterval);
+  obsTimerInterval = setInterval(() => {
+    if (!fieldActive || isCoherent || currentMode !== 'observe') return;
+    const remaining = obsTimerEnd - Date.now();
+    const el = document.getElementById('obs-timer');
+    if (el) {
+      const secs = Math.max(0, Math.ceil(remaining / 1000));
+      const m = Math.floor(secs / 60);
+      const s = secs % 60;
+      el.textContent = m + ':' + String(s).padStart(2, '0');
+    }
+    if (remaining <= 0) {
+      clearInterval(obsTimerInterval);
+      reachObsCoherence();
+    }
+  }, 1000);
 }
 
 function startAttentionTimer() {
@@ -699,7 +922,7 @@ function reachObsCoherence() {
   isCoherent = true; clearInterval(attentionTimer); clearInterval(microToneTimer); clearInterval(motionCheckInterval);
   clarityLevel = 1; updateClarityRing(); playObsCoherenceTone(); fadeDrone(true, 3);
   // Hide signals
-  ['obs-signals','meter','affirmBtn','scatter-text','obs-hint-txt'].forEach(id => {
+  ['obs-signals','meter','affirmWrap','scatter-text','obs-hint-txt','obs-timer'].forEach(id => {
     const el = document.getElementById(id); if (el) { el.style.transition = 'opacity 1.5s ease'; el.style.opacity = '0'; }
   });
   // Count both total and observe-specific
@@ -717,10 +940,11 @@ function reachObsCoherence() {
 }
 
 function clearObserver() {
-  clearInterval(attentionTimer); clearInterval(microToneTimer); clearInterval(motionCheckInterval);
+  clearInterval(attentionTimer); clearInterval(microToneTimer);
+  clearInterval(motionCheckInterval); clearInterval(obsTimerInterval);
   fieldActive = false; isCoherent = false;
   particleVisible = false; attentionSec = 0; affirmBonus = 0; clarityLevel = 0;
-  isStill = true;
+  isStill = true; kasinaParticle = null;
   clearTimeout(scatterTO);
 }
 
