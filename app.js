@@ -242,20 +242,22 @@ class ObsParticle {
 
 // ── RENDER LOOP ──
 function loop() {
-  cx.clearRect(0, 0, cv.width, cv.height);
-  bgPts.forEach(p => { p.update(); p.draw(); });
-  if (currentMode === 'observe' && particleVisible) {
-    if (obsMode === 'kasina' && kasinaParticle) {
-      kasinaParticle.update(); kasinaParticle.draw();
-    } else if (obsMode === 'drift' && observeParticle) {
-      observeParticle.update();
-      if (observeParticle.scattering) observeParticle.drawScatter();
-      else observeParticle.draw();
+  try {
+    cx.clearRect(0, 0, cv.width, cv.height);
+    bgPts.forEach(p => { p.update(); p.draw(); });
+    if (currentMode === 'observe' && particleVisible) {
+      if (obsMode === 'kasina' && kasinaParticle) {
+        kasinaParticle.update(); kasinaParticle.draw();
+      } else if (obsMode === 'drift' && observeParticle) {
+        observeParticle.update();
+        if (observeParticle.scattering) observeParticle.drawScatter();
+        else observeParticle.draw();
+      }
     }
-  }
-  if ((currentMode === 'collapse' || currentMode === 'home' || currentMode === 'decohere') && spParticles.length) {
-    spParticles.forEach(p => { p.update(); p.draw(); });
-  }
+    if ((currentMode === 'collapse' || currentMode === 'home' || currentMode === 'decohere') && spParticles.length) {
+      spParticles.forEach(p => { p.update(); p.draw(); });
+    }
+  } catch(e) { console.warn('loop err:', e); }
   requestAnimationFrame(loop);
 }
 loop();
@@ -671,6 +673,17 @@ function updateClarityRing() {
 function startObserve() {
   if (navigator.vibrate) navigator.vibrate(18);
   currentMode = 'observe'; showBackBtn(); initAudio();
+  // Spawn particle immediately at alpha 0 — already running behind setup screen
+  isCoherent = false; fieldActive = false; attentionSec = 0;
+  affirmBonus = 0; clarityLevel = 0; isStill = true; lastAffirmTime = 0;
+  if (obsMode === 'kasina') {
+    kasinaParticle = new KasinaParticle(); kasinaParticle.targetAlpha = 0;
+    observeParticle = null;
+  } else {
+    observeParticle = new ObsParticle(); observeParticle.targetAlpha = 0;
+    kasinaParticle = null;
+  }
+  particleVisible = true;
   buildObsSetupScreen();
   showScreen('s-observe');
 }
@@ -678,89 +691,135 @@ function startObserve() {
 function buildObsSetupScreen() {
   const t = lang === 'en';
   const screen = document.getElementById('s-observe');
-  screen.innerHTML = `
-    <div id="obs-setup" style="display:flex;flex-direction:column;align-items:center;
-      justify-content:center;gap:clamp(28px,7vw,44px);padding:clamp(24px,6vw,48px);
-      width:100%;max-width:400px;margin:auto;opacity:0;transition:opacity 1.2s ease;">
 
-      <div style="font-size:clamp(13px,3.2vw,16px);letter-spacing:.18em;
-        color:rgba(201,169,110,.45);text-transform:uppercase;">
-        ${t ? 'observe' : 'observar'}
-      </div>
+  // Build DOM directly — no onclick in innerHTML (iOS Safari blocks it)
+  screen.innerHTML = '';
 
-      <!-- Mode selection -->
-      <div style="display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;">
-        <div style="font-size:clamp(11px,2.8vw,14px);letter-spacing:.14em;
-          color:rgba(240,230,208,.35);">${t ? 'particle' : 'partícula'}</div>
-        <div style="display:flex;gap:12px;width:100%;max-width:320px;">
-          <button id="obs-mode-drift" onclick="setObsMode('drift')"
-            style="flex:1;padding:18px 8px;background:none;border:1px solid rgba(201,169,110,.35);
-            border-radius:12px;color:rgba(240,204,136,.8);font-family:inherit;
-            font-size:clamp(14px,3.5vw,17px);letter-spacing:.08em;cursor:pointer;
-            -webkit-tap-highlight-color:transparent;transition:all .3s ease;">
-            ${t ? 'drift' : 'deriva'}
-          </button>
-          <button id="obs-mode-kasina" onclick="setObsMode('kasina')"
-            style="flex:1;padding:18px 8px;background:none;border:1px solid rgba(201,169,110,.18);
-            border-radius:12px;color:rgba(240,230,208,.45);font-family:inherit;
-            font-size:clamp(14px,3.5vw,17px);letter-spacing:.08em;cursor:pointer;
-            -webkit-tap-highlight-color:transparent;transition:all .3s ease;">
-            kasina
-          </button>
-        </div>
-      </div>
+  const wrap = document.createElement('div');
+  wrap.id = 'obs-setup';
+  wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;' +
+    'gap:clamp(28px,7vw,44px);padding:clamp(24px,6vw,48px);width:100%;max-width:400px;' +
+    'margin:auto;opacity:0;transition:opacity 1.2s ease;';
 
-      <!-- Timer selection -->
-      <div style="display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;">
-        <div style="font-size:clamp(11px,2.8vw,14px);letter-spacing:.14em;
-          color:rgba(240,230,208,.35);">${t ? 'duration' : 'duración'}</div>
-        <div style="display:flex;gap:10px;width:100%;max-width:320px;">
-          <button id="obs-time-1" onclick="setObsTime(1)"
-            style="flex:1;padding:18px 6px;background:none;border:1px solid rgba(201,169,110,.18);
-            border-radius:12px;color:rgba(240,230,208,.45);font-family:inherit;
-            font-size:clamp(13px,3.2vw,16px);letter-spacing:.06em;cursor:pointer;
-            -webkit-tap-highlight-color:transparent;transition:all .3s ease;">1m</button>
-          <button id="obs-time-5" onclick="setObsTime(5)"
-            style="flex:1;padding:18px 6px;background:none;border:1px solid rgba(201,169,110,.35);
-            border-radius:12px;color:rgba(240,204,136,.8);font-family:inherit;
-            font-size:clamp(13px,3.2vw,16px);letter-spacing:.06em;cursor:pointer;
-            -webkit-tap-highlight-color:transparent;transition:all .3s ease;">5m</button>
-          <button id="obs-time-10" onclick="setObsTime(10)"
-            style="flex:1;padding:18px 6px;background:none;border:1px solid rgba(201,169,110,.18);
-            border-radius:12px;color:rgba(240,230,208,.45);font-family:inherit;
-            font-size:clamp(13px,3.2vw,16px);letter-spacing:.06em;cursor:pointer;
-            -webkit-tap-highlight-color:transparent;transition:all .3s ease;">10m</button>
-        </div>
-      </div>
+  // Title
+  const title = document.createElement('div');
+  title.style.cssText = 'font-size:clamp(14px,3.5vw,17px);letter-spacing:.18em;color:rgba(201,169,110,.45);text-transform:uppercase;';
+  title.textContent = t ? 'observe' : 'observar';
+  wrap.appendChild(title);
 
-      <!-- Enter button -->
-      <button onclick="enterObserve()"
-        style="background:none;border:none;font-family:inherit;
-        font-size:clamp(13px,3.2vw,16px);letter-spacing:.18em;
-        color:rgba(201,169,110,.55);cursor:pointer;padding:20px 40px;
-        -webkit-tap-highlight-color:transparent;transition:color .4s ease;">
-        ${t ? 'enter' : 'entrar'}
-      </button>
-    </div>
-  `;
-  // Fade setup in
+  // ── Particle mode ──
+  const modeSection = document.createElement('div');
+  modeSection.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;';
+
+  const modeLabel = document.createElement('div');
+  modeLabel.style.cssText = 'font-size:clamp(12px,3vw,15px);letter-spacing:.14em;color:rgba(240,230,208,.35);';
+  modeLabel.textContent = t ? 'particle' : 'partícula';
+  modeSection.appendChild(modeLabel);
+
+  const modeRow = document.createElement('div');
+  modeRow.style.cssText = 'display:flex;gap:12px;width:100%;max-width:320px;';
+
+  const btnDrift = document.createElement('button');
+  btnDrift.id = 'obs-mode-drift';
+  btnDrift.style.cssText = 'flex:1;padding:20px 8px;background:none;border:1px solid rgba(201,169,110,.18);' +
+    'border-radius:12px;color:rgba(240,230,208,.4);font-family:inherit;' +
+    'font-size:clamp(15px,3.8vw,18px);letter-spacing:.08em;cursor:pointer;' +
+    '-webkit-tap-highlight-color:transparent;transition:all .3s ease;min-height:64px;';
+  btnDrift.textContent = t ? 'drift' : 'deriva';
+  btnDrift.addEventListener('click', () => setObsMode('drift'));
+  btnDrift.addEventListener('touchend', e => { e.preventDefault(); setObsMode('drift'); });
+
+  const btnKasina = document.createElement('button');
+  btnKasina.id = 'obs-mode-kasina';
+  btnKasina.style.cssText = 'flex:1;padding:20px 8px;background:none;border:1px solid rgba(201,169,110,.18);' +
+    'border-radius:12px;color:rgba(240,230,208,.4);font-family:inherit;' +
+    'font-size:clamp(15px,3.8vw,18px);letter-spacing:.08em;cursor:pointer;' +
+    '-webkit-tap-highlight-color:transparent;transition:all .3s ease;min-height:64px;';
+  btnKasina.textContent = 'kasina';
+  btnKasina.addEventListener('click', () => setObsMode('kasina'));
+  btnKasina.addEventListener('touchend', e => { e.preventDefault(); setObsMode('kasina'); });
+
+  modeRow.appendChild(btnDrift);
+  modeRow.appendChild(btnKasina);
+  modeSection.appendChild(modeRow);
+  wrap.appendChild(modeSection);
+
+  // ── Duration ──
+  const timeSection = document.createElement('div');
+  timeSection.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;';
+
+  const timeLabel = document.createElement('div');
+  timeLabel.style.cssText = 'font-size:clamp(12px,3vw,15px);letter-spacing:.14em;color:rgba(240,230,208,.35);';
+  timeLabel.textContent = t ? 'duration' : 'duración';
+  timeSection.appendChild(timeLabel);
+
+  const timeRow = document.createElement('div');
+  timeRow.style.cssText = 'display:flex;gap:10px;width:100%;max-width:320px;';
+
+  [1, 5, 10].forEach(m => {
+    const b = document.createElement('button');
+    b.id = 'obs-time-' + m;
+    b.style.cssText = 'flex:1;padding:20px 6px;background:none;border:1px solid rgba(201,169,110,.18);' +
+      'border-radius:12px;color:rgba(240,230,208,.4);font-family:inherit;' +
+      'font-size:clamp(14px,3.5vw,17px);letter-spacing:.06em;cursor:pointer;' +
+      '-webkit-tap-highlight-color:transparent;transition:all .3s ease;min-height:64px;';
+    b.textContent = m + 'm';
+    b.addEventListener('click', () => setObsTime(m));
+    b.addEventListener('touchend', e => { e.preventDefault(); setObsTime(m); });
+    timeRow.appendChild(b);
+  });
+
+  timeSection.appendChild(timeRow);
+  wrap.appendChild(timeSection);
+
+  // ── Enter ──
+  const enterBtn = document.createElement('button');
+  enterBtn.style.cssText = 'background:none;border:none;font-family:inherit;' +
+    'font-size:clamp(14px,3.5vw,17px);letter-spacing:.18em;color:rgba(201,169,110,.55);' +
+    'cursor:pointer;padding:24px 48px;-webkit-tap-highlight-color:transparent;transition:color .4s ease;min-height:64px;';
+  enterBtn.textContent = t ? 'enter' : 'entrar';
+  enterBtn.addEventListener('click', enterObserve);
+  enterBtn.addEventListener('touchend', e => { e.preventDefault(); enterObserve(); });
+  wrap.appendChild(enterBtn);
+
+  screen.appendChild(wrap);
+
+  // Fade in
   requestAnimationFrame(() => requestAnimationFrame(() => {
-    const s = document.getElementById('obs-setup');
-    if (s) s.style.opacity = '1';
+    wrap.style.opacity = '1';
   }));
-  // Apply current selections visually
-  setObsMode(obsMode); setObsTime(obsMinutes);
+
+  // Apply current selections
+  setObsMode(obsMode);
+  setObsTime(obsMinutes);
 }
 
 function setObsMode(mode) {
   obsMode = mode;
   const drift  = document.getElementById('obs-mode-drift');
   const kasina = document.getElementById('obs-mode-kasina');
-  if (!drift || !kasina) return;
-  drift.style.borderColor  = mode==='drift'  ? 'rgba(201,169,110,.7)' : 'rgba(201,169,110,.18)';
-  drift.style.color        = mode==='drift'  ? 'rgba(240,204,136,.9)' : 'rgba(240,230,208,.4)';
-  kasina.style.borderColor = mode==='kasina' ? 'rgba(201,169,110,.7)' : 'rgba(201,169,110,.18)';
-  kasina.style.color       = mode==='kasina' ? 'rgba(240,204,136,.9)' : 'rgba(240,230,208,.4)';
+  if (drift) {
+    drift.style.borderColor = mode==='drift' ? 'rgba(201,169,110,.7)' : 'rgba(201,169,110,.18)';
+    drift.style.color       = mode==='drift' ? 'rgba(240,204,136,.9)' : 'rgba(240,230,208,.45)';
+  }
+  if (kasina) {
+    kasina.style.borderColor = mode==='kasina' ? 'rgba(201,169,110,.7)' : 'rgba(201,169,110,.18)';
+    kasina.style.color       = mode==='kasina' ? 'rgba(240,204,136,.9)' : 'rgba(240,230,208,.45)';
+  }
+  // Swap particle type silently — keeps same alpha, no jump
+  if (currentMode === 'observe') {
+    const curAlpha = (observeParticle ? observeParticle.alpha : 0) ||
+                     (kasinaParticle  ? kasinaParticle.alpha  : 0);
+    if (mode === 'kasina' && !kasinaParticle) {
+      kasinaParticle = new KasinaParticle();
+      kasinaParticle.alpha = curAlpha; kasinaParticle.targetAlpha = curAlpha;
+      observeParticle = null;
+    } else if (mode === 'drift' && !observeParticle) {
+      observeParticle = new ObsParticle();
+      observeParticle.alpha = curAlpha; observeParticle.targetAlpha = curAlpha;
+      kasinaParticle = null;
+    }
+  }
 }
 
 function setObsTime(mins) {
@@ -769,37 +828,37 @@ function setObsTime(mins) {
     const btn = document.getElementById('obs-time-'+m);
     if (!btn) return;
     btn.style.borderColor = m===mins ? 'rgba(201,169,110,.7)' : 'rgba(201,169,110,.18)';
-    btn.style.color       = m===mins ? 'rgba(240,204,136,.9)' : 'rgba(240,230,208,.4)';
+    btn.style.color       = m===mins ? 'rgba(240,204,136,.9)' : 'rgba(240,230,208,.45)';
   });
 }
 
 function enterObserve() {
-  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  initAudio(); // ensure audioCtx exists before any .state check
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{});
   fadeDrone(true, 1); spParticles = [];
   // Fade out setup, build observe screen
   const setup = document.getElementById('obs-setup');
   if (setup) { setup.style.transition = 'opacity 0.8s ease'; setup.style.opacity = '0'; }
   setTimeout(() => {
     buildObsScreen();
-    isCoherent = false; fieldActive = false; attentionSec = 0;
-    affirmBonus = 0; clarityLevel = 0; isStill = true; lastAffirmTime = 0;
-    // Spawn correct particle type
-    if (obsMode === 'kasina') {
-      kasinaParticle = new KasinaParticle(); observeParticle = null;
-    } else {
-      observeParticle = new ObsParticle(); kasinaParticle = null;
+    // Particle already running — just raise alpha to visible
+    if (obsMode === 'kasina' && kasinaParticle) {
+      kasinaParticle.targetAlpha = 1;
+    } else if (observeParticle) {
+      observeParticle.targetAlpha = 0.9;
     }
-    particleVisible = true;
     // Subtle observe drone
-    if (!droneNodes.length && currentMode === 'observe') {
-      [40,80,120].forEach((f,i) => {
-        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-        o.type = 'sine'; o.frequency.value = f;
-        g.gain.setValueAtTime(0, audioCtx.currentTime);
-        g.gain.linearRampToValueAtTime(0.015-i*0.004, audioCtx.currentTime+3);
-        o.connect(g); g.connect(audioCtx.destination); o.start();
-        droneNodes.push({o, g, frequency: o.frequency});
-      });
+    if (audioCtx && !droneNodes.length && currentMode === 'observe') {
+      try {
+        [40,80,120].forEach((f,i) => {
+          const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+          o.type = 'sine'; o.frequency.value = f;
+          g.gain.setValueAtTime(0, audioCtx.currentTime);
+          g.gain.linearRampToValueAtTime(0.015-i*0.004, audioCtx.currentTime+3);
+          o.connect(g); g.connect(audioCtx.destination); o.start();
+          droneNodes.push({o, g, frequency: o.frequency});
+        });
+      } catch(e) { console.warn('obs drone:', e); }
     }
     // Set timer end
     obsTimerEnd = Date.now() + obsMinutes * 60 * 1000;
