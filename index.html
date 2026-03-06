@@ -646,10 +646,11 @@ body.fs-large .imag-prompt{font-size:clamp(18px,4.8vw,24px);}
 </div>
 
 <!-- DECOHERE BREATH — static layout, never rebuilt -->
-<div class="screen" id="s-dec-breath" style="position:relative;overflow:hidden;padding-top:64px;">
+<div class="screen" id="s-dec-breath" style="position:relative;overflow:hidden;">
   <!-- Acknowledge layer -->
-  <div id="dec-ack-layer" style="position:absolute;inset:0;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;gap:20px;padding:clamp(24px,6vw,48px);
+  <div id="dec-ack-layer" style="position:fixed;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:20px;
+    padding:clamp(24px,6vw,48px);padding-top:calc(56px + clamp(24px,6vw,48px));
     text-align:center;opacity:0;transition:opacity 1s ease;pointer-events:none;z-index:50;">
     <div id="dec-ack-line" style="font-size:clamp(20px,5.5vw,28px);letter-spacing:.20em;
       font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;
@@ -657,8 +658,9 @@ body.fs-large .imag-prompt{font-size:clamp(18px,4.8vw,24px);}
       text-shadow:0 0 20px rgba(240,220,180,.25);margin-top:8px;"></div>
   </div>
   <!-- Breath layer — fixed height btext so nothing ever reflows -->
-  <div id="dec-breath-layer" style="position:absolute;inset:0;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;gap:20px;padding:clamp(24px,6vw,48px);
+  <div id="dec-breath-layer" style="position:fixed;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:20px;
+    padding:clamp(24px,6vw,48px);padding-top:calc(56px + clamp(24px,6vw,48px));
     text-align:center;opacity:0;transition:opacity 1s ease;pointer-events:none;">
     <div id="dec-btext" style="font-size:var(--fh);font-weight:300;letter-spacing:.10em;
       color:rgba(240,230,208,.45);
@@ -682,13 +684,15 @@ body.fs-large .imag-prompt{font-size:clamp(18px,4.8vw,24px);}
     </div>
   </div>
   <!-- Word lives in breath layer — not fixed, so display:none on parent hides it properly -->
-  <div id="dec-word-wrap" style="position:absolute;top:50%;left:50%;
+  <div id="dec-word-wrap" style="position:fixed;
+    top:50vh;left:50%;
     transform:translate(-50%,-50%);text-align:center;pointer-events:none;z-index:15;
-    max-width:88vw;">
-    <div id="dec-word" style="font-size:clamp(34px,9vw,58px);font-weight:300;
+    width:88vw;max-width:360px;">
+    <div id="dec-word" style="font-size:clamp(28px,7vw,48px);font-weight:300;
       font-family:'Cormorant Garamond',Georgia,serif;
-      letter-spacing:.10em;color:rgba(180,175,165,.65);
-      white-space:normal;word-break:break-word;
+      letter-spacing:.08em;color:rgba(180,175,165,.65);
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+      width:100%;display:block;
       transition:color 3s ease,text-shadow 3s ease,opacity 2s ease;opacity:0;"></div>
   </div>
 </div>
