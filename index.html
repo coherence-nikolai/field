@@ -394,21 +394,32 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 #s-witness{gap:0;text-align:center;padding-top:clamp(72px,18vw,96px);display:flex;flex-direction:column;}
 .dec-line{font-size:var(--fh);color:var(--cream-dim);line-height:1.55;max-width:300px;font-weight:300;}
 .dec-sub{font-size:var(--fs);color:var(--cream-ghost);letter-spacing:.04em;margin-bottom:8px;}
+.dec-tap-hint{font-size:clamp(12px,3.2vw,15px);color:rgba(240,230,208,.42);letter-spacing:.08em;font-style:italic;margin-bottom:16px;}
 .shadow-grid{position:relative;width:100%;flex:1;min-height:340px;max-height:60vh;}
 /* Shadow grid — matches Collapse field style */
 .shadow-orb{
   display:inline-flex;align-items:center;justify-content:center;
   padding:clamp(10px,2.8vw,16px) clamp(16px,4vw,28px);
-  cursor:pointer;background:rgba(201,169,110,.06);
-  border:1px solid rgba(201,169,110,.28);border-radius:40px;
+  cursor:pointer;background:rgba(180,60,60,.08);
+  border:1px solid rgba(200,80,80,.35);border-radius:40px;
   -webkit-tap-highlight-color:transparent;touch-action:manipulation;
   letter-spacing:.06em;text-align:center;
   font-family:'Cormorant Garamond',Georgia,serif;font-weight:400;
   font-size:clamp(22px,6vw,30px);
-  color:rgba(240,204,136,.92);
+  color:rgba(230,160,140,.92);
+  animation:shadowAgitate 2.8s ease-in-out infinite;
   transition:color .3s ease, border-color .3s ease, background .3s ease, opacity .4s ease;}
-.shadow-orb:active{color:rgba(240,204,136,1);border-color:rgba(201,169,110,.85);
-  background:rgba(201,169,110,.12);}
+.shadow-orb:active{color:rgba(240,180,160,1);border-color:rgba(200,80,80,.85);
+  background:rgba(180,60,60,.18);}
+@keyframes shadowAgitate{
+  0%,100%{transform:translate(0,0) rotate(0deg);}
+  15%{transform:translate(-1px,1px) rotate(-0.4deg);}
+  30%{transform:translate(1.5px,-1px) rotate(0.3deg);}
+  45%{transform:translate(-1px,0.5px) rotate(-0.2deg);}
+  60%{transform:translate(1px,1px) rotate(0.4deg);}
+  75%{transform:translate(-0.5px,-1px) rotate(-0.3deg);}
+  90%{transform:translate(1px,0.5px) rotate(0.2deg);}
+}
 
 /* Witness breath */
 #s-dec-breath{gap:0;text-align:center;cursor:default;overflow:hidden;}
@@ -923,6 +934,7 @@ body.fs-large .imag-prompt{font-size:clamp(18px,4.8vw,24px);}
 <div class="screen" id="s-witness">
   <div class="dec-line" id="decArrivalLine"></div>
   <div class="dec-sub" id="decArrivalSub"></div>
+  <div class="dec-tap-hint" id="decTapHint"></div>
   <div class="shadow-grid" id="shadowGrid"></div>
 </div>
 

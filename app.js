@@ -1526,8 +1526,15 @@ function buildObsScreen() {
       const b = document.createElement('button');
       b.className = 'sense-chip-full';
       b.innerHTML = `<span class="scf-glyph">${s.glyph}</span><span class="scf-label">${s.label}</span>`;
-      b.addEventListener('click', () => chooseNoteSense(s.key, b));
-      b.addEventListener('touchend', e => { e.preventDefault(); chooseNoteSense(s.key, b); });
+      let _senseFired = false;
+      const fireSense = () => {
+        if (_senseFired) return;
+        _senseFired = true;
+        setTimeout(() => { _senseFired = false; }, 800);
+        chooseNoteSense(s.key, b);
+      };
+      b.addEventListener('click', fireSense);
+      b.addEventListener('touchend', e => { e.preventDefault(); fireSense(); });
       senseRow.appendChild(b);
     });
 
@@ -1540,8 +1547,15 @@ function buildObsScreen() {
       b.innerHTML = `<span class="tcf-symbol">${tone.label}</span><span class="tcf-word">${tone.word}</span>`;
       b.style.setProperty('--tone-color', tone.color);
       b.style.setProperty('--tone-border', tone.border);
-      b.addEventListener('click', () => chooseNoteTone(tone.key, b));
-      b.addEventListener('touchend', e => { e.preventDefault(); chooseNoteTone(tone.key, b); });
+      let _toneFired = false;
+      const fireTone = () => {
+        if (_toneFired) return;
+        _toneFired = true;
+        setTimeout(() => { _toneFired = false; }, 800);
+        chooseNoteTone(tone.key, b);
+      };
+      b.addEventListener('click', fireTone);
+      b.addEventListener('touchend', e => { e.preventDefault(); fireTone(); });
       toneRow.appendChild(b);
     });
 
@@ -2744,10 +2758,17 @@ function showCollapseStage(n) {
     tapEl.style.transition = 'opacity 0.7s ease';
     tapEl.style.opacity = n<6 ? '1' : '0';
     if (n===4) {
-      // Fire collapse AI amplifier — shown during imagination prompt, before breath starts
+      // Fire collapse AI amplifier — shown during breath, not hidden with imagPre
       const ip = document.getElementById('imagPrompt');
       const ampEl = document.getElementById('collapseAI');
-      if (ampEl) { ampEl.textContent = ''; ampEl.style.color = 'rgba(240,230,208,.0)'; }
+      if (ampEl) {
+        ampEl.textContent = '';
+        ampEl.style.color = 'rgba(240,230,208,.0)';
+        // Move out of imagPre so it survives imagPre fade
+        const cs4 = document.getElementById('cs4');
+        if (cs4 && ampEl.parentNode !== cs4) cs4.appendChild(ampEl);
+        ampEl.style.cssText += ';position:fixed;bottom:clamp(80px,16vh,120px);left:50%;transform:translateX(-50%);width:90%;max-width:340px;text-align:center;z-index:20;pointer-events:none;';
+      }
       if (ip && ip.textContent) {
         setTimeout(() => runCollapseAI(curStateName, ip.textContent), 800);
       }
@@ -3006,9 +3027,6 @@ function exitStormScreen() {
   stormNoteLog = [];
   const log = document.getElementById('storm-note-log');
   if (log) log.innerHTML = '';
-  // Restore observe screen opacity if we came from noting
-  const obsScr = document.getElementById('s-observe');
-  if (obsScr) { obsScr.style.transition = 'opacity 0.4s ease'; obsScr.style.opacity = '1'; }
   bgDimTarget = 1;
   if (stormAutoExitTimer) { clearTimeout(stormAutoExitTimer); stormAutoExitTimer = null; }
   currentMode = 'observe';
@@ -3083,23 +3101,21 @@ function spawnStormWord() {
   const el = document.createElement('div');
   el.className = 'sw-word';
   el.textContent = word;
-  // Much larger — overwhelm scale
-  const sizes = [
-    'clamp(28px,8vw,48px)',
-    'clamp(36px,11vw,64px)',
-    'clamp(22px,6vw,36px)',
-    'clamp(44px,14vw,80px)',
-    'clamp(18px,5vw,28px)'
-  ];
-  el.style.fontSize = sizes[Math.floor(Math.random() * sizes.length)];
+  // Single readable size — centred, no overflow
+  el.style.fontSize = 'clamp(18px,5vw,28px)';
+  el.style.maxWidth = (innerWidth - 48) + 'px';
+  el.style.overflow = 'hidden';
+  el.style.textOverflow = 'ellipsis';
+  el.style.whiteSpace = 'nowrap';
   el.style.color = 'rgba(240,204,136,0)';
-  layer.appendChild(el); // append first so we can measure
-  const wordW = el.offsetWidth || 120;
-  const wordH = el.offsetHeight || 40;
-  const safeL = 16;
-  const safeR = innerWidth - wordW - 16;
-  const safeT = 80;
-  const safeB = innerHeight - wordH - 80;
+  el.style.textAlign = 'center';
+  layer.appendChild(el);
+  const wordW = Math.min(el.offsetWidth || 120, innerWidth - 48);
+  const wordH = el.offsetHeight || 30;
+  const safeL = 24;
+  const safeR = innerWidth - wordW - 24;
+  const safeT = 100;
+  const safeB = innerHeight - wordH - 100;
   const x = safeL + Math.random() * Math.max(0, safeR - safeL);
   const y = safeT + Math.random() * Math.max(0, safeB - safeT);
   el.style.left = x + 'px';
@@ -3218,6 +3234,8 @@ function startDecohere() {
   const arrSub  = document.getElementById('decArrivalSub');
   arrLine.textContent = t.decArrivalLine; arrLine.style.opacity = '1';
   arrSub.textContent  = t.decArrivalSub;  arrSub.style.opacity  = '1';
+  const tapHint = document.getElementById('decTapHint');
+  if (tapHint) tapHint.textContent = lang === 'en' ? 'tap where you feel it in your body' : 'toca donde lo sientes en tu cuerpo';
   showScreen('s-witness');
 }
 
@@ -3386,6 +3404,16 @@ function showBodyMap(mode, payload) {
       transition:opacity 0.8s ease;`;
     qEl.textContent = question;
     wrap.appendChild(qEl);
+
+    // Tap instruction below question
+    const tapEl = document.createElement('div');
+    tapEl.style.cssText = `position:absolute;bottom:clamp(14px,5vh,32px);left:50%;
+      transform:translateX(-50%);font-size:clamp(11px,2.8vw,14px);font-weight:300;
+      color:rgba(240,230,208,.40);letter-spacing:.10em;text-align:center;
+      pointer-events:none;z-index:2;white-space:nowrap;font-style:italic;
+      transition:opacity 0.8s ease;`;
+    tapEl.textContent = lang === 'en' ? 'tap the area you feel it most' : 'toca donde lo sientes más';
+    wrap.appendChild(tapEl);
 
     // Full-screen canvas
     const fc = document.createElement('canvas');
@@ -3860,18 +3888,18 @@ function showVoiceSensingLayer(container, zoneKey, shadowWord, toneKey, onComple
 
   // Prompt text
   const prompt = document.createElement('div');
-  prompt.style.cssText = `font-size:clamp(17px,4.5vw,22px);font-weight:300;letter-spacing:.05em;
+  prompt.style.cssText = `font-size:clamp(32px,9vw,48px);font-weight:300;letter-spacing:.05em;
     color:rgba(240,230,208,.0);font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;
-    text-align:center;line-height:1.6;transition:color 1.4s ease;max-width:320px;`;
+    text-align:center;line-height:1.4;transition:color 1.4s ease;max-width:320px;`;
   const locationLine = t ? `in your ${zoneLabel}` : `en tu ${zoneLabel}`;
-  prompt.innerHTML = `${shadowWord}<br><span style="font-size:.72em;color:rgba(240,230,208,.82);letter-spacing:.08em;font-style:normal;">${locationLine}</span>`;
+  prompt.innerHTML = `${shadowWord}<br><span style="font-size:.6em;color:rgba(240,230,208,.82);letter-spacing:.08em;font-style:normal;">${locationLine}</span>`;
   layer.appendChild(prompt);
 
   // AI reflection line
   const reflectionEl = document.createElement('div');
-  reflectionEl.style.cssText = `font-size:clamp(13px,3.4vw,16px);letter-spacing:.08em;
-    color:rgba(201,169,110,.0);text-align:center;line-height:1.7;min-height:22px;
-    transition:color 1.2s ease;max-width:280px;`;
+  reflectionEl.style.cssText = `font-size:clamp(17px,4.5vw,22px);letter-spacing:.05em;font-style:italic;
+    color:rgba(201,169,110,.0);text-align:center;line-height:1.6;min-height:28px;
+    transition:color 1.2s ease;max-width:300px;`;
   layer.appendChild(reflectionEl);
 
   // Voice orb button — or text input fallback
@@ -4029,6 +4057,13 @@ async function getVoiceReflection(spokenText, zoneKey, shadowWord, toneKey, refl
 
   const toneLabel = { pleasant: 'pleasant', unpleasant: 'unpleasant', neutral: 'neutral' };
 
+  // Show loading
+  reflectionEl.style.opacity = '0.4';
+  reflectionEl.style.transition = 'opacity 1s ease';
+  reflectionEl.textContent = '·  ·  ·';
+  reflectionEl.style.color = 'rgba(201,169,110,.90)';
+  setTimeout(() => { reflectionEl.style.opacity = '1'; }, 50);
+
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -4048,13 +4083,17 @@ async function getVoiceReflection(spokenText, zoneKey, shadowWord, toneKey, refl
     const data = await res.json();
     const reflection = data.content?.[0]?.text?.trim();
     if (reflection) {
-      reflectionEl.textContent = reflection;
-      reflectionEl.style.color = 'rgba(201,169,110,.90)';
+      reflectionEl.style.opacity = '0';
+      setTimeout(() => {
+        reflectionEl.textContent = reflection;
+        reflectionEl.style.color = 'rgba(201,169,110,.95)';
+        reflectionEl.style.opacity = '1';
+      }, 400);
     } else {
-      reflectionEl.textContent = '';
+      reflectionEl.style.opacity = '0';
     }
   } catch(e) {
-    reflectionEl.textContent = '';
+    reflectionEl.style.opacity = '0';
   }
 
   // Show continue after reflection has time to land
@@ -4654,6 +4693,17 @@ function startDecBreath(displayName) {
   if (backBtn) { backBtn.style.opacity='1'; backBtn.style.pointerEvents='all'; backBtn.onclick = () => startDecohere(); }
 
   // ── Violet BreathOrb on the shared canvas ──
+  // First: fade and remove the bodymapWrap that covers the canvas
+  const bmap = document.getElementById('bodymapWrap');
+  if (bmap) {
+    bmap.style.transition = 'opacity 1s ease';
+    bmap.style.opacity = '0';
+    setTimeout(() => { if (bmap.parentNode) bmap.parentNode.removeChild(bmap); }, 1050);
+  }
+  // Ensure main canvas is visible
+  const mainCv = document.getElementById('cv');
+  if (mainCv) { mainCv.style.transition = 'opacity 1s ease'; mainCv.style.opacity = '1'; }
+
   const decOrb = new BreathOrb(innerWidth * 0.5, innerHeight * 0.5, 'violet');
   decOrb.maxCycles = 3;
   // Word lives INSIDE the orb on canvas — steady and present (witnessing, not choosing)
