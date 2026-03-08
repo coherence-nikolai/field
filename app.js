@@ -24,26 +24,32 @@
 
 // ── STATE ──
 let lang = (() => {
-  const stored = localStorage.getItem('field_lang');
-  if (stored) return stored;
-  // Auto-detect: default to Spanish for Spanish-speaking devices
+  try {
+    const stored = lsGet('field_lang');
+    if (stored) return stored;
+  } catch(e) {}
   const nav = (navigator.language || navigator.userLanguage || '').toLowerCase();
   return nav.startsWith('es') ? 'es' : 'en';
 })();
 let audioCtx = null, droneNodes = [], breathTimers = [], decBreathTimers = [];
 let breathRunning = false, breathCycle = 0, curStateName = '', spChosen = 0;
-let breathOrb = null; // canvas-driven breath orb
+let breathOrb = null;
 let collapseStage = 0, isTransitioning = false, particlesHidden = false;
-let totalObs = parseInt(localStorage.getItem('field_obs') || '0');
+let totalObs = (() => { try { return parseInt(lsGet('field_obs') || '0'); } catch(e) { return 0; } })();
 let currentMode = 'home';
 let audioEnabled = true;
-let fontLarge = localStorage.getItem('field_font_large') === '1';
+let fontLarge = (() => { try { return lsGet('field_font_large') === '1'; } catch(e) { return false; } })();
 
 // Observer state
 let attentionTimer = null, attentionSec = 0, isCoherent = false;
 let fieldActive = false, scatterTO = null, observeParticle = null;
 const COHERENCE_SEC = 45;
 const METER_DOTS = 9;
+
+// Safe localStorage (Safari private mode throws SecurityError)
+const lsGet = (k, def='') => { try { return localStorage.getItem(k) ?? def; } catch(e) { return def; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch(e) {} };
+const lsDel = (k) => { try { localStorage.removeItem(k); } catch(e) {} };
 
 // Three-signal attention system
 let isStill = true, lastMotionTime = 0, lastAffirmTime = 0;
@@ -1048,6 +1054,8 @@ function playBackNav() {
 }
 function playToneNeutral() {
   if (!audioCtx) return;
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type = 'sine'; o.frequency.value = 528;
   g.gain.setValueAtTime(0, audioCtx.currentTime);
   g.gain.linearRampToValueAtTime(0.04, audioCtx.currentTime + 0.12);
   g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 2.2);
@@ -1219,7 +1227,7 @@ function updateSettingsToggles() {
   if (audioToggle) audioToggle.classList.toggle('active', audioEnabled);
   if (fontToggle) fontToggle.classList.toggle('active', fontLarge);
   if (langToggle) langToggle.textContent = lang === 'en' ? 'EN' : 'ES';
-  const apiKey = localStorage.getItem('field_api_key') || '';
+  const apiKey = lsGet('field_api_key') || '';
   const apiInput = document.getElementById('st-api-input');
   const apiStatus = document.getElementById('st-api-status');
   if (apiInput) apiInput.value = apiKey ? '••••••••••••••••••••••••' : '';
@@ -1232,7 +1240,7 @@ function saveApiKey() {
   if (!input) return;
   const val = input.value.trim();
   if (val && val !== '••••••••••••••••••••••••') {
-    localStorage.setItem('field_api_key', val);
+    lsSet('field_api_key', val);
   }
   updateSettingsToggles();
   input.value = '';
@@ -1240,7 +1248,7 @@ function saveApiKey() {
   setTimeout(() => { input.placeholder = ''; updateSettingsToggles(); }, 1500);
 }
 function clearApiKey() {
-  localStorage.removeItem('field_api_key');
+  lsDel('field_api_key');
   updateSettingsToggles();
 }
 function settingsToggleAudio() {
@@ -1251,13 +1259,13 @@ function settingsToggleAudio() {
 }
 function settingsToggleFont() {
   fontLarge = !fontLarge;
-  localStorage.setItem('field_font_large', fontLarge ? '1' : '0');
+  lsSet('field_font_large', fontLarge ? '1' : '0');
   document.body.classList.toggle('fs-large', fontLarge);
   updateSettingsToggles();
 }
 function settingsToggleLang() {
   lang = lang === 'en' ? 'es' : 'en';
-  localStorage.setItem('field_lang', lang);
+  lsSet('field_lang', lang);
   applyLang();
   updateSettingsToggles();
 }
@@ -1265,7 +1273,7 @@ function settingsToggleLang() {
 // ── LANG ──
 function toggleLang() {
   lang = lang === 'en' ? 'es' : 'en';
-  localStorage.setItem('field_lang', lang);
+  lsSet('field_lang', lang);
   applyLang();
 }
 function applyLang() {
@@ -1290,21 +1298,21 @@ function applyLang() {
   updateHomeCount();
 }
 function updateHomeCount() {
-  const n = parseInt(localStorage.getItem('field_obs')||'0');
+  const n = parseInt(lsGet('field_obs')||'0');
   const t = TRANSLATIONS[lang];
   const el = document.getElementById('homeCount');
   if (!el) return;
 
   // Streak tracking — store last visit date
   const today = new Date().toDateString();
-  const lastVisit = localStorage.getItem('field_last_visit');
-  const streakRaw = parseInt(localStorage.getItem('field_streak')||'0');
+  const lastVisit = lsGet('field_last_visit');
+  const streakRaw = parseInt(lsGet('field_streak')||'0');
   let streak = streakRaw;
   if (lastVisit !== today) {
     const yesterday = new Date(Date.now() - 86400000).toDateString();
     streak = (lastVisit === yesterday) ? streakRaw + 1 : 1;
-    localStorage.setItem('field_streak', streak);
-    localStorage.setItem('field_last_visit', today);
+    lsSet('field_streak', streak);
+    lsSet('field_last_visit', today);
   }
 
   if (n > 0) {
@@ -1389,7 +1397,7 @@ function goHome() {
 
   // Guided entry hint — show for users who haven't done Collapse yet
   const hintEl = document.getElementById('guided-hint');
-  const collapseCount = parseInt(localStorage.getItem('field_obs')||'0');
+  const collapseCount = parseInt(lsGet('field_obs')||'0');
   if (hintEl) {
     const t = lang === 'en';
     if (collapseCount === 0) {
@@ -1419,9 +1427,9 @@ function goHome() {
     setTimeout(() => { whisperEl.remove(); }, 9000);
   }
   setTimeout(() => {
-    const obs = parseInt(localStorage.getItem('field_obs')||'0');
-    const dec = parseInt(localStorage.getItem('field_obs_witness')||'0');
-    const obv = parseInt(localStorage.getItem('field_obs_observe')||'0');
+    const obs = parseInt(lsGet('field_obs')||'0');
+    const dec = parseInt(lsGet('field_obs_witness')||'0');
+    const obv = parseInt(lsGet('field_obs_observe')||'0');
     const max = Math.max(obs, dec, obv);
     if (max === 0) return;
     const mvId = max === obs ? 'mv-collapse' : max === dec ? 'mv-witness' : 'mv-observe';
@@ -2135,10 +2143,10 @@ function reachObsCoherence() {
   const altWrap = document.querySelector('.observe-alt-wrap');
   if (altWrap) { altWrap.style.transition = 'opacity 1.5s ease'; altWrap.style.opacity = '0'; }
 
-  const n = parseInt(localStorage.getItem('field_obs')||'0') + 1;
-  localStorage.setItem('field_obs', n); totalObs = n;
-  const no = parseInt(localStorage.getItem('field_obs_observe')||'0') + 1;
-  localStorage.setItem('field_obs_observe', no);
+  const n = parseInt(lsGet('field_obs')||'0') + 1;
+  lsSet('field_obs', n); totalObs = n;
+  const no = parseInt(lsGet('field_obs_observe')||'0') + 1;
+  lsSet('field_obs_observe', no);
 
   const isNoting = obsMode === 'noting';
   const cohWord = isNoting
@@ -2516,11 +2524,11 @@ function startCollapse() {
   playCollapseSignature();
   currentMode = 'collapse'; showBackBtn();
   spParticles = []; fadeDrone(true, 1);
-  const visited = localStorage.getItem('field_visited');
+  const visited = lsGet('field_visited');
   if (visited) {
     setTimeout(() => { tryDrone(); buildCollapseField(); showScreen('s-field'); }, 200);
   } else {
-    localStorage.setItem('field_visited', '1');
+    lsSet('field_visited', '1');
     buildInit(); showScreen('s-init');
   }
 }
@@ -2639,9 +2647,9 @@ function selectState(state) {
   document.getElementById('ceqNote').textContent = state.eq;
   document.getElementById('imagPrompt').textContent = getImagination(lang, state.name);
   document.getElementById('imagLabel3').textContent = t.imagLabel;
-  const n = parseInt(localStorage.getItem('field_st_'+lang+'_'+state.name)||'0') + 1;
-  localStorage.setItem('field_st_'+lang+'_'+state.name, n);
-  totalObs++; localStorage.setItem('field_obs', totalObs);
+  const n = parseInt(lsGet('field_st_'+lang+'_'+state.name)||'0') + 1;
+  lsSet('field_st_'+lang+'_'+state.name, n);
+  totalObs++; lsSet('field_obs', totalObs);
   // Log this session for companion check-in
   logSession({ type: 'collapse', state: state.name, ts: Date.now() });
   document.getElementById('obsNote').innerHTML = '';
@@ -3179,7 +3187,7 @@ function startDecohere() {
   arrLine.textContent = t.decArrivalLine; arrLine.style.opacity = '1';
   arrSub.textContent  = t.decArrivalSub;  arrSub.style.opacity  = '1';
   const tapHint = document.getElementById('decTapHint');
-  if (tapHint) tapHint.textContent = lang === 'en' ? 'tap where you feel it in your body' : 'toca donde lo sientes en tu cuerpo';
+  if (tapHint) tapHint.textContent = '';
   showScreen('s-witness');
 }
 
@@ -3624,7 +3632,7 @@ function showBodyMap(mode, payload) {
               // Voice sensing layer — speak into the zone before chamber
               showVoiceSensingLayer(wrap, z.key, decStateName, toneKey, (spokenText) => {
                 if (spokenText) decSomaticSpoken = spokenText;
-                const apiKey = localStorage.getItem('field_api_key');
+                const apiKey = lsGet('field_api_key');
                 if (apiKey) { startDissolutionChamber(); } else { startDecAcknowledge(); }
               });
             });
@@ -3809,7 +3817,7 @@ function showTonePicker(container, onSelect) {
 
 function showVoiceSensingLayer(container, zoneKey, shadowWord, toneKey, onComplete) {
   const hasSpeech = ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
-  const apiKey = localStorage.getItem('field_api_key');
+  const apiKey = lsGet('field_api_key');
 
   // If no speech API and no API key, skip entirely
   if (!hasSpeech && !apiKey) { setTimeout(onComplete, 0); return; }
@@ -3952,10 +3960,68 @@ function showVoiceSensingLayer(container, zoneKey, shadowWord, toneKey, onComple
     micOrb.addEventListener('click', startListening);
     micOrb.addEventListener('touchend', e => { e.preventDefault(); startListening(); });
 
+    // "type instead" toggle
+    const typeToggle = document.createElement('button');
+    typeToggle.style.cssText = `background:none;border:none;font-size:clamp(10px,2.5vw,11px);
+      letter-spacing:.16em;color:rgba(240,230,208,.25);cursor:pointer;padding:6px 12px;
+      font-family:inherit;-webkit-tap-highlight-color:transparent;transition:color .3s ease;
+      margin-top:4px;`;
+    typeToggle.textContent = t ? 'type instead' : 'escribir';
+
+    const typeWrap = document.createElement('div');
+    typeWrap.style.cssText = 'display:none;flex-direction:column;align-items:center;gap:8px;width:100%;max-width:280px;margin-top:4px;';
+
+    const textInput = document.createElement('input');
+    textInput.type = 'text';
+    textInput.placeholder = t ? 'describe what you feel...' : 'describe lo que sientes...';
+    textInput.style.cssText = `background:none;border:none;border-bottom:1px solid rgba(240,230,208,.18);
+      outline:none;font-family:inherit;font-size:clamp(14px,3.5vw,17px);letter-spacing:.04em;font-style:italic;
+      color:rgba(240,230,208,.90);width:100%;padding:10px 0;text-align:center;
+      caret-color:rgba(201,169,110,.8);`;
+
+    const submitBtn = document.createElement('button');
+    submitBtn.style.cssText = `background:none;border:1px solid rgba(201,169,110,.25);border-radius:20px;
+      font-size:clamp(10px,2.5vw,12px);letter-spacing:.18em;color:rgba(201,169,110,.70);
+      cursor:pointer;padding:8px 20px;font-family:inherit;
+      -webkit-tap-highlight-color:transparent;transition:all .3s ease;margin-top:4px;`;
+    submitBtn.textContent = t ? 'done' : 'listo';
+
+    const submitText = () => {
+      const val = textInput.value.trim();
+      if (!val) return;
+      spokenText = val;
+      interimEl.textContent = '"' + val + '"';
+      interimEl.style.color = 'rgba(240,230,208,.70)';
+      typeWrap.style.display = 'none';
+      typeToggle.style.display = 'none';
+      micOrb.style.display = 'none';
+      micLabel.textContent = t ? 'received' : 'recibido';
+      micLabel.style.color = 'rgba(201,169,110,.85)';
+      if (apiKey) getVoiceReflection(spokenText, zoneKey, shadowWord, toneKey, reflectionEl, continueBtn);
+      else { setTimeout(() => { continueBtn.style.opacity = '1'; continueBtn.style.pointerEvents = 'auto'; }, 800); }
+    };
+
+    submitBtn.addEventListener('click', submitText);
+    submitBtn.addEventListener('touchend', e => { e.preventDefault(); submitText(); });
+    textInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); submitText(); } });
+
+    typeWrap.appendChild(textInput);
+    typeWrap.appendChild(submitBtn);
+
+    typeToggle.addEventListener('click', () => {
+      const showing = typeWrap.style.display !== 'none';
+      typeWrap.style.display = showing ? 'none' : 'flex';
+      typeToggle.textContent = showing ? (t ? 'type instead' : 'escribir') : (t ? 'use mic' : 'usar mic');
+      if (!showing) setTimeout(() => textInput.focus(), 100);
+    });
+    typeToggle.addEventListener('touchend', e => { e.preventDefault(); typeToggle.click(); });
+
     micWrap.appendChild(micOrb);
     micWrap.appendChild(micLabel);
     micWrap.appendChild(instrEl);
     micWrap.appendChild(interimEl);
+    micWrap.appendChild(typeToggle);
+    micWrap.appendChild(typeWrap);
   } else {
     // Text fallback — small input
     const textInput = document.createElement('input');
@@ -4013,7 +4079,7 @@ function showVoiceSensingLayer(container, zoneKey, shadowWord, toneKey, onComple
 }
 
 async function getVoiceReflection(spokenText, zoneKey, shadowWord, toneKey, reflectionEl, continueBtn) {
-  const apiKey = localStorage.getItem('field_api_key');
+  const apiKey = lsGet('field_api_key');
   if (!apiKey) { continueBtn.style.opacity = '1'; continueBtn.style.pointerEvents = 'auto'; return; }
 
   reflectionEl.style.color = 'rgba(201,169,110,.25)';
@@ -4072,16 +4138,16 @@ async function getVoiceReflection(spokenText, zoneKey, shadowWord, toneKey, refl
 // ══════════════════════════════════════
 function logSession(entry) {
   try {
-    const raw = localStorage.getItem('field_sessions');
+    const raw = lsGet('field_sessions');
     const log = raw ? JSON.parse(raw) : [];
     log.push(entry);
     // Keep last 20
     if (log.length > 20) log.splice(0, log.length - 20);
-    localStorage.setItem('field_sessions', JSON.stringify(log));
+    lsSet('field_sessions', JSON.stringify(log));
   } catch(e) {}
 }
 function getSessions() {
-  try { return JSON.parse(localStorage.getItem('field_sessions') || '[]'); } catch(e) { return []; }
+  try { return JSON.parse(lsGet('field_sessions') || '[]'); } catch(e) { return []; }
 }
 
 // ══════════════════════════════════════
@@ -4104,7 +4170,7 @@ let companionActive = false;
 let companionAsked = false;
 
 async function maybeShowCompanion() {
-  const apiKey = localStorage.getItem('field_api_key');
+  const apiKey = lsGet('field_api_key');
   if (!apiKey) return;
   const sessions = getSessions();
   if (sessions.length < 3) return; // needs history to be meaningful
@@ -4207,7 +4273,7 @@ Rules:
 
 // Called after noting session completes — passes note log to AI, shows mirror line
 async function runObserveAI(noteLog) {
-  const apiKey = localStorage.getItem('field_api_key');
+  const apiKey = lsGet('field_api_key');
   if (!apiKey || !noteLog || noteLog.length === 0) return;
 
   const mirrorEl = document.getElementById('obsCohAI');
@@ -4244,7 +4310,7 @@ async function runObserveAI(noteLog) {
 
 // Called when collapse pre-breath stage shows — passes state + imagination to AI
 async function runCollapseAI(stateName, imagPrompt) {
-  const apiKey = localStorage.getItem('field_api_key');
+  const apiKey = lsGet('field_api_key');
   if (!apiKey) return;
 
   const ampEl = document.getElementById('collapseAI');
@@ -4324,7 +4390,7 @@ function appendChamberMsg(text, role) {
 }
 
 async function chamberCallAI(onDone) {
-  const apiKey = localStorage.getItem('field_api_key');
+  const apiKey = lsGet('field_api_key');
   if (!apiKey) { startDecAcknowledge(); return; }
 
   chamberTyping = true;
@@ -4797,8 +4863,8 @@ function startDecBreath(displayName) {
 function showDecEnd() {
   currentMode = 'witness-end';
   const t = TRANSLATIONS[lang];
-  const nd = parseInt(localStorage.getItem('field_obs_witness')||'0') + 1;
-  localStorage.setItem('field_obs_witness', nd);
+  const nd = parseInt(lsGet('field_obs_witness')||'0') + 1;
+  lsSet('field_obs_witness', nd);
   // Log this witness session
   logSession({ type: 'witness', shadow: decStateName, ts: Date.now() });
 
@@ -4951,7 +5017,7 @@ function startLandingScreen() {
       if (collapseProgress >= 1) {
         cleanupLandingResize();
         cancelAnimationFrame(landingRaf);
-        localStorage.setItem('field_welcomed_landing', '1');
+        lsSet('field_welcomed_landing', '1');
         buildWelcome();
         document.getElementById('s-landing').classList.remove('active');
         document.getElementById('s-welcome').classList.add('active');
@@ -5138,7 +5204,7 @@ function advanceWelcome() {
 }
 
 function enterFromWelcome() {
-  localStorage.setItem('field_welcomed', '1');
+  lsSet('field_welcomed', '1');
   showScreen('s-home', () => { initSpParticles(12); tryDrone(); });
 }
 
@@ -5206,7 +5272,7 @@ function restoreCircadianPalette() {
 }
 if (fontLarge) document.body.classList.add('fs-large');
 
-if (!localStorage.getItem('field_welcomed')) {
+if (!lsGet('field_welcomed')) {
   startLandingScreen();
 } else {
   initSpParticles(12);
