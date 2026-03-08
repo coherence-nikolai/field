@@ -296,8 +296,8 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
   transition:opacity 1.2s ease;}
 .ai-mirror{font-size:clamp(14px,3.8vw,17px);font-weight:300;font-style:italic;
   font-family:'Cormorant Garamond',Georgia,serif;letter-spacing:.03em;
-  color:rgba(240,230,208,.0);line-height:1.7;max-width:300px;text-align:center;
-  transition:color 2.2s ease;margin-top:8px;}
+  color:rgba(240,230,208,.92);line-height:1.7;max-width:300px;text-align:center;
+  opacity:0;transition:opacity 1.6s ease;margin-top:8px;}
 .bwrap{display:flex;flex-direction:column;align-items:center;gap:20px;width:100%;}
 .btext-slot{height:clamp(44px,10vw,60px);display:flex;align-items:center;justify-content:center;width:100%;position:relative;overflow:hidden;}
 .btext{position:fixed;top:calc(50% - clamp(100px,22vw,140px));left:50%;transform:translateX(-50%);
@@ -881,19 +881,19 @@ body.fs-large .imag-prompt{font-size:clamp(18px,4.8vw,24px);}
       <div class="c-eq-note" id="ceqNote"></div>
     </div>
   </div>
+  <div class="cp-stage" id="cs3">
+    <div class="stage-inner" style="gap:clamp(16px,4vw,28px);text-align:center;padding:0 clamp(24px,8vw,48px);">
+      <span class="c-confirm-label" id="imagLabel3"></span>
+      <div class="imag-prompt" id="imagPrompt"></div>
+    </div>
+  </div>
   <div class="cp-stage" id="cs4">
     <div class="bwrap">
       <div class="btext-slot">
         <div class="btext" id="btext"></div>
       </div>
-      <div class="imag-pre" id="imagPre">
-        <span class="c-confirm-label" id="imagLabel3"></span>
-        <div class="imag-prompt" id="imagPrompt"></div>
-        <div class="ai-mirror" id="collapseAI"></div>
-      </div>
-      <div class="bp-wrap" id="bp-wrap">
-        <!-- bp and bripple are position:fixed, placed by JS -->
-      </div>
+      <div class="ai-mirror" id="collapseAI"></div>
+      <div class="bp-wrap" id="bp-wrap"></div>
       <div class="bdots">
         <div class="bdot" id="bdot0"></div>
         <div class="bdot" id="bdot1"></div>

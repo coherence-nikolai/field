@@ -2204,7 +2204,7 @@ function reachObsCoherence() {
     document.getElementById('obsCohTap').textContent = TRANSLATIONS[lang].obsCoherenceTap;
     // Reset AI mirror
     const mirrorEl = document.getElementById('obsCohAI');
-    if (mirrorEl) { mirrorEl.textContent = ''; mirrorEl.style.color = 'rgba(240,230,208,.0)'; }
+    if (mirrorEl) { mirrorEl.textContent = ''; mirrorEl.style.opacity = '0'; }
     showScreen('s-obs-coherence');
     // Fire observe AI mirror after screen settles (noting only)
     if (isNoting && sessionNoteLog.length >= 3) {
@@ -2704,9 +2704,7 @@ function selectState(state) {
   initScene('state_chosen', spChosen);
   collapseStage = 0;
   document.querySelectorAll('.cp-stage').forEach(s => { s.classList.remove('on'); s.style.cssText=''; });
-  // Reset imagPre for fresh entry
-  const imagPreReset = document.getElementById('imagPre');
-  if (imagPreReset) { imagPreReset.style.display = ''; imagPreReset.style.opacity = '1'; }
+  // cs3 (imagination prompt stage) resets naturally with cp-stage cssText clear
   clearAllBreath();
   document.getElementById('tapNext').textContent = t.tapHint;
   particlesHidden = false;
@@ -2734,7 +2732,6 @@ function buildGhosts(chosen) {
 }
 function showCollapseStage(n) {
   if (isTransitioning) return; // [TECH3]
-  if (n === 3) n = 4;
   if (n === 5) n = 6;
   const current = document.querySelector('.cp-stage.on');
   if (n===4) {
@@ -2762,19 +2759,19 @@ function showCollapseStage(n) {
     tapEl.style.transition = 'opacity 0.7s ease';
     tapEl.style.opacity = n<6 ? '1' : '0';
     if (n===4) {
-      // Fire collapse AI amplifier — shown during breath, not hidden with imagPre
+      // Fire collapse AI amplifier + start breath
       const ip = document.getElementById('imagPrompt');
       const ampEl = document.getElementById('collapseAI');
       if (ampEl) {
         ampEl.textContent = '';
         ampEl.style.opacity = '0';
-        // Move out of imagPre so it survives imagPre fade
         const cs4 = document.getElementById('cs4');
         if (cs4 && ampEl.parentNode !== cs4) cs4.appendChild(ampEl);
         ampEl.style.cssText = 'position:fixed;bottom:clamp(80px,16vh,120px);left:50%;transform:translateX(-50%);width:90%;max-width:340px;text-align:center;z-index:20;pointer-events:none;opacity:0;color:rgba(240,230,208,.92);font-size:clamp(14px,3.8vw,17px);font-weight:300;font-style:italic;letter-spacing:.06em;line-height:1.7;transition:opacity 1.4s ease;font-family:\'Cormorant Garamond\',Georgia,serif;';
       }
-      if (ip && ip.textContent) {
-        setTimeout(() => runCollapseAI(curStateName, ip.textContent), 800);
+      const imagText = ip ? ip.textContent : '';
+      if (imagText) {
+        setTimeout(() => runCollapseAI(curStateName, imagText), 800);
       }
       startBreath();
     }
@@ -2826,13 +2823,7 @@ function startBreath() {
   const inviteLine1 = lang === 'en' ? 'breathe in all possibilities' : 'inhala todas las posibilidades';
   const inviteLine2 = (lang === 'en' ? 'exhale into · ' : 'exhala hacia · ') + stateName;
 
-  // Fade out the pre-breath imagination prompt
-  const imagPre = document.getElementById('imagPre');
-  if (imagPre) {
-    imagPre.style.transition = 'opacity 0.8s ease';
-    imagPre.style.opacity = '0';
-    setTimeout(() => { if (imagPre) imagPre.style.display = 'none'; }, 850);
-  }
+  // imagPre is on cs3 (previous stage) — already hidden by stage transition
 
   const bp = document.getElementById('bp'); if (bp) bp.style.opacity = '0';
   const rp = document.getElementById('bripple'); if (rp) rp.className = 'bripple';
@@ -3893,8 +3884,8 @@ function showVoiceSensingLayer(container, zoneKey, shadowWord, toneKey, onComple
   // Prompt text
   const prompt = document.createElement('div');
   prompt.style.cssText = `font-size:clamp(32px,9vw,48px);font-weight:300;letter-spacing:.05em;
-    color:rgba(240,230,208,.0);font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;
-    text-align:center;line-height:1.4;transition:color 1.4s ease;max-width:320px;`;
+    color:rgba(240,230,208,.95);font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;
+    text-align:center;line-height:1.4;opacity:0;transition:opacity 1.4s ease;max-width:320px;`;
   const locationLine = t ? `in your ${zoneLabel}` : `en tu ${zoneLabel}`;
   prompt.innerHTML = `${shadowWord}<br><span style="font-size:.6em;color:rgba(240,230,208,.82);letter-spacing:.08em;font-style:normal;">${locationLine}</span>`;
   layer.appendChild(prompt);
@@ -3902,8 +3893,8 @@ function showVoiceSensingLayer(container, zoneKey, shadowWord, toneKey, onComple
   // AI reflection line
   const reflectionEl = document.createElement('div');
   reflectionEl.style.cssText = `font-size:clamp(17px,4.5vw,22px);letter-spacing:.05em;font-style:italic;
-    color:rgba(201,169,110,.0);text-align:center;line-height:1.6;min-height:28px;
-    transition:color 1.2s ease;max-width:300px;`;
+    color:rgba(201,169,110,.95);text-align:center;line-height:1.6;min-height:28px;
+    opacity:0;transition:opacity 1.2s ease;max-width:300px;`;
   layer.appendChild(reflectionEl);
 
   // Voice orb button — or text input fallback
@@ -4039,7 +4030,7 @@ function showVoiceSensingLayer(container, zoneKey, shadowWord, toneKey, onComple
   requestAnimationFrame(() => {
     layer.style.background = 'rgba(14,12,10,0.88)';
     setTimeout(() => {
-      prompt.style.color = 'rgba(240,230,208,.80)';
+      prompt.style.opacity = '1';
       // Pulse the mic orb to invite tap
       if (hasSpeech) {
         const orb = layer.querySelector('button');
@@ -4276,7 +4267,8 @@ async function runObserveAI(noteLog) {
     if (data.content && data.content[0]) {
       const text = data.content[0].text.trim();
       mirrorEl.textContent = text;
-      setTimeout(() => { mirrorEl.style.color = 'rgba(240,230,208,.92)'; }, 400);
+      mirrorEl.style.transition = 'opacity 1.6s ease';
+      setTimeout(() => { mirrorEl.style.opacity = '1'; }, 100);
     }
   } catch(e) { /* fail silently */ }
 }
