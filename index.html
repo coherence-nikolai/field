@@ -425,10 +425,10 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 /* Witness breath */
 #s-dec-breath{gap:0;text-align:center;cursor:default;overflow:hidden;}
 #dec-btext{position:fixed;left:50%;transform:translateX(-50%);
-  top:clamp(72px,14vh,110px);
-  font-size:clamp(18px,5vw,24px);font-weight:300;letter-spacing:.10em;
-  color:rgba(240,230,208,.95);display:flex;align-items:center;justify-content:center;
-  width:100%;max-width:360px;text-align:center;
+  top:calc(50% - clamp(100px,22vw,140px));
+  font-size:clamp(13px,3.2vw,16px);font-weight:300;letter-spacing:.22em;
+  color:rgba(240,230,208,.92);display:flex;align-items:center;justify-content:center;
+  width:100%;max-width:360px;text-align:center;text-transform:lowercase;
   opacity:0;overflow:hidden;line-height:1.5;
   z-index:22;pointer-events:none;will-change:opacity;}
 #dec-bp-wrap{position:relative;
@@ -468,7 +468,7 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
   padding:clamp(56px,14vw,80px) clamp(20px,5vw,36px) clamp(20px,5vw,32px);
   box-sizing:border-box;gap:0;}
 #chamber-context{font-size:clamp(11px,2.8vw,13px);letter-spacing:.22em;
-  color:rgba(210,110,100,.55);text-transform:lowercase;text-align:center;
+  color:rgba(210,110,100,.82);text-transform:lowercase;text-align:center;
   margin-bottom:clamp(20px,5vh,36px);opacity:0;transition:opacity 1.8s ease;}
 #chamber-messages{flex:1;overflow-y:auto;display:flex;flex-direction:column;
   gap:clamp(18px,4vh,28px);padding-bottom:16px;scrollbar-width:none;

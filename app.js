@@ -212,6 +212,7 @@ class BreathOrb {
     this.flickPh = 0;
     this.onPhaseChange = null;
     this.wordText = '';
+    this.wordColorPhase = 0; // 0=red-amber, 1=rose, 2=violet-cream, 3=luminous white
     this.wordAlpha = 0;
     this.wordTargetAlpha = 0;
     this.wordScale = 1;
@@ -451,16 +452,30 @@ class BreathOrb {
       const glowRadius = 10 + gi * 35;
       const glowAlpha = 0.25 + gi * 0.75;
 
-      // Witness: carry the shadow-red hue into the orb
+      // Witness colour arc across cycles — red-amber → rose → violet-cream → luminous white
       // Collapse: warm gold
       let wordColor;
       if (isViolet) {
-        // Red-to-amber gradient based on glow intensity
-        const r = Math.round(230 + gi * 10);
-        const g2 = Math.round(140 + gi * 40);
-        const b = Math.round(120 + gi * 20);
+        const phase = this.wordColorPhase || 0;
+        let r, g2, b;
+        if (phase === 0) {
+          // red-amber
+          r = Math.round(220 + gi * 10); g2 = Math.round(100 + gi * 50); b = Math.round(80 + gi * 20);
+          cx.shadowColor = `rgba(210,90,70,${(wordA * glowAlpha).toFixed(2)})`;
+        } else if (phase === 1) {
+          // rose
+          r = Math.round(210 + gi * 10); g2 = Math.round(130 + gi * 40); b = Math.round(110 + gi * 30);
+          cx.shadowColor = `rgba(200,110,100,${(wordA * glowAlpha).toFixed(2)})`;
+        } else if (phase === 2) {
+          // violet-cream
+          r = Math.round(200 + gi * 10); g2 = Math.round(180 + gi * 20); b = Math.round(215 + gi * 20);
+          cx.shadowColor = `rgba(190,160,220,${(wordA * glowAlpha).toFixed(2)})`;
+        } else {
+          // luminous cream-white (morph)
+          r = Math.round(245); g2 = Math.round(238); b = Math.round(230);
+          cx.shadowColor = `rgba(245,235,215,${(wordA * glowAlpha * 1.2).toFixed(2)})`;
+        }
         wordColor = `rgba(${r},${g2},${b},${wordA.toFixed(3)})`;
-        cx.shadowColor = `rgba(220,100,80,${(wordA * glowAlpha).toFixed(2)})`;
       } else {
         const bright = Math.round(200 + gi * 55);
         wordColor = `rgba(${bright + 15},${bright},${Math.max(0,bright - 50)},${wordA.toFixed(3)})`;
@@ -3629,18 +3644,21 @@ function showBodyMap(mode, payload) {
     const grid = document.getElementById('shadowGrid');
     const line = document.getElementById('decArrivalLine');
     const sub  = document.getElementById('decArrivalSub');
-    if (line) { line.style.transition = 'opacity 0.5s ease'; line.style.opacity = '0'; }
-    if (sub)  { sub.style.transition  = 'opacity 0.5s ease'; sub.style.opacity  = '0'; }
-    // Remove padding constraints — full screen figure
+    if (line) { line.style.transition = 'opacity 0.4s ease'; line.style.opacity = '0'; }
+    if (sub)  { sub.style.transition  = 'opacity 0.4s ease'; sub.style.opacity  = '0'; }
     const scr = document.getElementById('s-witness');
     if (scr) { scr.style.paddingTop = '0'; scr.style.gap = '0'; }
-    grid.innerHTML = '<div id="bodymapWrap" style="position:fixed;inset:0;z-index:10;background:var(--bg);opacity:0;transition:opacity 1.2s ease;"></div>';
-    wrap = document.getElementById('bodymapWrap');
-    // Fade in after a beat
-    setTimeout(() => { wrap.style.opacity = '1'; }, 80);
-    // Hide main canvas during witness body map
-    const mainCv = document.getElementById('cv');
-    if (mainCv) mainCv.style.opacity = '0';
+    // Fade witness screen out, then inject body map
+    if (scr) { scr.style.transition = 'opacity 0.5s ease'; scr.style.opacity = '0'; }
+    setTimeout(() => {
+      grid.innerHTML = '<div id="bodymapWrap" style="position:fixed;inset:0;z-index:10;background:var(--bg);opacity:0;transition:opacity 1.0s ease;"></div>';
+      wrap = document.getElementById('bodymapWrap');
+      if (scr) { scr.style.opacity = '1'; scr.style.transition = 'none'; }
+      const mainCv = document.getElementById('cv');
+      if (mainCv) mainCv.style.opacity = '0';
+      setTimeout(() => { if (wrap) wrap.style.opacity = '1'; }, 60);
+      buildDecohere();
+    }, 520);
   } else {
     // Collapse: use dedicated s-bodymap screen
     const screen = document.getElementById('s-bodymap');
@@ -3655,9 +3673,10 @@ function showBodyMap(mode, payload) {
     screen.appendChild(bwrap);
     wrap = bwrap;
     showScreen('s-bodymap');
+    buildDecohere();
   }
 
-  // ── Decohere: full-screen canvas figure ──
+  function buildDecohere() {
   if (isDecohere) {
     const W = innerWidth, H = innerHeight;
 
@@ -4057,6 +4076,7 @@ function showBodyMap(mode, payload) {
     wrap.appendChild(b);
     setTimeout(() => { b.style.opacity = '1'; b.style.transform = 'translateY(0)'; }, 120 * idx);
   });
+  } // end buildDecohere
 }
 
 function showDecBodyMap() {
@@ -4088,53 +4108,94 @@ Rules:
 function showTonePicker(container, onSelect) {
   const t = lang === 'en';
   const tones = t
-    ? [{ key:'pleasant', label:'pleasant', color:'rgba(140,200,160,', glow:'rgba(120,180,140,' },
-       { key:'unpleasant', label:'unpleasant', color:'rgba(200,140,140,', glow:'rgba(180,120,120,' },
-       { key:'neutral', label:'neutral', color:'rgba(200,185,210,', glow:'rgba(180,165,195,' }]
-    : [{ key:'pleasant', label:'agradable', color:'rgba(140,200,160,', glow:'rgba(120,180,140,' },
-       { key:'unpleasant', label:'desagradable', color:'rgba(200,140,140,', glow:'rgba(180,120,120,' },
-       { key:'neutral', label:'neutro', color:'rgba(200,185,210,', glow:'rgba(180,165,195,' }];
+    ? [{ key:'pleasant',   label:'pleasant',     freq:528, color:'rgba(140,200,160,' },
+       { key:'unpleasant', label:'unpleasant',   freq:174, color:'rgba(200,140,140,' },
+       { key:'neutral',    label:'neutral',       freq:396, color:'rgba(200,185,210,' }]
+    : [{ key:'pleasant',   label:'agradable',    freq:528, color:'rgba(140,200,160,' },
+       { key:'unpleasant', label:'desagradable', freq:174, color:'rgba(200,140,140,' },
+       { key:'neutral',    label:'neutro',        freq:396, color:'rgba(200,185,210,' }];
 
   const layer = document.createElement('div');
   layer.style.cssText = `position:fixed;inset:0;z-index:22;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;gap:clamp(20px,6vh,36px);
-    background:rgba(14,12,10,0.82);opacity:0;transition:opacity .9s ease;padding:0 32px;`;
+    align-items:center;justify-content:center;gap:clamp(28px,8vh,52px);
+    background:rgba(14,12,10,0.92);opacity:0;transition:opacity 0.9s ease;`;
+  document.body.appendChild(layer);
 
+  // Label
   const label = document.createElement('div');
-  label.style.cssText = `font-size:clamp(13px,3.2vw,15px);letter-spacing:.18em;
-    color:rgba(240,230,208,.35);text-transform:uppercase;text-align:center;`;
+  label.style.cssText = `font-size:clamp(11px,2.8vw,13px);letter-spacing:.28em;
+    color:rgba(240,230,208,.62);text-transform:uppercase;text-align:center;
+    opacity:0;transition:opacity 1.2s ease;`;
   label.textContent = t ? 'its quality' : 'su cualidad';
+  layer.appendChild(label);
 
-  const btnRow = document.createElement('div');
-  btnRow.style.cssText = 'display:flex;gap:clamp(10px,3vw,18px);';
+  // Words — stacked, large
+  const wordWrap = document.createElement('div');
+  wordWrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:clamp(18px,5vh,36px);';
+  layer.appendChild(wordWrap);
 
-  tones.forEach(tone => {
-    const b = document.createElement('button');
-    b.style.cssText = `background:none;border:1px solid ${tone.color}0.28);border-radius:24px;
-      padding:clamp(8px,2vh,12px) clamp(14px,4vw,22px);cursor:pointer;font-family:inherit;
-      font-size:clamp(12px,3vw,15px);letter-spacing:.10em;color:${tone.color}0.65);
-      -webkit-tap-highlight-color:transparent;
-      transition:all .25s ease;`;
-    b.textContent = tone.label;
+  let selected = false;
+
+  tones.forEach((tone, idx) => {
+    const w = document.createElement('button');
+    w.style.cssText = `background:none;border:none;cursor:pointer;font-family:'Cormorant Garamond',Georgia,serif;
+      font-size:clamp(42px,12vw,64px);font-weight:300;letter-spacing:.06em;
+      color:${tone.color}0.72);opacity:0;
+      transition:opacity 1.0s ease, color 0.3s ease, text-shadow 0.4s ease;
+      -webkit-tap-highlight-color:transparent;padding:8px 24px;line-height:1.1;`;
+    w.textContent = tone.label;
+
+    // Stagger fade-in
+    setTimeout(() => {
+      w.style.opacity = '1';
+    }, 300 + idx * 280);
 
     const select = () => {
-      b.style.borderColor = `${tone.color}0.75)`;
-      b.style.color = `${tone.color}0.95)`;
-      b.style.boxShadow = `0 0 18px ${tone.glow}0.3)`;
-      if (navigator.vibrate) navigator.vibrate(12);
+      if (selected) return;
+      selected = true;
+      if (navigator.vibrate) navigator.vibrate(14);
+
+      // Play tone
+      if (audioCtx) {
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = 'sine'; o.frequency.value = tone.freq;
+        g.gain.setValueAtTime(0, audioCtx.currentTime);
+        g.gain.linearRampToValueAtTime(0.055, audioCtx.currentTime + 0.12);
+        g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 2.2);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(); o.stop(audioCtx.currentTime + 2.5);
+      }
+
+      // Chosen word glows, others dissolve
+      wordWrap.querySelectorAll('button').forEach(el => {
+        if (el === w) {
+          el.style.color = `${tone.color}1)`;
+          el.style.textShadow = `0 0 40px ${tone.color}0.5), 0 0 80px ${tone.color}0.2)`;
+          el.style.transition = 'color 0.4s ease, text-shadow 0.4s ease';
+        } else {
+          el.style.transition = 'opacity 0.5s ease';
+          el.style.opacity = '0';
+        }
+      });
+      label.style.opacity = '0';
+
+      // Hold chosen word for 1.8s — let it land
       setTimeout(() => {
+        layer.style.transition = 'opacity 0.7s ease';
         layer.style.opacity = '0';
         setTimeout(() => { layer.remove(); onSelect(tone.key); }, 700);
-      }, 280);
+      }, 1800);
     };
-    b.onclick = select;
-    btnRow.appendChild(b);
+
+    w.onclick = select;
+    w.addEventListener('touchend', e => { e.preventDefault(); select(); });
+    wordWrap.appendChild(w);
   });
 
-  layer.appendChild(label);
-  layer.appendChild(btnRow);
-  container.appendChild(layer);
-  requestAnimationFrame(() => { requestAnimationFrame(() => { layer.style.opacity = '1'; }); });
+  requestAnimationFrame(() => {
+    layer.style.opacity = '1';
+    setTimeout(() => { label.style.opacity = '1'; }, 200);
+  });
 }
 
 function showVoiceSensingLayer(container, zoneKey, shadowWord, toneKey, onComplete) {
@@ -4160,29 +4221,29 @@ function showVoiceSensingLayer(container, zoneKey, shadowWord, toneKey, onComple
   const layer = document.createElement('div');
   layer.id = 'voice-sense-layer';
   layer.style.cssText = `position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;gap:clamp(18px,5vh,32px);
+    align-items:center;justify-content:center;gap:clamp(24px,7vh,44px);
     background:rgba(14,12,10,0);transition:background 1.2s ease;padding:0 clamp(24px,8vw,52px);`;
   document.body.appendChild(layer);
 
   // Prompt text
   const prompt = document.createElement('div');
-  prompt.style.cssText = `font-size:clamp(32px,9vw,48px);font-weight:300;letter-spacing:.05em;
+  prompt.style.cssText = `font-size:clamp(42px,12vw,58px);font-weight:300;letter-spacing:.05em;
     color:rgba(240,230,208,.95);font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;
-    text-align:center;line-height:1.4;opacity:0;transition:opacity 1.4s ease;max-width:320px;`;
+    text-align:center;line-height:1.3;opacity:0;transition:opacity 1.4s ease;max-width:340px;`;
   const locationLine = t ? `in your ${zoneLabel}` : `en tu ${zoneLabel}`;
   prompt.innerHTML = `${shadowWord}<br><span style="font-size:.6em;color:rgba(240,230,208,.82);letter-spacing:.08em;font-style:normal;">${locationLine}</span>`;
   layer.appendChild(prompt);
 
   // AI reflection line
   const reflectionEl = document.createElement('div');
-  reflectionEl.style.cssText = `font-size:clamp(17px,4.5vw,22px);letter-spacing:.05em;font-style:italic;
-    color:rgba(201,169,110,.95);text-align:center;line-height:1.6;min-height:28px;
-    opacity:0;transition:opacity 1.2s ease;max-width:300px;`;
+  reflectionEl.style.cssText = `font-size:clamp(19px,5vw,24px);letter-spacing:.04em;font-style:italic;
+    color:rgba(201,169,110,.95);text-align:center;line-height:1.6;min-height:30px;
+    opacity:0;transition:opacity 1.2s ease;max-width:320px;`;
   layer.appendChild(reflectionEl);
 
   // Voice orb button — or text input fallback
   const micWrap = document.createElement('div');
-  micWrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:12px;';
+  micWrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:clamp(14px,4vh,22px);';
 
   let spokenText = '';
   let isListening = false;
@@ -4197,21 +4258,21 @@ function showVoiceSensingLayer(container, zoneKey, shadowWord, toneKey, onComple
     recog.lang = lang === 'es' ? 'es-ES' : 'en-US';
 
     const micOrb = document.createElement('button');
-    micOrb.style.cssText = `width:72px;height:72px;border-radius:50%;background:none;
-      border:1.5px solid rgba(201,169,110,.22);cursor:pointer;
+    micOrb.style.cssText = `width:96px;height:96px;border-radius:50%;background:none;
+      border:1.5px solid rgba(201,169,110,.28);cursor:pointer;
       display:flex;align-items:center;justify-content:center;
       -webkit-tap-highlight-color:transparent;transition:all .4s ease;position:relative;`;
-    micOrb.innerHTML = `<span style="font-size:28px;line-height:1;">🎙</span>`;
+    micOrb.innerHTML = `<span style="font-size:38px;line-height:1;">🎙</span>`;
 
     const micLabel = document.createElement('div');
-    micLabel.style.cssText = `font-size:clamp(10px,2.6vw,12px);letter-spacing:.16em;
-      color:rgba(240,230,208,.70);transition:color .4s ease;`;
+    micLabel.style.cssText = `font-size:clamp(13px,3.2vw,15px);letter-spacing:.16em;
+      color:rgba(240,230,208,.72);transition:color .4s ease;`;
     micLabel.textContent = t ? 'tap to speak' : 'toca para hablar';
 
     // Instruction line — what to say
     const instrEl = document.createElement('div');
-    instrEl.style.cssText = `font-size:clamp(11px,2.8vw,13px);letter-spacing:.06em;font-style:italic;
-      color:rgba(240,230,208,.50);text-align:center;max-width:240px;line-height:1.5;margin-top:4px;`;
+    instrEl.style.cssText = `font-size:clamp(13px,3.2vw,15px);letter-spacing:.06em;font-style:italic;
+      color:rgba(240,230,208,.78);text-align:center;max-width:240px;line-height:1.5;margin-top:4px;`;
     instrEl.textContent = t ? 'describe what you feel there' : 'describe lo que sientes ahí';
 
     const interimEl = document.createElement('div');
@@ -4259,7 +4320,7 @@ function showVoiceSensingLayer(container, zoneKey, shadowWord, toneKey, onComple
           redoBtn = document.createElement('button');
           redoBtn.className = 'redo-btn';
           redoBtn.style.cssText = `background:none;border:none;font-size:clamp(10px,2.5vw,11px);
-            letter-spacing:.16em;color:rgba(240,230,208,.28);cursor:pointer;padding:4px 12px;
+            letter-spacing:.16em;color:rgba(240,230,208,.60);cursor:pointer;padding:4px 12px;
             font-family:inherit;-webkit-tap-highlight-color:transparent;transition:color .3s ease;`;
           redoBtn.textContent = t ? 'redo' : 'repetir';
           redoBtn.addEventListener('click', () => {
@@ -4289,11 +4350,16 @@ function showVoiceSensingLayer(container, zoneKey, shadowWord, toneKey, onComple
 
     // "type instead" toggle
     const typeToggle = document.createElement('button');
-    typeToggle.style.cssText = `background:none;border:none;font-size:clamp(10px,2.5vw,11px);
-      letter-spacing:.16em;color:rgba(240,230,208,.25);cursor:pointer;padding:6px 12px;
-      font-family:inherit;-webkit-tap-highlight-color:transparent;transition:color .3s ease;
-      margin-top:4px;`;
+    typeToggle.style.cssText = `background:none;border:none;font-size:clamp(11px,2.8vw,13px);
+      letter-spacing:.16em;color:rgba(240,230,208,.62);cursor:pointer;padding:6px 12px;
+      font-family:inherit;-webkit-tap-highlight-color:transparent;transition:color .3s ease, opacity 0.8s ease;
+      margin-top:4px;opacity:0;pointer-events:none;`;
     typeToggle.textContent = t ? 'type instead' : 'escribir';
+    // Reveal after 4s — give voice a real chance first
+    setTimeout(() => {
+      typeToggle.style.opacity = '1';
+      typeToggle.style.pointerEvents = 'auto';
+    }, 4000);
 
     const typeWrap = document.createElement('div');
     typeWrap.style.cssText = 'display:none;flex-direction:column;align-items:center;gap:8px;width:100%;max-width:280px;margin-top:4px;';
@@ -4372,11 +4438,11 @@ function showVoiceSensingLayer(container, zoneKey, shadowWord, toneKey, onComple
   // Continue/skip button — always visible
   const continueBtn = document.createElement('button');
   continueBtn.style.cssText = `background:none;border:none;
-    font-size:clamp(10px,2.6vw,12px);letter-spacing:.2em;
-    color:rgba(240,230,208,.22);cursor:pointer;padding:10px 20px;
+    font-size:clamp(11px,2.8vw,13px);letter-spacing:.2em;
+    color:rgba(240,230,208,.65);cursor:pointer;padding:10px 20px;
     font-family:inherit;-webkit-tap-highlight-color:transparent;
     transition:color .4s ease, opacity .4s ease;
-    opacity:0.22;pointer-events:none;`;
+    opacity:0.65;pointer-events:none;`;
   continueBtn.textContent = t ? 'skip' : 'omitir';
   continueBtn.addEventListener('click', () => {
     layer.style.transition = 'opacity 0.8s ease';
@@ -4416,7 +4482,7 @@ async function getVoiceReflection(spokenText, zoneKey, shadowWord, toneKey, refl
     continueBtn.style.pointerEvents = 'auto';
   }, 12000);
 
-  reflectionEl.style.color = 'rgba(201,169,110,.25)';
+  reflectionEl.style.color = 'rgba(201,169,110,.65)';
   reflectionEl.textContent = '·  ·  ·';
 
   const toneLabel = { pleasant: 'pleasant', unpleasant: 'unpleasant', neutral: 'neutral' };
@@ -4890,10 +4956,36 @@ Your first question should go deeper into what they already named — not restat
   document.querySelectorAll('[id*="tapEl"], .dec-tap-hint').forEach(el => { el.textContent = ''; el.style.opacity = '0'; });
 
   showScreen('s-chamber', () => {
-    setTimeout(() => { contextEl.style.opacity = '1'; }, 600);
+    // Immediate anchor — shadow word + zone visible before AI responds
+    setTimeout(() => { contextEl.style.opacity = '1'; }, 200);
+
+    // Breathing dots — holds attention during API latency
+    const loadingDots = document.createElement('div');
+    loadingDots.id = 'chamber-loading';
+    loadingDots.style.cssText = `font-size:clamp(18px,4.5vw,22px);letter-spacing:.4em;
+      color:rgba(240,230,208,.55);text-align:center;opacity:0;transition:opacity 0.8s ease;
+      font-family:'Cormorant Garamond',Georgia,serif;`;
+    loadingDots.textContent = '·  ·  ·';
+    msgsEl.appendChild(loadingDots);
+    setTimeout(() => { loadingDots.style.opacity = '1'; }, 400);
+
+    // Animate dots
+    let dotPhase = 0;
+    const dotTexts = ['·  ·  ·', '·  ·   ', '·      ', '·  ·  ·'];
+    const dotInterval = setInterval(() => {
+      dotPhase = (dotPhase + 1) % dotTexts.length;
+      loadingDots.textContent = dotTexts[dotPhase];
+    }, 500);
+
     // Opening AI question arrives after a beat
     setTimeout(() => {
       chamberCallAI(() => {
+        // Remove loading dots when AI responds
+        clearInterval(dotInterval);
+        loadingDots.style.transition = 'opacity 0.4s ease';
+        loadingDots.style.opacity = '0';
+        setTimeout(() => { if (loadingDots.parentNode) loadingDots.remove(); }, 400);
+
         // Show input and skip after first AI message
         setTimeout(() => {
           inputWrap.style.opacity = '1';
@@ -4907,7 +4999,7 @@ Your first question should go deeper into what they already named — not restat
           }
         }, 600);
       });
-    }, 1800);
+    }, 1200);
   });
 
   // Skip always available
@@ -5139,12 +5231,15 @@ function startDecBreath(displayName) {
   decOrb.wordText = displayName;
   decOrb.wordTargetAlpha = 0;
   decOrb.wordGlowIntensity = 0.4; // steady moderate glow throughout
+  decOrb.alpha = 0; // start invisible — fades in with breath layer
 
   decOrb.onPhaseChange = (phase) => {
     if (phase === 'inhale') {
       // Word glows on inhale — being seen, held in awareness
       decOrb.wordTargetAlpha = 0.85;
       decOrb.wordGlowIntensity = 0.5 + decOrb.cycleCount * 0.15;
+      // Colour arc: cycle 0=red-amber, 1=rose, 2=violet-cream
+      decOrb.wordColorPhase = Math.min(decOrb.cycleCount, 2);
     } else if (phase === 'hold') {
       decOrb.wordTargetAlpha = 0.65;
       decOrb.wordGlowIntensity = 0.4;
@@ -5154,11 +5249,25 @@ function startDecBreath(displayName) {
       decOrb.wordGlowIntensity = 0.1;
     } else if (phase === 'rest') {
       decOrb.wordTargetAlpha = 0.25;
+    } else if (phase === 'morph') {
+      // Luminous cream-white for ascent
+      decOrb.wordColorPhase = 3;
+      decOrb.wordTargetAlpha = 1;
+      decOrb.wordGlowIntensity = 1;
     }
   };
 
-  // Register orb so render loop draws it
-  window._decOrb = decOrb;
+  // Register orb after breath layer fades in — no pop-in during crossfade
+  setTimeout(() => {
+    window._decOrb = decOrb;
+    // Fade orb in smoothly
+    const fadeIn = () => {
+      if (!window._decOrb) return;
+      decOrb.alpha = Math.min((decOrb.alpha || 0) + 0.02, 1);
+      if (decOrb.alpha < 1) requestAnimationFrame(fadeIn);
+    };
+    requestAnimationFrame(fadeIn);
+  }, 1100);
 
   let cycle = 0;
   const decTimers = [];
