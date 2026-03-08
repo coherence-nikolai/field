@@ -1500,9 +1500,6 @@ function buildObsScreen() {
     // Progress dots
     const prog = document.getElementById('noting-progress');
     const target = obsStorm ? 10 : 7;
-    // Progress dots
-    const prog = document.getElementById('noting-progress');
-    const target = obsStorm ? 10 : 7;
     for (let i = 0; i < target; i++) {
       const d = document.createElement('div');
       d.className = 'ndot-pip'; d.id = 'ndot' + i;
@@ -1533,9 +1530,9 @@ function buildObsScreen() {
         // Log directly — no tone screen
         noteCount++;
         sessionNoteLog.push(s.key);
-        const prog = document.getElementById('noting-progress');
-        if (prog) {
-          const pips = prog.querySelectorAll('.ndot-pip');
+        const progEl = document.getElementById('noting-progress');
+        if (progEl) {
+          const pips = progEl.querySelectorAll('.ndot-pip');
           pips.forEach((p, i) => p.classList.toggle('pip-lit', i < noteCount));
         }
         if (audioCtx) playNoteSense(s.key);
