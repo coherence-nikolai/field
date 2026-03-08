@@ -1451,20 +1451,20 @@ function showBackBtn() {
 
 const NOTE_SENSES = {
   en: [
-    {key:'seeing', label:'seeing', glyph:'◌'},
-    {key:'hearing', label:'hearing', glyph:'~'},
-    {key:'body', label:'body', glyph:'◎'},
-    {key:'mind', label:'mind', glyph:'◉'},
-    {key:'taste', label:'taste', glyph:'·'},
-    {key:'smell', label:'smell', glyph:'˚'}
+    {key:'seeing',  label:'seeing',  glyph:'◌', color:'rgba(180,210,240,', border:'rgba(140,190,230,'},
+    {key:'hearing', label:'hearing', glyph:'~', color:'rgba(180,200,160,', border:'rgba(150,190,130,'},
+    {key:'body',    label:'body',    glyph:'◎', color:'rgba(201,169,110,', border:'rgba(201,150, 80,'},
+    {key:'mind',    label:'mind',    glyph:'◉', color:'rgba(200,160,220,', border:'rgba(180,130,210,'},
+    {key:'taste',   label:'taste',   glyph:'·', color:'rgba(220,180,140,', border:'rgba(210,160,110,'},
+    {key:'smell',   label:'smell',   glyph:'˚', color:'rgba(160,210,190,', border:'rgba(120,190,160,'}
   ],
   es: [
-    {key:'seeing', label:'ver', glyph:'◌'},
-    {key:'hearing', label:'oír', glyph:'~'},
-    {key:'body', label:'cuerpo', glyph:'◎'},
-    {key:'mind', label:'mente', glyph:'◉'},
-    {key:'taste', label:'gusto', glyph:'·'},
-    {key:'smell', label:'olor', glyph:'˚'}
+    {key:'seeing',  label:'ver',     glyph:'◌', color:'rgba(180,210,240,', border:'rgba(140,190,230,'},
+    {key:'hearing', label:'oír',     glyph:'~', color:'rgba(180,200,160,', border:'rgba(150,190,130,'},
+    {key:'body',    label:'cuerpo',  glyph:'◎', color:'rgba(201,169,110,', border:'rgba(201,150, 80,'},
+    {key:'mind',    label:'mente',   glyph:'◉', color:'rgba(200,160,220,', border:'rgba(180,130,210,'},
+    {key:'taste',   label:'gusto',   glyph:'·', color:'rgba(220,180,140,', border:'rgba(210,160,110,'},
+    {key:'smell',   label:'olor',    glyph:'˚', color:'rgba(160,210,190,', border:'rgba(120,190,160,'}
   ]
 };
 const NOTE_TONES = {
@@ -1489,127 +1489,66 @@ function buildObsScreen() {
   const screen = document.getElementById('s-observe');
 
   if (obsMode === 'noting') {
-    // ── TWO-SCREEN NOTING FLOW ──
-    // Screen 1: Sense — full screen, one question
-    // Screen 2: Tone — full screen, auto-shown after sense tap
     screen.innerHTML = `
       <div id="noting-sense-screen" class="noting-phase active-phase">
-        <div class="noting-step-dots"><span class="nsdot active"></span><span class="nsdot"></span></div>
         <div class="noting-question">${t ? 'what are you noticing?' : '¿qué estás notando?'}</div>
-        <div class="noting-sub">${t ? 'one sense, right now' : 'un sentido, ahora mismo'}</div>
-        <div id="senseRow" class="sense-row-full"></div>
-        <div id="stormWord" class="storm-word"></div>
-        <div id="noteCounter" class="note-counter">${t?'notes':'notas'} · 0</div>
-        <div id="obs-timer-noting" style="font-size:clamp(11px,2.8vw,13px);letter-spacing:.18em;color:rgba(201,169,110,.35);"></div>
-        <div id="noting-progress" style="display:flex;gap:6px;justify-content:center;margin-top:4px;"></div>
-      </div>
-      <div id="noting-tone-screen" class="noting-phase noting-tone-phase">
-        <div class="tone-zone-header">
-          <div class="noting-question" id="noting-sense-label"></div>
-          <div class="noting-sub">${t ? 'how does it feel?' : '¿cómo se siente?'}</div>
-        </div>
-        <div id="toneRow" class="tone-zone-row"></div>
+        <div id="senseRow" class="sense-grid"></div>
+        <div id="noting-progress" class="noting-dots-row"></div>
+        <div id="obs-timer-noting" class="noting-timer"></div>
       </div>`;
 
     // Progress dots
     const prog = document.getElementById('noting-progress');
     const target = obsStorm ? 10 : 7;
+    // Progress dots
+    const prog = document.getElementById('noting-progress');
+    const target = obsStorm ? 10 : 7;
     for (let i = 0; i < target; i++) {
       const d = document.createElement('div');
-      d.className = 'mdot'; d.id = 'ndot' + i;
+      d.className = 'ndot-pip'; d.id = 'ndot' + i;
       prog.appendChild(d);
     }
 
-    // Sense buttons — full screen style
+    // Six sense buttons — 2×3 grid, tap = log immediately
     const senseRow = document.getElementById('senseRow');
     NOTE_SENSES[lang].forEach(s => {
       const b = document.createElement('button');
-      b.className = 'sense-chip-full';
-      b.innerHTML = `<span class="scf-glyph">${s.glyph}</span><span class="scf-label">${s.label}</span>`;
-      let _senseFired = false;
-      const fireSense = () => {
-        if (_senseFired) return;
-        _senseFired = true;
-        setTimeout(() => { _senseFired = false; }, 800);
-        chooseNoteSense(s.key, b);
-      };
-      b.onclick = fireSense;
-      b.addEventListener('touchstart', e => { e.stopPropagation(); }, { passive: true });
-      b.addEventListener('touchend', e => { e.preventDefault(); e.stopPropagation(); fireSense(); });
-      senseRow.appendChild(b);
-    });
-
-    // Tone zones — full screen thirds, no centering issues
-    const toneRow = document.getElementById('toneRow');
-    const toneZones = lang === 'en'
-      ? [{key:'neutral',   symbol:'○', word:'neither',    color:'rgba(180,175,165,', bg:'rgba(180,175,165,.05)'},
-         {key:'pleasant',  symbol:'+', word:'good',       color:'rgba(201,169,110,', bg:'rgba(201,169,110,.07)'},
-         {key:'unpleasant',symbol:'–', word:'difficult',  color:'rgba(110,150,201,', bg:'rgba(110,150,201,.07)'}]
-      : [{key:'neutral',   symbol:'○', word:'ninguno',    color:'rgba(180,175,165,', bg:'rgba(180,175,165,.05)'},
-         {key:'pleasant',  symbol:'+', word:'bueno',      color:'rgba(201,169,110,', bg:'rgba(201,169,110,.07)'},
-         {key:'unpleasant',symbol:'–', word:'difícil',    color:'rgba(110,150,201,', bg:'rgba(110,150,201,.07)'}];
-
-    toneZones.forEach(tone => {
-      const z = document.createElement('button');
-      z.className = 'tone-zone';
-      z.type = 'button';
-      z.dataset.toneKey = tone.key;
-      z.style.cssText = `background:${tone.bg};border:none;border-bottom:1px solid rgba(240,230,208,.06);`;
-      z.innerHTML = `<span class="tz-symbol" style="color:${tone.color}0.85)">${tone.symbol}</span><span class="tz-word" style="color:${tone.color}0.75)">${tone.word}</span>`;
-
+      b.type = 'button';
+      b.className = 'sense-btn';
+      // Per-sense color vars
+      const glCol = s.color + '0.90)';
+      const bgCol = s.color + '0.13)';
+      const brCol = s.border + '0.60)';
+      b.style.cssText = `--sc-gl:${glCol};--sc-bg:${bgCol};--sc-br:${brCol};`;
+      b.innerHTML = `<span class="sb-glyph" style="color:${glCol}">${s.glyph}</span><span class="sb-label">${s.label}</span>`;
       let _fired = false;
       const fire = () => {
         if (_fired) return;
         _fired = true;
-        z.style.background = tone.bg.replace('.07)', '.18)').replace('.05)', '.14)');
-        if (navigator.vibrate) navigator.vibrate(10);
-        setTimeout(() => chooseNoteTone(tone.key, z), 80);
+        setTimeout(() => { _fired = false; }, 500);
+        // Flash
+        b.classList.add('sb-active');
+        setTimeout(() => b.classList.remove('sb-active'), 300);
+        if (navigator.vibrate) navigator.vibrate(8);
+        // Log directly — no tone screen
+        noteCount++;
+        sessionNoteLog.push(s.key);
+        const prog = document.getElementById('noting-progress');
+        if (prog) {
+          const pips = prog.querySelectorAll('.ndot-pip');
+          pips.forEach((p, i) => p.classList.toggle('pip-lit', i < noteCount));
+        }
+        if (audioCtx) playNoteSense(s.key);
+        if (noteCount >= target) {
+          clearInterval(obsTimerInterval);
+          reachObsCoherence();
+        }
       };
-      z.onclick = fire;
-      z.addEventListener('touchend', e => { e.preventDefault(); e.stopPropagation(); fire(); });
-      toneRow.appendChild(z);
+      b.onclick = fire;
+      b.addEventListener('touchend', e => { e.preventDefault(); e.stopPropagation(); fire(); });
+      senseRow.appendChild(b);
     });
 
-    const stormLink = document.createElement('div');
-    stormLink.style.cssText = 'position:absolute;bottom:clamp(28px,7vh,48px);left:50%;transform:translateX(-50%);font-size:clamp(11px,2.8vw,13px);letter-spacing:.18em;color:rgba(240,204,136,.58);cursor:pointer;padding:8px 16px;white-space:nowrap;-webkit-tap-highlight-color:transparent;';
-    stormLink.textContent = lang === 'en' ? 'enter storm' : 'entrar tormenta';
-    stormLink.addEventListener('click', () => { if(audioCtx) playTap(); const obsScr = document.getElementById('s-observe'); if (obsScr) { obsScr.style.transition = 'opacity 0.3s ease'; obsScr.style.opacity = '0'; } setTimeout(() => { clearObserver(); startStormScreen(); }, 280); });
-
-    // Voice noting button — only if Web Speech API available
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const voiceWrap = document.createElement('div');
-      voiceWrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;margin-top:4px;';
-
-      const micBtn = document.createElement('button');
-      micBtn.id = 'mic-btn';
-      micBtn.innerHTML = '&#127908;';
-      micBtn.style.cssText = 'background:none;border:1px solid rgba(201,169,110,.18);border-radius:50%;' +
-        'width:52px;height:52px;font-size:22px;color:rgba(201,169,110,.80);cursor:pointer;' +
-        '-webkit-tap-highlight-color:transparent;transition:all .4s ease;display:flex;' +
-        'align-items:center;justify-content:center;line-height:1;';
-      micBtn.title = t ? 'voice note' : 'nota de voz';
-
-      const voiceLabel = document.createElement('div');
-      voiceLabel.id = 'voice-label';
-      voiceLabel.style.cssText = 'font-size:clamp(10px,2.5vw,12px);letter-spacing:.14em;color:rgba(201,169,110,.60);';
-      voiceLabel.textContent = t ? 'voice' : 'voz';
-
-      const voiceTranscriptEl = document.createElement('div');
-      voiceTranscriptEl.id = 'voice-transcript';
-      voiceTranscriptEl.style.cssText = 'font-size:clamp(18px,5vw,24px);letter-spacing:.04em;' +
-        'color:rgba(240,230,208,.68);font-style:italic;min-height:22px;max-width:280px;' +
-        'text-align:center;line-height:1.5;opacity:0;transition:opacity .6s ease;';
-
-      micBtn.addEventListener('click', () => toggleVoiceNoting(micBtn, voiceTranscriptEl));
-      micBtn.addEventListener('touchend', e => { e.preventDefault(); toggleVoiceNoting(micBtn, voiceTranscriptEl); });
-
-      voiceWrap.appendChild(micBtn);
-      voiceWrap.appendChild(voiceLabel);
-      voiceWrap.appendChild(voiceTranscriptEl);
-      document.getElementById('noting-sense-screen').appendChild(voiceWrap);
-    }
-
-    document.getElementById('noting-sense-screen').appendChild(stormLink);
     return;
   }
 
@@ -2219,7 +2158,7 @@ function reachObsCoherence() {
     showScreen('s-obs-coherence');
     // Fire observe AI mirror after screen settles (noting only)
     if (isNoting && sessionNoteLog.length >= 3) {
-      setTimeout(() => runObserveAI([...sessionNoteLog]), 1800);
+      // AI mirror removed — observe is pure attention, no feedback
     }
   }, 2200);
 }
