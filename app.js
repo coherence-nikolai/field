@@ -194,11 +194,11 @@ class BreathOrb {
     this.dispRadius = 9;
     this.dispBlur = 0;
     this.dispGlow = 1;
-    this.SETTLE = 1800;
-    this.INHALE = 4500;
-    this.HOLD   = 1500;
-    this.EXHALE = 5000;
-    this.REST   = 800;
+    this.SETTLE = 9500;   // Extended — instructions play during this window
+    this.INHALE = 5000;
+    this.HOLD   = 1200;
+    this.EXHALE = 5500;
+    this.REST   = 700;
     this.ripples = [];
     this.flickPh = 0;
     this.onPhaseChange = null;
@@ -206,11 +206,15 @@ class BreathOrb {
     this.wordAlpha = 0;
     this.wordTargetAlpha = 0;
     this.wordScale = 1;
+    this.wordVibX = 0;    // vibration offset x
+    this.wordVibY = 0;    // vibration offset y
+    this.wordVibPh = 0;   // vibration phase
+    this.wordGlowIntensity = 0; // 0→1 across cycles
     this.morphStartY = 0;
     this.MORPH_DURATION = 2800;
     this.MORPH_LIFT = innerHeight * 0.55;
     this.onMorphDone = null;
-    // Colour palette: 'gold' (Collapse) or 'violet' (Witness)
+    // Colour palette
     if (palette === 'violet') {
       this.c1 = '210,180,240'; this.c2 = '175,135,215';
       this.c3 = '170,130,210'; this.c4 = '230,210,250'; this.c5 = '200,170,235';
@@ -233,49 +237,68 @@ class BreathOrb {
     this.flickPh += 0.35;
     const flicker = 0.92 + 0.08 * Math.sin(this.flickPh);
 
-    // Move toward centre
     this.x += (this.targetX - this.x) * 0.04;
     this.y += (this.targetY - this.y) * 0.04;
 
     let targetRadius, targetBlur, targetGlow;
 
     if (this.phase === 'settling') {
-      // Gentle pre-breath settle — small soft pulse
+      // Quiet — just sits and breathes gently while instructions play
       const p = Math.min(t / this.SETTLE, 1);
-      targetRadius = 9 + 6 * Math.sin(p * Math.PI);
-      targetBlur = 2 + 3 * Math.sin(p * Math.PI);
-      targetGlow = 0.4 + 0.3 * Math.sin(p * Math.PI);
+      targetRadius = 9 + 4 * Math.sin(p * Math.PI * 1.5);
+      targetBlur   = 0;
+      targetGlow   = 0.6 + 0.2 * Math.sin(p * Math.PI);
       if (t > this.SETTLE) this.startPhase('inhale');
 
     } else if (this.phase === 'inhale') {
-      // Expand to blurry superposition — all possibilities
+      // Expand dramatically — all possibilities
       const p = Math.min(t / this.INHALE, 1);
-      const ease = 1 - Math.pow(1 - p, 3); // ease-out cubic
-      targetRadius = 9 + 51 * ease;    // 9 → 60
-      targetBlur   = 0 + 10 * ease;    // 0 → 10
-      targetGlow   = 1 - 0.4 * ease;   // 1 → 0.6
+      const ease = 1 - Math.pow(1 - p, 3);
+      targetRadius = 9 + 91 * ease;     // 9 → 100 (was 60)
+      targetBlur   = 0 + 16 * ease;     // more blur = more superposition
+      targetGlow   = 1 - 0.5 * ease;
+      // Word gets softer, more diffuse as possibilities expand
+      this.wordVibPh += 0.04;
+      this.wordVibX = Math.sin(this.wordVibPh) * 1.2 * ease;
+      this.wordVibY = Math.cos(this.wordVibPh * 0.7) * 0.8 * ease;
       if (t > this.INHALE) {
         this.ripples.push({ r: this.dispRadius * 0.8, alpha: 0.5 });
         this.startPhase('hold');
       }
 
     } else if (this.phase === 'hold') {
-      // Peak — suspended, diffuse
-      targetRadius = 60;
-      targetBlur   = 9;
-      targetGlow   = 0.5;
+      targetRadius = 100;
+      targetBlur   = 15;
+      targetGlow   = 0.45;
+      this.wordVibPh += 0.06;
+      this.wordVibX = Math.sin(this.wordVibPh) * 2;
+      this.wordVibY = Math.cos(this.wordVibPh * 0.8) * 1.2;
       if (t > this.HOLD) this.startPhase('exhale');
 
     } else if (this.phase === 'exhale') {
-      // Collapse — wave function collapsing to a single defined point
+      // Collapse — wave function collapses, word becomes dominant
       const p = Math.min(t / this.EXHALE, 1);
-      const ease = p < 0.5 ? 2*p*p : 1-Math.pow(-2*p+2,2)/2; // ease-in-out
-      targetRadius = 60 - 51 * ease;   // 60 → 9
-      targetBlur   = 10  - 10  * ease; // 10 → 0
-      targetGlow   = 0.5 + (0.9 + this.cycleCount * 0.25) * ease;
-      // Big ripple at start of exhale
-      if (t < 60 && this.ripples.length === 0) {
-        this.ripples.push({ r: 20, alpha: 0.7 });
+      const ease = p < 0.5 ? 2*p*p : 1-Math.pow(-2*p+2,2)/2;
+      targetRadius = 100 - 88 * ease;   // 100 → 12
+      targetBlur   = 15  - 15  * ease;
+      targetGlow   = 0.45 + (1.2 + this.cycleCount * (this.cycleCount === 2 ? 1.2 : 0.4)) * ease;
+      // Word vibration calms to stillness as it crystallises
+      this.wordVibPh += 0.08 * (1 - ease);
+      this.wordVibX = Math.sin(this.wordVibPh) * 2 * (1 - ease);
+      this.wordVibY = Math.cos(this.wordVibPh * 0.7) * 1.2 * (1 - ease);
+      // NOTE: wordGlowIntensity is set by onPhaseChange — not overridden here
+      // On final cycle, send extra big ripple at exhale start for drama
+      if (t < 60) {
+        const ripCount = this.cycleCount === 2 ? 3 : 1;
+        if (this.ripples.length < ripCount) {
+          if (this.cycleCount === 2) {
+            this.ripples.push({ r: 18, alpha: 0.85 });
+            this.ripples.push({ r: 10, alpha: 0.6 });
+            this.ripples.push({ r: 5,  alpha: 0.45 });
+          } else {
+            this.ripples.push({ r: 20, alpha: 0.7 });
+          }
+        }
       }
       if (t > this.EXHALE) {
         this.cycleCount++;
@@ -288,50 +311,41 @@ class BreathOrb {
       }
 
     } else if (this.phase === 'rest') {
-      targetRadius = 9;
+      targetRadius = 12;
       targetBlur   = 0;
-      targetGlow   = 1.2;
+      targetGlow   = 1.4;
+      this.wordVibX = 0; this.wordVibY = 0;
       if (t > this.REST) this.startPhase('inhale');
 
     } else if (this.phase === 'crystallised') {
-      // Final collapse — steady bright defined point, then morph begins
       const age = Math.min(t / 1400, 1);
-      targetRadius = 9 + 6 * Math.sin(age * Math.PI * 0.5);
+      targetRadius = 12 + 6 * Math.sin(age * Math.PI * 0.5);
       targetBlur   = 0;
-      targetGlow   = 1.5 + 0.5 * Math.sin(t * 0.003); // slow pulse
+      targetGlow   = 1.8 + 0.5 * Math.sin(t * 0.003);
+      this.wordGlowIntensity = 1;
+      this.wordVibX = 0; this.wordVibY = 0;
 
     } else if (this.phase === 'morph') {
-      // Word and orb contract to bright point, then particle lifts upward
       const p = Math.min(t / this.MORPH_DURATION, 1);
       const ease = p < 0.5 ? 2*p*p : 1 - Math.pow(-2*p+2,2)/2;
-
-      // Orb contracts to near-zero
-      targetRadius = 9 * (1 - ease * 0.85);
+      targetRadius = 12 * (1 - ease * 0.85);
       targetBlur   = 0;
-      targetGlow   = 1.5 + ease * 2.5; // gets intensely bright as it contracts
-
-      // Word contracts toward orb centre (alpha driven separately below)
+      targetGlow   = 1.5 + ease * 2.5;
       this.wordScale = 1 - ease;
-
-      // Lift upward — start slow, accelerate
       const liftEase = Math.pow(p, 2);
       this.y = this.morphStartY - liftEase * this.MORPH_LIFT;
-
       if (t > this.MORPH_DURATION) {
         this.phase = 'done';
         if (this.onMorphDone) this.onMorphDone();
       }
     }
 
-    // Smooth lerp toward targets (speed varies by phase for feel)
     const lerpSpeed = this.phase === 'exhale' ? 0.055 : 0.045;
     this.dispRadius += (targetRadius - this.dispRadius) * lerpSpeed;
     this.dispBlur   += (targetBlur   - this.dispBlur)   * lerpSpeed;
     this.dispGlow   += (targetGlow   - this.dispGlow)   * lerpSpeed;
-    // Word fade
     this.wordAlpha  += (this.wordTargetAlpha - this.wordAlpha) * 0.03;
 
-    // Age ripples
     this.ripples = this.ripples.filter(rp => {
       rp.r += 2.2; rp.alpha -= 0.012;
       return rp.alpha > 0;
@@ -358,8 +372,8 @@ class BreathOrb {
       cx.restore();
     });
 
-    // ── Outer glow (corona) ──
-    const coronaR = r * 3.5 + bl * 8;
+    // ── Outer corona ──
+    const coronaR = r * 3.2 + bl * 10;
     if (coronaR > 1) {
       const corona = cx.createRadialGradient(px, py, r * 0.5, px, py, coronaR);
       corona.addColorStop(0, `rgba(${c2},${(0.18 * gl * this.alpha).toFixed(3)})`);
@@ -371,7 +385,7 @@ class BreathOrb {
     // ── Blurry expansion layer ──
     if (bl > 0.5) {
       cx.filter = `blur(${bl.toFixed(1)}px)`;
-      const expandR = r * 1.4;
+      const expandR = r * 1.35;
       const expGrad = cx.createRadialGradient(px, py, 0, px, py, expandR);
       expGrad.addColorStop(0, `rgba(${c1},${(0.55 * this.alpha).toFixed(3)})`);
       expGrad.addColorStop(0.5, `rgba(${c2},${(0.25 * this.alpha).toFixed(3)})`);
@@ -382,7 +396,7 @@ class BreathOrb {
     }
 
     // ── Inner glow ──
-    const innerR = r * 1.8 + (1 - bl / 18) * 30 * gl;
+    const innerR = r * 1.8 + (1 - bl / 22) * 30 * gl;
     const innerGrad = cx.createRadialGradient(px, py, 0, px, py, innerR);
     innerGrad.addColorStop(0, `rgba(${c4},${(0.85 * gl * this.alpha * flicker).toFixed(3)})`);
     innerGrad.addColorStop(0.4, `rgba(${c2},${(0.4 * gl * this.alpha).toFixed(3)})`);
@@ -391,7 +405,7 @@ class BreathOrb {
     cx.beginPath(); cx.arc(px, py, innerR, 0, Math.PI * 2); cx.fill();
 
     // ── Hard core ──
-    const coreAlpha = Math.max(0, 1 - bl / 10) * this.alpha;
+    const coreAlpha = Math.max(0, 1 - bl / 16) * this.alpha;
     if (coreAlpha > 0.01 && r > 0.1) {
       cx.globalAlpha = coreAlpha * flicker;
       cx.fillStyle = `rgba(${c4},1)`;
@@ -404,26 +418,51 @@ class BreathOrb {
     cx.globalAlpha = 1;
     cx.restore();
 
-    // ── State word ──
+    // ── State word — centred IN the orb, breathes and vibrates ──
     if (this.wordText && this.wordAlpha > 0.01) {
       const wordA = this.wordAlpha * this.alpha;
-      const cycleBlurFactor = Math.max(0, 1 - this.cycleCount * 0.45);
-      const wordBlur = bl * 0.2 + cycleBlurFactor * 10;
+      const gi = this.wordGlowIntensity; // 0→1 across cycles
+
+      // Font size grows with glow intensity — word becomes more dominant
+      const baseFontSize = Math.max(22, Math.min(58, innerWidth * 0.13));
+      const fontSize = baseFontSize * (0.7 + gi * 0.5) * (this.wordScale !== undefined ? this.wordScale : 1);
+      if (fontSize < 2) return;
+
+      // During inhale/hold: word softens with blur, during exhale/rest: sharp and bright
+      const isExpanded = this.phase === 'inhale' || this.phase === 'hold';
+      const wordBlur = isExpanded ? bl * 0.35 : 0;
+
       cx.save();
       if (wordBlur > 0.5) cx.filter = `blur(${wordBlur.toFixed(1)}px)`;
+
+      // Glow shadow — intensifies with each cycle and on exhale
+      const glowRadius = 12 + gi * 40;
+      const glowAlpha = 0.3 + gi * 0.7;
+      cx.shadowColor = `rgba(${c5},${(wordA * glowAlpha).toFixed(2)})`;
+      cx.shadowBlur = glowRadius;
+
+      // Brightness increases across cycles
+      const bright = Math.round(200 + gi * 55);
+      const wordColor = `rgba(${bright + 15},${bright},${Math.max(0,bright - 50)},${wordA.toFixed(3)})`;
+
       cx.globalAlpha = wordA;
-      const baseFontSize = Math.max(28, Math.min(72, innerWidth * 0.16));
-      const fontSize = baseFontSize * (this.wordScale !== undefined ? this.wordScale : 1);
-      if (fontSize < 2) { cx.restore(); return; }
       cx.font = `300 ${fontSize.toFixed(1)}px 'Cormorant Garamond', Georgia, serif`;
       cx.textAlign = 'center';
       cx.textBaseline = 'middle';
-      const glowStrength = 0.4 + this.cycleCount * 0.25;
-      cx.shadowColor = `rgba(${c5},${(wordA * glowStrength).toFixed(2)})`;
-      cx.shadowBlur = 18 + this.cycleCount * 12;
-      const brightness = 180 + this.cycleCount * 25;
-      cx.fillStyle = `rgba(${brightness+15},${brightness},${brightness-40},${wordA.toFixed(3)})`;
-      cx.fillText(this.wordText, px, py);
+      cx.fillStyle = wordColor;
+
+      // Position: centre of orb + vibration offset
+      const wx = px + (this.wordVibX || 0);
+      const wy = py + (this.wordVibY || 0);
+      cx.fillText(this.wordText, wx, wy);
+
+      // Second pass for extra glow on high-intensity moments
+      if (gi > 0.5) {
+        cx.shadowBlur = glowRadius * 2;
+        cx.globalAlpha = wordA * (gi - 0.5) * 0.6;
+        cx.fillText(this.wordText, wx, wy);
+      }
+
       cx.shadowBlur = 0;
       cx.filter = 'none';
       cx.restore();
@@ -726,6 +765,25 @@ function loop() {
     // Witness violet breath orb — drawn on same canvas
     if (window._decOrb && (currentMode === 'witness' || currentMode === 'decohere')) {
       window._decOrb.update(); window._decOrb.draw();
+      const dOrb = window._decOrb;
+      const isInhale = dOrb.phase === 'inhale' || dOrb.phase === 'hold';
+      const isExhale = dOrb.phase === 'exhale';
+      if (isInhale || isExhale) {
+        const orbR = dOrb.dispRadius;
+        const ringR = orbR * 2.8 + 18;
+        const progT = Math.min(dOrb.elapsed / (isInhale ? dOrb.INHALE : dOrb.EXHALE), 1);
+        const arc = isInhale ? progT * Math.PI * 2 : (1 - progT) * Math.PI * 2;
+        const ringAlpha = 0.15 + 0.10 * Math.sin(dOrb.flickPh * 0.4);
+        cx.save();
+        cx.globalAlpha = ringAlpha;
+        cx.strokeStyle = 'rgba(190,160,230,1)';
+        cx.lineWidth = 1;
+        cx.lineCap = 'round';
+        cx.beginPath();
+        cx.arc(dOrb.x, dOrb.y, ringR, -Math.PI/2, -Math.PI/2 + arc, false);
+        cx.stroke();
+        cx.restore();
+      }
     }
   } catch(e) { console.warn('loop err:', e); }
   requestAnimationFrame(loop);
@@ -734,19 +792,33 @@ loop();
 
 // ── AUDIO ──
 function initAudio() {
-  if (audioCtx) return;
+  if (audioCtx && audioCtx.state !== 'closed') return;
   audioCtx = new (window.AudioContext||window.webkitAudioContext)();
 }
 
-// [TECH1] visibilitychange — suspend/resume audio to save battery and prevent ghost audio
-document.addEventListener('visibilitychange', () => {
-  if (!audioCtx) return;
-  if (document.hidden) {
-    audioCtx.suspend().catch(() => {});
-  } else if (audioEnabled) {
+function resumeAudio() {
+  if (!audioCtx || audioCtx.state === 'closed') {
+    // Recreate destroyed context
+    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    return;
+  }
+  if (audioCtx.state === 'suspended') {
     audioCtx.resume().catch(() => {});
   }
+}
+
+// [TECH1] visibilitychange — resume audio when app returns to foreground
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    resumeAudio();
+  } else if (audioCtx && audioCtx.state !== 'closed') {
+    audioCtx.suspend().catch(() => {});
+  }
 });
+
+// Resume on any user touch — catches iOS first-interaction requirement
+document.addEventListener('touchstart', () => { resumeAudio(); }, { passive: true, capture: true });
+document.addEventListener('click', () => { resumeAudio(); }, { passive: true, capture: true });
 
 function playDrone() {
   if (!audioCtx || droneNodes.length) return;
@@ -791,6 +863,69 @@ function playCollapseSound() {
   bg.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+3.5);
   b.connect(bg); bg.connect(audioCtx.destination);
   b.start(audioCtx.currentTime+0.75); b.stop(audioCtx.currentTime+4);
+}
+function playBreathInhale() {
+  if (!audioCtx) return;
+  // Sine layer — rising harmonic
+  [[220,0],[330,0.08],[440,0.16]].forEach(([f, delay]) => {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(f * 0.85, audioCtx.currentTime + delay);
+    o.frequency.linearRampToValueAtTime(f, audioCtx.currentTime + delay + 3.5);
+    const t0 = audioCtx.currentTime + delay;
+    g.gain.setValueAtTime(0, t0);
+    g.gain.linearRampToValueAtTime(0.028 - delay * 0.04, t0 + 0.6);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 4.8);
+    o.connect(g); g.connect(audioCtx.destination); o.start(t0); o.stop(t0 + 5.2);
+  });
+  // Noise layer — breath texture
+  try {
+    const bufLen = audioCtx.sampleRate * 5;
+    const buf = audioCtx.createBuffer(1, bufLen, audioCtx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufLen; i++) data[i] = (Math.random() * 2 - 1);
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    const filt = audioCtx.createBiquadFilter();
+    filt.type = 'bandpass'; filt.frequency.value = 900; filt.Q.value = 0.4;
+    const g2 = audioCtx.createGain();
+    g2.gain.setValueAtTime(0, audioCtx.currentTime);
+    g2.gain.linearRampToValueAtTime(0.012, audioCtx.currentTime + 1.2);
+    g2.gain.linearRampToValueAtTime(0.018, audioCtx.currentTime + 3.5);
+    g2.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 5);
+    src.connect(filt); filt.connect(g2); g2.connect(audioCtx.destination);
+    src.start(); src.stop(audioCtx.currentTime + 5.2);
+  } catch(e) {}
+}
+function playBreathExhale() {
+  if (!audioCtx) return;
+  // Sine layer — descending settling
+  [[440,0],[330,0.1],[220,0.2]].forEach(([f, delay]) => {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(f, audioCtx.currentTime + delay);
+    o.frequency.exponentialRampToValueAtTime(f * 0.75, audioCtx.currentTime + delay + 4.5);
+    const t0 = audioCtx.currentTime + delay;
+    g.gain.setValueAtTime(0, t0);
+    g.gain.linearRampToValueAtTime(0.032 - delay * 0.04, t0 + 0.3);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 5.5);
+    o.connect(g); g.connect(audioCtx.destination); o.start(t0); o.stop(t0 + 6);
+  });
+  // Noise layer — releasing breath texture
+  try {
+    const bufLen = audioCtx.sampleRate * 6;
+    const buf = audioCtx.createBuffer(1, bufLen, audioCtx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufLen; i++) data[i] = (Math.random() * 2 - 1);
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    const filt = audioCtx.createBiquadFilter();
+    filt.type = 'bandpass'; filt.frequency.value = 600; filt.Q.value = 0.3;
+    const g2 = audioCtx.createGain();
+    g2.gain.setValueAtTime(0, audioCtx.currentTime);
+    g2.gain.linearRampToValueAtTime(0.016, audioCtx.currentTime + 0.4);
+    g2.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 5.5);
+    src.connect(filt); filt.connect(g2); g2.connect(audioCtx.destination);
+    src.start(); src.stop(audioCtx.currentTime + 6);
+  } catch(e) {}
 }
 function playExhaleCollapse() {
   if (!audioCtx) return;
@@ -968,6 +1103,7 @@ function playDecohereSignature() {
 
 // ── SCREEN TRANSITIONS ──
 function showScreen(id, postCb) {
+  resumeAudio();
   const gh = document.getElementById('ghosts');
   if (gh) {
     if (id !== 's-collapse' && id !== 's-field') {
@@ -2180,6 +2316,7 @@ function clearObserver() {
   fieldActive = false; isCoherent = false;
   particleVisible = false; attentionSec = 0; affirmBonus = 0; clarityLevel = 0;
   isStill = true; kasinaParticle = null;
+  noteCount = 0; noteSense = ''; sessionNoteLog = [];
   clearTimeout(scatterTO);
   const ring = document.getElementById('clarity-ring');
   if (ring) { ring.style.display = 'none'; ring.style.borderColor = 'rgba(201,169,110,0)'; ring.style.boxShadow = 'none'; }
@@ -2645,57 +2782,37 @@ function startBreath() {
   const cycleIn  = lang === 'en' ? 'inhale' : 'inhala';
   const cycleOut = lang === 'en' ? 'exhale' : 'exhala';
   const inviteLine1 = lang === 'en' ? 'breathe in all possibilities' : 'inhala todas las posibilidades';
-  const inviteLine2 = (lang === 'en' ? 'exhale into ' : 'exhala hacia ') + stateName;
+  const inviteLine2 = (lang === 'en' ? 'exhale into · ' : 'exhala hacia · ') + stateName;
 
-  // Fade out the pre-breath imagination prompt immediately when breath starts
+  // Fade out the pre-breath imagination prompt
   const imagPre = document.getElementById('imagPre');
   if (imagPre) {
     imagPre.style.transition = 'opacity 0.8s ease';
     imagPre.style.opacity = '0';
-    setTimeout(() => { if (imagPre) { imagPre.style.display = 'none'; } }, 850);
+    setTimeout(() => { if (imagPre) imagPre.style.display = 'none'; }, 850);
   }
 
-  // Hide DOM bp element — we use canvas now
   const bp = document.getElementById('bp'); if (bp) bp.style.opacity = '0';
   const rp = document.getElementById('bripple'); if (rp) rp.className = 'bripple';
 
-  // Reset text
   btext.style.transition = 'none'; btext.style.opacity = '0';
   btext.textContent = ''; btext.className = 'btext';
   [0,1,2].forEach(i=>{ const d=document.getElementById('bdot'+i); if(d) d.classList.remove('done'); });
 
-  // Get chosen particle's canvas position — or centre if none
   const chosen = spParticles[spChosen % Math.max(spParticles.length, 1)];
   const startX = chosen ? chosen.x : innerWidth * 0.5;
   const startY = chosen ? chosen.y : innerHeight * 0.5;
 
-  // Fade out all sp particles — the orb takes over
   spParticles.forEach(sp => { sp.targetAlpha = 0; });
 
-  // Create BreathOrb at chosen particle position, moves to centre
   breathOrb = new BreathOrb(startX, startY);
   breathOrb.targetX = innerWidth * 0.5;
   breathOrb.targetY = innerHeight * 0.5;
-  breathOrb.wordText = ''; // no word inside orb — kept separate below
-  breathOrb.wordTargetAlpha = 0;
 
-  // State word shown BELOW the orb as a DOM element, fades over cycles
-  let stateWordEl = document.getElementById('breath-state-word');
-  if (!stateWordEl) {
-    stateWordEl = document.createElement('div');
-    stateWordEl.id = 'breath-state-word';
-    stateWordEl.style.cssText = `position:fixed;left:50%;transform:translateX(-50%);
-      font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:300;
-      font-size:clamp(28px,8vw,44px);letter-spacing:.04em;
-      color:rgba(240,204,136,.75);text-align:center;
-      pointer-events:none;z-index:25;opacity:0;
-      transition:opacity 2s ease, color 2s ease;white-space:nowrap;`;
-    document.body.appendChild(stateWordEl);
-  }
-  stateWordEl.textContent = stateName;
-  // Position below orb
-  stateWordEl.style.top = (innerHeight * 0.5 + 72) + 'px';
-  bDelay(() => { stateWordEl.style.opacity = '1'; }, 7200);
+  // Word lives INSIDE the orb — set immediately, alpha builds with first exhale
+  breathOrb.wordText = stateName;
+  breathOrb.wordTargetAlpha = 0;
+  breathOrb.wordGlowIntensity = 0;
 
   function showText(text, cls, delayMs) {
     bDelay(() => {
@@ -2716,54 +2833,64 @@ function startBreath() {
     bDelay(() => { btext.style.transition = 'opacity 0.8s ease'; btext.style.opacity = '0'; }, delayMs || 0);
   }
 
-  // ── Intro instructions (shown during settling phase) ──
+  // ── Pre-breath instruction sequence (during SETTLE = 9500ms) ──
+  // Line 1: "breathe in all possibilities" — 0.8s to 4.5s
   bDelay(() => {
     btext.className = 'btext intro';
     btext.textContent = inviteLine1;
     btext.style.transition = 'opacity 2.5s ease'; btext.style.opacity = '1';
   }, 800);
-  bDelay(() => {
-    btext.style.transition = 'opacity 1.2s ease'; btext.style.opacity = '0';
-    bDelay(() => {
-      btext.className = 'btext intro-gold';
-      btext.textContent = inviteLine2;
-      btext.style.transition = 'opacity 2.5s ease'; btext.style.opacity = '1';
-    }, 1200);
-  }, 5000);
-  hideText(9000);
+  hideText(4600);
 
-  // ── Wire up BreathOrb phase changes to text labels ──
+  // Line 2: "exhale into · [word]" — 5.5s to 9s — word also glows faintly in orb
+  bDelay(() => {
+    btext.className = 'btext intro-gold';
+    btext.textContent = inviteLine2;
+    btext.style.transition = 'opacity 2s ease'; btext.style.opacity = '1';
+    // Word appears faintly inside orb as its name is spoken
+    if (breathOrb) { breathOrb.wordTargetAlpha = 0.28; }
+  }, 5500);
+  hideText(9200);
+
+  // ── Wire up BreathOrb phase changes ──
   const INHALE = breathOrb.INHALE, HOLD = breathOrb.HOLD, EXHALE = breathOrb.EXHALE, REST = breathOrb.REST;
 
   breathOrb.onPhaseChange = (phase, cycle) => {
     if (phase === 'inhale') {
-      // Word alpha by cycle: 1→0.85, 2→0.42, 3→0.10
-      if (breathOrb) {
-        const wordAlphas = [0.85, 0.42, 0.10];
-        breathOrb.wordTargetAlpha = wordAlphas[Math.min(cycle, 2)];
-      }
-      // Minimal inhale label fades in with breath
-      bDelay(() => { showText(cycleIn, 'cycle', 0); }, 500);
-      bDelay(() => { btext.style.transition='opacity 0.8s ease'; btext.style.opacity='0'; }, INHALE - 600);
+      // Inhale: word stays dim — possibilities are open, not yet chosen
+      // Cycle 2 (third): word barely visible, anticipation before the final crystallisation
+      const inAlphas = [0.18, 0.22, 0.30];
+      if (breathOrb) breathOrb.wordTargetAlpha = inAlphas[Math.min(cycle, 2)];
+      bDelay(() => { showText(cycleIn, 'cycle', 0); }, 400);
+      bDelay(() => { btext.style.transition='opacity 0.8s ease'; btext.style.opacity='0'; }, INHALE - 800);
+      playBreathInhale();
+
     } else if (phase === 'exhale') {
-      // Word dims further on exhale — pulled toward collapse
+      // Dramatic jump: cycles 0+1 stay subtle, cycle 2 = full explosion
+      const exAlphas    = [0.38, 0.52, 1.0];
+      const exGlows     = [0.05, 0.12, 1.0];  // glow almost nothing until final
       if (breathOrb) {
-        const exhaleAlphas = [0.55, 0.22, 0.0];
-        breathOrb.wordTargetAlpha = exhaleAlphas[Math.min(cycle, 2)];
+        breathOrb.wordTargetAlpha    = exAlphas[Math.min(cycle, 2)];
+        breathOrb.wordGlowIntensity  = exGlows[Math.min(cycle, 2)];
       }
-      // Exhale label — slightly more present
       showText(cycleOut, 'cycle-exhale', 100);
-      bDelay(() => { btext.style.transition='opacity 0.8s ease'; btext.style.opacity='0'; }, EXHALE - 600);
+      bDelay(() => { btext.style.transition='opacity 0.8s ease'; btext.style.opacity='0'; }, EXHALE - 800);
+      playBreathExhale();
       playExhaleCollapse();
+      if (cycle === 2 && navigator.vibrate) navigator.vibrate([30, 60, 50, 80, 80]);
       const cw = document.getElementById('cword'); if (cw) cw.classList.add('exhaling');
+
     } else if (phase === 'rest') {
       const cw = document.getElementById('cword'); if (cw) cw.classList.remove('exhaling');
       const dot = document.getElementById('bdot' + (cycle - 1));
       if (dot) dot.classList.add('done');
+
+    } else if (phase === 'hold') {
+      if (breathOrb) breathOrb.wordTargetAlpha = Math.max(0.10, breathOrb.wordAlpha * 0.5);
+
     } else if (phase === 'crystallised') {
-      // Word fully dissolved
-      if (breathOrb) breathOrb.wordTargetAlpha = 0;
-      // Third dot — lights on crystallise since there's no rest after final exhale
+      // Final state — word at full glory, max glow
+      if (breathOrb) { breathOrb.wordTargetAlpha = 1; breathOrb.wordGlowIntensity = 1; }
       const dot2 = document.getElementById('bdot2');
       if (dot2) dot2.classList.add('done');
     }
@@ -2772,25 +2899,19 @@ function startBreath() {
   breathOrb.onCyclesDone = () => {
     breathRunning = false;
     btext.style.transition = 'opacity 0.9s ease'; btext.style.opacity = '0';
-    // Fade state word below orb
-    const sw = document.getElementById('breath-state-word');
-    if (sw) { sw.style.transition = 'opacity 1.2s ease'; sw.style.opacity = '0'; setTimeout(() => { if(sw.parentNode) sw.parentNode.removeChild(sw); }, 1300); }
 
-    // Hold crystallised for 800ms so user sees the bright point, then morph
     setTimeout(() => {
       if (!breathOrb) return;
       breathOrb.morphStartY = breathOrb.y;
-      breathOrb.wordTargetAlpha = 0; // word fades as orb lifts
+      breathOrb.wordTargetAlpha = 0;
       breathOrb.startPhase('morph');
 
       breathOrb.onMorphDone = () => {
-        // Particle inherits orb's final lifted position
         if (chosen) {
           chosen.x  = breathOrb ? breathOrb.x : innerWidth * 0.5;
           chosen.y  = breathOrb ? breathOrb.y : innerHeight * 0.2;
           chosen.cx = chosen.x / innerWidth;
           chosen.cy = chosen.y / innerHeight;
-          // Particle target — settle to upper third
           chosen.targetCx = 0.5;
           chosen.targetCy = 0.14;
           chosen.targetAlpha = 1;
@@ -4486,34 +4607,25 @@ function startDecBreath(displayName) {
   // ── Violet BreathOrb on the shared canvas ──
   const decOrb = new BreathOrb(innerWidth * 0.5, innerHeight * 0.5, 'violet');
   decOrb.maxCycles = 3;
-  // Word shown below orb — separate DOM element
-  let decWordEl = document.getElementById('dec-state-word');
-  if (!decWordEl) {
-    decWordEl = document.createElement('div');
-    decWordEl.id = 'dec-state-word';
-    decWordEl.style.cssText = `position:fixed;left:50%;transform:translateX(-50%);
-      font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:300;
-      font-size:clamp(26px,7vw,40px);letter-spacing:.06em;
-      color:rgba(200,170,235,.75);text-align:center;
-      pointer-events:none;z-index:25;opacity:0;
-      transition:opacity 2.2s ease, color 2.2s ease;white-space:nowrap;`;
-    document.body.appendChild(decWordEl);
-  }
-  decWordEl.textContent = displayName;
-  decWordEl.style.top = (innerHeight * 0.5 + 78) + 'px';
-  // Fade in at first inhale
+  // Word lives INSIDE the orb on canvas — steady and present (witnessing, not choosing)
+  decOrb.wordText = displayName;
+  decOrb.wordTargetAlpha = 0;
+  decOrb.wordGlowIntensity = 0.4; // steady moderate glow throughout
+
   decOrb.onPhaseChange = (phase) => {
-    if (phase === 'inhale' && decOrb.cycleCount === 0) {
-      setTimeout(() => { if (decWordEl) decWordEl.style.opacity = '1'; }, 600);
-    }
-    if (phase === 'exhale') {
-      // Dim word on exhale
-      const a = Math.max(0.18, 0.75 - decOrb.cycleCount * 0.2);
-      if (decWordEl) { decWordEl.style.opacity = a.toFixed(2); decWordEl.style.color = `rgba(180,150,215,${a.toFixed(2)})`; }
+    if (phase === 'inhale') {
+      // Word stays present but soft on inhale
+      decOrb.wordTargetAlpha = 0.45;
+    } else if (phase === 'exhale') {
+      // Word brightens gently on exhale — being witnessed, held
+      decOrb.wordTargetAlpha = 0.75;
+      decOrb.wordGlowIntensity = Math.min(0.7, 0.4 + decOrb.cycleCount * 0.1);
+    } else if (phase === 'hold') {
+      decOrb.wordTargetAlpha = 0.38;
     }
   };
 
-  // Register orb so render loop draws it (stored alongside breathOrb)
+  // Register orb so render loop draws it
   window._decOrb = decOrb;
 
   let cycle = 0;
@@ -4563,7 +4675,13 @@ function startDecBreath(displayName) {
     setBtext(inhaleText);
 
     // Drive orb phase manually to sync with our timers
-    dDelay(() => { if (window._decOrb) window._decOrb.startPhase('inhale'); dronePitch(true); }, 100);
+    dDelay(() => { 
+      if (window._decOrb) { 
+        window._decOrb.startPhase('inhale'); 
+        window._decOrb.wordTargetAlpha = 0.45;
+      } 
+      dronePitch(true); 
+    }, 100);
     dDelay(() => { if (window._decOrb) window._decOrb.startPhase('hold'); }, 4700);
     dDelay(() => {
       setBtext(exhaleText);
