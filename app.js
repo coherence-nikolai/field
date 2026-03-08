@@ -1489,6 +1489,8 @@ function buildObsScreen() {
   const screen = document.getElementById('s-observe');
 
   if (obsMode === 'noting') {
+    noteCount = 0;
+    sessionNoteLog = [];
     screen.innerHTML = `
       <div id="noting-sense-screen" class="noting-phase active-phase">
         <div class="noting-question">${t ? 'what are you noticing?' : '¿qué estás notando?'}</div>
@@ -1508,6 +1510,8 @@ function buildObsScreen() {
 
     // Six sense buttons — 2×3 grid, tap = log immediately
     const senseRow = document.getElementById('senseRow');
+    let _lastNote = 0;  // global cooldown across all buttons
+
     NOTE_SENSES[lang].forEach(s => {
       const b = document.createElement('button');
       b.type = 'button';
@@ -1518,16 +1522,15 @@ function buildObsScreen() {
       const brCol = s.border + '0.60)';
       b.style.cssText = `--sc-gl:${glCol};--sc-bg:${bgCol};--sc-br:${brCol};`;
       b.innerHTML = `<span class="sb-glyph" style="color:${glCol}">${s.glyph}</span><span class="sb-label">${s.label}</span>`;
-      let _fired = false;
       const fire = () => {
-        if (_fired) return;
-        _fired = true;
-        setTimeout(() => { _fired = false; }, 500);
+        const now = Date.now();
+        if (now - _lastNote < 1500) return;  // 1.5s between notes
+        _lastNote = now;
         // Flash
         b.classList.add('sb-active');
         setTimeout(() => b.classList.remove('sb-active'), 300);
         if (navigator.vibrate) navigator.vibrate(8);
-        // Log directly — no tone screen
+        // Log
         noteCount++;
         sessionNoteLog.push(s.key);
         const progEl = document.getElementById('noting-progress');
