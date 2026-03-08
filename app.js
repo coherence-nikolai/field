@@ -1503,12 +1503,12 @@ function buildObsScreen() {
         <div id="obs-timer-noting" style="font-size:clamp(11px,2.8vw,13px);letter-spacing:.18em;color:rgba(201,169,110,.35);"></div>
         <div id="noting-progress" style="display:flex;gap:6px;justify-content:center;margin-top:4px;"></div>
       </div>
-      <div id="noting-tone-screen" class="noting-phase">
-        <div class="noting-step-dots"><span class="nsdot"></span><span class="nsdot active"></span></div>
-        <div class="noting-question" id="noting-sense-label"></div>
-        <div class="noting-sub">${t ? 'and its quality?' : '¿y su cualidad?'}</div>
-        <div class="noting-tone-anchor">${t ? 'good · difficult · neither' : 'bueno · difícil · ninguno'}</div>
-        <div id="toneRow" class="tone-row-full"></div>
+      <div id="noting-tone-screen" class="noting-phase noting-tone-phase">
+        <div class="tone-zone-header">
+          <div class="noting-question" id="noting-sense-label"></div>
+          <div class="noting-sub">${t ? 'how does it feel?' : '¿cómo se siente?'}</div>
+        </div>
+        <div id="toneRow" class="tone-zone-row"></div>
       </div>`;
 
     // Progress dots
@@ -1539,26 +1539,34 @@ function buildObsScreen() {
       senseRow.appendChild(b);
     });
 
-    // Tone buttons — full screen style
+    // Tone zones — full screen thirds, no centering issues
     const toneRow = document.getElementById('toneRow');
-    NOTE_TONES[lang].forEach(tone => {
-      const b = document.createElement('button');
-      b.className = 'tone-chip-full';
-      b.dataset.toneKey = tone.key;
-      b.innerHTML = `<span class="tcf-symbol">${tone.label}</span><span class="tcf-word">${tone.word}</span>`;
-      b.style.setProperty('--tone-color', tone.color);
-      b.style.setProperty('--tone-border', tone.border);
-      let _toneFired = false;
-      const fireTone = () => {
-        if (_toneFired) return;
-        _toneFired = true;
-        setTimeout(() => { _toneFired = false; }, 400);
-        chooseNoteTone(tone.key, b);
+    const toneZones = lang === 'en'
+      ? [{key:'pleasant',  symbol:'+', word:'good',      color:'rgba(201,169,110,', bg:'rgba(201,169,110,.07)'},
+         {key:'unpleasant',symbol:'–', word:'difficult',  color:'rgba(110,150,201,', bg:'rgba(110,150,201,.07)'},
+         {key:'neutral',   symbol:'○', word:'neither',    color:'rgba(180,175,165,', bg:'rgba(180,175,165,.05)'}]
+      : [{key:'pleasant',  symbol:'+', word:'bueno',      color:'rgba(201,169,110,', bg:'rgba(201,169,110,.07)'},
+         {key:'unpleasant',symbol:'–', word:'difícil',    color:'rgba(110,150,201,', bg:'rgba(110,150,201,.07)'},
+         {key:'neutral',   symbol:'○', word:'ninguno',    color:'rgba(180,175,165,', bg:'rgba(180,175,165,.05)'}];
+
+    toneZones.forEach(tone => {
+      const z = document.createElement('div');
+      z.className = 'tone-zone';
+      z.dataset.toneKey = tone.key;
+      z.style.cssText = `background:${tone.bg};border-bottom:1px solid rgba(240,230,208,.06);`;
+      z.innerHTML = `<span class="tz-symbol" style="color:${tone.color}0.85)">${tone.symbol}</span><span class="tz-word" style="color:${tone.color}0.75)">${tone.word}</span>`;
+
+      let _fired = false;
+      const fire = () => {
+        if (_fired) return;
+        _fired = true;
+        z.style.background = tone.bg.replace('.07)', '.18)').replace('.05)', '.14)');
+        if (navigator.vibrate) navigator.vibrate(10);
+        setTimeout(() => chooseNoteTone(tone.key, z), 80);
       };
-      b.onclick = fireTone;
-      b.addEventListener('touchstart', e => { e.stopPropagation(); }, { passive: true });
-      b.addEventListener('touchend', e => { e.preventDefault(); e.stopPropagation(); fireTone(); });
-      toneRow.appendChild(b);
+      z.onclick = fire;
+      z.addEventListener('touchend', e => { e.preventDefault(); e.stopPropagation(); fire(); });
+      toneRow.appendChild(z);
     });
 
     const stormLink = document.createElement('div');
