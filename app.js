@@ -1446,6 +1446,7 @@ function goHome() {
   const cameFromDecohere = currentMode === 'witness-end' || currentMode === 'witness';
   currentMode = 'home';
   clearAllBreath(); clearObserver(); clearAllDec();
+  stopStillDrone(1.0);
   clearGhosts();
   // Clear witness/decohere state
   const grid = document.getElementById('shadowGrid');
@@ -3070,156 +3071,159 @@ function enterStill() {
   showBackBtn();
   document.getElementById('backBtn').onclick = () => goHome();
 
-  // Particle field — very slow, almost motionless
-  spParticles.forEach(p => { p.targetAlpha = 0.15 + Math.random()*0.1; });
+  spParticles.forEach(p => { p.targetAlpha = 0.12 + Math.random()*0.08; });
 
   document.getElementById('stillTxt').innerHTML = t.stillTxt.replace(/\n/g,'<br>');
   const stillBackEl = document.getElementById('stillBack');
   stillBackEl.textContent = t.retBtn;
-  stillBackEl.style.opacity = '0.28'; // dim until AI responds, but always tappable
-  stillBackEl.onclick = () => {
-    saveThreadLine();
-    goHome();
-  };
-
-  // Still entry tone — single quiet fade: 432Hz barely audible
-  if (audioCtx) {
-    try {
-      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-      o.type = 'sine'; o.frequency.value = 432;
-      g.gain.setValueAtTime(0, audioCtx.currentTime);
-      g.gain.linearRampToValueAtTime(0.018, audioCtx.currentTime + 2.5);
-      g.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 9);
-      o.connect(g); g.connect(audioCtx.destination);
-      o.start(); o.stop(audioCtx.currentTime + 9.5);
-    } catch(e) {}
-  }
+  stillBackEl.style.opacity = '0';
+  stillBackEl.onclick = () => { saveThreadLine(); goHome(); };
 
   showScreen('s-still', () => {
-    // ── Still canvas — crystallised kasina, slow breath, already arrived ──
-    const stillP = document.querySelector('#s-still .still-p');
-    if (stillP) {
-      stillP.style.opacity = '0'; // canvas replaces the gold dot
-      const sc = document.createElement('canvas');
-      sc.id = 'still-canvas';
-      sc.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:0;transition:opacity 2s ease;';
-      sc.width = innerWidth; sc.height = innerHeight;
-      document.getElementById('s-still').insertBefore(sc, document.getElementById('s-still').firstChild);
-      setTimeout(() => { sc.style.opacity = '1'; }, 400);
+    const orbZone = document.getElementById('still-orb-zone');
+    const sc = document.createElement('canvas');
+    sc.id = 'still-canvas';
+    sc.width = orbZone.offsetWidth || innerWidth;
+    sc.height = orbZone.offsetHeight || Math.round(innerHeight * 0.44);
+    sc.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:0;transition:opacity 2.5s ease;';
+    orbZone.appendChild(sc);
+    setTimeout(() => { sc.style.opacity = '1'; }, 300);
 
-      const sx = sc.getContext('2d');
-      let stillRaf = null;
-      let stillPh = 0;
-      let stillBreathPh = 0;
+    const sx = sc.getContext('2d');
+    let stillPh = 0, stillBreathPh = 0;
 
-      const drawStill = () => {
-        if (currentMode !== 'still') { cancelAnimationFrame(stillRaf); sc.remove(); return; }
-        stillRaf = requestAnimationFrame(drawStill);
-        sx.clearRect(0, 0, sc.width, sc.height);
+    const drawStill = () => {
+      if (currentMode !== 'still') { sc.remove(); return; }
+      requestAnimationFrame(drawStill);
+      sx.clearRect(0, 0, sc.width, sc.height);
+      stillPh += 0.005; stillBreathPh += 0.007;
+      const cx2 = sc.width * 0.5, cy2 = sc.height * 0.5;
+      const breathScale = 1 + 0.1 * Math.sin(stillBreathPh);
+      const baseR = Math.min(sc.width, sc.height) * 0.22 * breathScale;
+      const NUM_RAYS = 8;
 
-        stillPh   += 0.006;   // slow spin
-        stillBreathPh += 0.008; // very slow breath
+      const grad = sx.createRadialGradient(cx2, cy2, 0, cx2, cy2, baseR * 3.2);
+      grad.addColorStop(0, `rgba(210,185,235,${(0.20*breathScale).toFixed(3)})`);
+      grad.addColorStop(0.5, 'rgba(180,150,220,0.05)');
+      grad.addColorStop(1, 'rgba(180,150,220,0)');
+      sx.fillStyle = grad;
+      sx.beginPath(); sx.arc(cx2, cy2, baseR*3.2, 0, Math.PI*2); sx.fill();
 
-        const cx2 = sc.width * 0.5;
-        const cy2 = sc.height * 0.38;
-        const breathScale = 1 + 0.12 * Math.sin(stillBreathPh);
-        const baseR = Math.min(sc.width, sc.height) * 0.11 * breathScale;
-        const NUM_RAYS = 8;
-
-        // Outer glow — violet/gold crystallised
-        const grad = sx.createRadialGradient(cx2, cy2, 0, cx2, cy2, baseR * 3.5);
-        grad.addColorStop(0, `rgba(210,185,235,${(0.22 * breathScale).toFixed(3)})`);
-        grad.addColorStop(0.5, `rgba(180,150,220,0.06)`);
-        grad.addColorStop(1, 'rgba(180,150,220,0)');
-        sx.fillStyle = grad;
-        sx.beginPath(); sx.arc(cx2, cy2, baseR * 3.5, 0, Math.PI * 2); sx.fill();
-
-        // Rays — crystallised star
-        sx.save();
-        sx.translate(cx2, cy2);
-        sx.rotate(stillPh);
-        for (let i = 0; i < NUM_RAYS; i++) {
-          const angle = (Math.PI * 2 / NUM_RAYS) * i;
-          const rayLen = baseR * (1.4 + 0.3 * Math.sin(stillPh * 2 + i));
-          const rayAlpha = 0.28 + 0.14 * Math.sin(stillBreathPh + i * 0.7);
-          sx.beginPath();
-          sx.strokeStyle = `rgba(210,185,235,${rayAlpha.toFixed(3)})`;
-          sx.lineWidth = 0.8;
-          sx.moveTo(Math.cos(angle) * baseR * 0.5, Math.sin(angle) * baseR * 0.5);
-          sx.lineTo(Math.cos(angle) * rayLen, Math.sin(angle) * rayLen);
-          sx.stroke();
-        }
-        sx.restore();
-
-        // Core orb
-        const coreGrad = sx.createRadialGradient(cx2, cy2, 0, cx2, cy2, baseR);
-        coreGrad.addColorStop(0, `rgba(240,225,255,${(0.72 * breathScale).toFixed(3)})`);
-        coreGrad.addColorStop(0.4, `rgba(210,185,235,${(0.45 * breathScale).toFixed(3)})`);
-        coreGrad.addColorStop(1, 'rgba(180,150,220,0)');
-        sx.fillStyle = coreGrad;
-        sx.beginPath(); sx.arc(cx2, cy2, baseR, 0, Math.PI * 2); sx.fill();
-
-        // Dot at centre
+      sx.save(); sx.translate(cx2, cy2); sx.rotate(stillPh);
+      for (let i = 0; i < NUM_RAYS; i++) {
+        const angle = (Math.PI*2/NUM_RAYS)*i;
+        const rayLen = baseR*(1.5 + 0.25*Math.sin(stillPh*2 + i));
+        const rayAlpha = 0.22 + 0.12*Math.sin(stillBreathPh + i*0.7);
         sx.beginPath();
-        sx.fillStyle = `rgba(245,235,255,${(0.88 * breathScale).toFixed(3)})`;
-        sx.arc(cx2, cy2, 2.8, 0, Math.PI * 2); sx.fill();
-      };
-      drawStill();
+        sx.strokeStyle = `rgba(210,185,235,${rayAlpha.toFixed(3)})`;
+        sx.lineWidth = 0.8;
+        sx.moveTo(Math.cos(angle)*baseR*0.5, Math.sin(angle)*baseR*0.5);
+        sx.lineTo(Math.cos(angle)*rayLen, Math.sin(angle)*rayLen);
+        sx.stroke();
+      }
+      sx.restore();
+
+      const coreGrad = sx.createRadialGradient(cx2, cy2, 0, cx2, cy2, baseR);
+      coreGrad.addColorStop(0, `rgba(245,235,255,${(0.75*breathScale).toFixed(3)})`);
+      coreGrad.addColorStop(0.4, `rgba(210,185,235,${(0.48*breathScale).toFixed(3)})`);
+      coreGrad.addColorStop(1, 'rgba(180,150,220,0)');
+      sx.fillStyle = coreGrad;
+      sx.beginPath(); sx.arc(cx2, cy2, baseR, 0, Math.PI*2); sx.fill();
+
+      sx.beginPath();
+      sx.fillStyle = `rgba(248,240,255,${(0.90*breathScale).toFixed(3)})`;
+      sx.arc(cx2, cy2, 3, 0, Math.PI*2); sx.fill();
+    };
+    drawStill();
+
+    // Continuous ambient drone — 432Hz + 436Hz binaural (4Hz delta beat)
+    if (audioCtx) {
+      try {
+        const gainNode = audioCtx.createGain();
+        gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.022, audioCtx.currentTime + 4);
+        gainNode.connect(audioCtx.destination);
+        window._stillDroneGain = gainNode;
+
+        const oL = audioCtx.createOscillator();
+        oL.type = 'sine'; oL.frequency.value = 432;
+        if (audioCtx.createStereoPanner) {
+          const pL = audioCtx.createStereoPanner(); pL.pan.value = -0.6;
+          oL.connect(pL); pL.connect(gainNode);
+        } else oL.connect(gainNode);
+        oL.start();
+
+        const oR = audioCtx.createOscillator();
+        oR.type = 'sine'; oR.frequency.value = 436;
+        if (audioCtx.createStereoPanner) {
+          const pR = audioCtx.createStereoPanner(); pR.pan.value = 0.6;
+          oR.connect(pR); pR.connect(gainNode);
+        } else oR.connect(gainNode);
+        oR.start();
+
+        // Very slow tremolo 0.05Hz — one pulse per 20s
+        const tremoloOsc = audioCtx.createOscillator();
+        tremoloOsc.type = 'sine'; tremoloOsc.frequency.value = 0.05;
+        const tremoloDepth = audioCtx.createGain();
+        tremoloDepth.gain.value = 0.006;
+        tremoloOsc.connect(tremoloDepth); tremoloDepth.connect(gainNode.gain);
+        tremoloOsc.start();
+
+        window._stillDroneNodes = [oL, oR, tremoloOsc];
+      } catch(e) {}
     }
-    // Whisper back the last thread line if one exists
+
+    // Whisper — past session statement
     const lastThread = lsGet('field_thread', '');
     const whisperEl = document.getElementById('still-whisper');
     if (whisperEl && lastThread) {
       const prefix = lang === 'es'
-        ? (t.stillWhisperPrefixES || 'dijiste la última vez:')
-        : (t.stillWhisperPrefix || 'you said last time:');
-      whisperEl.textContent = prefix + ' \u201c' + lastThread + '\u201d';
-      setTimeout(() => { whisperEl.style.opacity = '1'; }, 800);
+        ? (t.stillWhisperPrefixES || 'la última vez dijiste:')
+        : (t.stillWhisperPrefix   || 'last time you said:');
+      whisperEl.innerHTML = `<span style="font-size:.78em;letter-spacing:.15em;color:rgba(240,230,208,.58);text-transform:lowercase;">${prefix}</span><br>&#8220;${lastThread}&#8221;`;
+      setTimeout(() => { whisperEl.style.opacity = '1'; }, 1200);
     }
 
-    // Thread input — fades in after 4s
-    const threadWrap = document.getElementById('still-thread-wrap');
+    // Thread input — fades in after 5s
+    const threadWrap   = document.getElementById('still-thread-wrap');
     const threadPrompt = document.getElementById('still-thread-prompt');
-    const threadInput = document.getElementById('still-thread-input');
+    const threadInput  = document.getElementById('still-thread-input');
+
     if (threadWrap && threadPrompt && threadInput) {
       threadPrompt.textContent = lang === 'es'
         ? 'una cosa verdadera de esta sesión'
         : 'one true thing from this session';
-      threadInput.placeholder = lang === 'es' ? '...' : '...';
+
+      const stillResponseEl = document.createElement('div');
+      stillResponseEl.id = 'still-ai-response';
+      threadWrap.appendChild(stillResponseEl);
+
       setTimeout(() => {
         threadWrap.style.opacity = '1';
         threadWrap.style.pointerEvents = 'auto';
-      }, 4000);
-
-      // Still AI response element — appears below input after submit
-      const stillResponseEl = document.createElement('div');
-      stillResponseEl.style.cssText = `font-size:clamp(13px,3.2vw,16px);font-style:italic;
-        font-family:'Cormorant Garamond',Georgia,serif;letter-spacing:.05em;
-        color:rgba(201,169,110,.82);text-align:center;max-width:280px;
-        line-height:1.6;opacity:0;transition:opacity 0s;margin-top:4px;`;
-      threadWrap.appendChild(stillResponseEl);
+      }, 5000);
 
       const submitThread = () => {
         const val = threadInput.value.trim();
         if (!val) return;
         saveThreadLine();
-        // Fire AI affirmation
+        threadInput.style.opacity = '0.45';
+        threadInput.disabled = true;
         const apiKey = lsGet('field_api_key');
         if (apiKey) {
-          threadInput.style.opacity = '0.4';
-          threadInput.disabled = true;
           runStillAI(val, stillResponseEl);
-          // After AI response has time to land, fade home button in
+          setTimeout(() => {
+            const sb = document.getElementById('stillBack');
+            if (sb) { sb.style.transition = 'opacity 1.8s ease'; sb.style.opacity = '1'; }
+          }, 3500);
+        } else {
           setTimeout(() => {
             const sb = document.getElementById('stillBack');
             if (sb) { sb.style.transition = 'opacity 1.4s ease'; sb.style.opacity = '1'; }
-          }, 3500);
-        } else {
-          goHome();
+          }, 800);
         }
       };
 
-      // Save on enter
       threadInput.addEventListener('keydown', e => {
         if (e.key === 'Enter') { e.preventDefault(); submitThread(); }
       });
@@ -3227,9 +3231,29 @@ function enterStill() {
         if (threadInput.value.trim()) submitThread();
       });
     }
+
+    // Back button always reachable after 7s
+    setTimeout(() => {
+      const sb = document.getElementById('stillBack');
+      if (sb && parseFloat(sb.style.opacity||'0') < 0.5) {
+        sb.style.transition = 'opacity 2s ease';
+        sb.style.opacity = '0.72';
+      }
+    }, 7000);
   });
 }
 
+function stopStillDrone(fadeTime) {
+  const g = window._stillDroneGain;
+  if (!g || !audioCtx) return;
+  const ft = fadeTime || 1.2;
+  g.gain.setTargetAtTime(0, audioCtx.currentTime, ft * 0.3);
+  setTimeout(() => {
+    (window._stillDroneNodes || []).forEach(n => { try { n.stop(); } catch(e){} });
+    window._stillDroneNodes = null;
+    window._stillDroneGain  = null;
+  }, ft * 1000 + 200);
+}
 function saveThreadLine() {
   const threadInput = document.getElementById('still-thread-input');
   if (threadInput && threadInput.value.trim()) {

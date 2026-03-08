@@ -370,7 +370,145 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
   transition:opacity .7s ease;}
 
 /* STILL */
-#s-still{gap:30px;}
+/* ── STILL ── */
+#s-still{
+  position:relative;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:flex-start;
+  padding:0;gap:0;overflow:hidden;
+}
+
+/* Orb zone — top 44% of screen */
+#still-orb-zone{
+  position:relative;
+  width:100%;height:44vh;
+  flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  pointer-events:none;
+}
+
+/* Text zone — below orb, centred column, generous spacing */
+#still-text-zone{
+  width:100%;max-width:360px;
+  display:flex;flex-direction:column;
+  align-items:center;
+  gap:clamp(20px,5vh,36px);
+  padding:clamp(16px,4vh,28px) clamp(24px,7vw,44px) clamp(28px,7vh,52px);
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  flex:1;
+}
+
+/* Still orb canvas — full screen behind text */
+#still-canvas{
+  position:fixed;inset:0;
+  width:100%;height:100%;
+  pointer-events:none;z-index:0;
+  opacity:0;transition:opacity 2.5s ease;
+}
+
+/* Main line */
+.still-line{
+  font-size:clamp(22px,6vw,30px);
+  font-family:'Cormorant Garamond',Georgia,serif;
+  font-weight:300;font-style:italic;
+  color:rgba(240,230,208,.95);
+  text-align:center;line-height:1.65;
+  max-width:320px;
+  letter-spacing:.03em;
+}
+
+/* Whisper — past session, readable but quieter */
+#still-whisper{
+  font-family:'Cormorant Garamond',Georgia,serif;
+  font-size:clamp(15px,4vw,19px);
+  font-style:italic;
+  color:rgba(240,230,208,.78);
+  letter-spacing:.05em;
+  text-align:center;
+  max-width:300px;
+  line-height:1.75;
+  opacity:0;
+  transition:opacity 1.8s ease;
+  padding:0 8px;
+}
+
+/* Thread wrap */
+#still-thread-wrap{
+  display:flex;flex-direction:column;
+  align-items:center;
+  gap:clamp(14px,3.5vh,22px);
+  width:100%;
+  opacity:0;transition:opacity 1.8s ease;
+  pointer-events:none;
+}
+
+/* Thread prompt label */
+#still-thread-prompt{
+  font-size:clamp(12px,3vw,14px);
+  letter-spacing:.22em;
+  color:rgba(240,230,208,.72);
+  text-align:center;
+  text-transform:lowercase;
+  font-weight:300;
+}
+
+/* Thread input */
+#still-thread-input{
+  background:none;border:none;
+  border-bottom:1px solid rgba(240,230,208,.22);
+  outline:none;
+  font-family:'Cormorant Garamond',Georgia,serif;
+  font-size:clamp(18px,4.8vw,22px);
+  font-style:italic;letter-spacing:.05em;
+  color:rgba(240,230,208,.92);
+  width:min(280px,85vw);
+  padding:10px 0;
+  text-align:center;
+  caret-color:rgba(201,169,110,.85);
+  transition:border-color .4s ease;
+}
+#still-thread-input:focus{
+  border-bottom-color:rgba(201,169,110,.55);
+}
+#still-thread-input::placeholder{
+  color:rgba(240,230,208,.28);
+}
+
+/* AI response */
+#still-ai-response{
+  font-size:clamp(17px,4.5vw,22px);
+  font-style:italic;
+  font-family:'Cormorant Garamond',Georgia,serif;
+  letter-spacing:.04em;
+  color:rgba(201,169,110,.95);
+  text-align:center;
+  max-width:300px;
+  line-height:1.7;
+  opacity:0;
+  transition:opacity 2s ease;
+}
+
+/* Return button */
+.still-back{
+  background:none;border:none;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:clamp(12px,3vw,14px);
+  letter-spacing:.22em;
+  color:rgba(201,169,110,.72);
+  cursor:pointer;
+  padding:clamp(14px,4vh,22px) 32px;
+  min-height:52px;
+  -webkit-tap-highlight-color:transparent;
+  transition:color .4s ease, opacity .6s ease;
+  font-weight:300;
+  text-transform:lowercase;
+}
+.still-back:hover{color:var(--gold-bright);}
+
+/* legacy dot — hidden, canvas takes over */
+.still-p{display:none;}
+
+/* ── STORM ── */
 #s-storm{overflow:hidden;cursor:default;}
 #storm-words-layer{position:absolute;inset:0;pointer-events:none;}
 #storm-note-log{position:fixed;bottom:clamp(80px,16vh,120px);left:50%;transform:translateX(-50%);
@@ -379,17 +517,6 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 .sw-word{position:absolute;font-family:inherit;font-weight:300;letter-spacing:.18em;
   color:rgba(240,204,136,0);pointer-events:none;transition:none;white-space:nowrap;
   text-transform:lowercase;}
-.still-p{width:16px;height:16px;border-radius:50%;background:var(--gold-bright);
-  box-shadow:0 0 24px var(--gold),0 0 60px rgba(201,169,110,.26);
-  animation:sb 6s ease-in-out infinite;}
-@keyframes sb{0%,100%{box-shadow:0 0 24px var(--gold),0 0 60px rgba(201,169,110,.26);}
-  50%{box-shadow:0 0 36px var(--gold-bright),0 0 90px rgba(240,204,136,.38);}}
-.still-line{font-size:var(--fh);color:var(--cream-dim);text-align:center;line-height:1.6;max-width:300px;font-weight:300;}
-.still-back{background:none;border:none;font-family:'Plus Jakarta Sans',sans-serif;
-  font-size:var(--fl);letter-spacing:.14em;color:rgba(201,169,110,.68);
-  cursor:pointer;padding:16px 32px;min-height:52px;
-  -webkit-tap-highlight-color:transparent;transition:color .4s ease;font-weight:300;}
-.still-back:hover{color:var(--gold);}
 
 /* WITNESS */
 #s-witness{gap:0;text-align:center;padding-top:clamp(72px,18vw,96px);display:flex;flex-direction:column;}
@@ -927,22 +1054,30 @@ body.fs-large .imag-prompt{font-size:clamp(18px,4.8vw,24px);}
 </div>
 
 <div class="screen" id="s-still">
-  <div class="still-p"></div>
-  <div id="still-whisper" style="font-family:'Cormorant Garamond',serif;font-size:clamp(13px,3.2vw,16px);
-    font-style:italic;color:rgba(240,230,208,.30);letter-spacing:.08em;text-align:center;
-    max-width:280px;line-height:1.7;min-height:24px;transition:opacity 1.5s ease;opacity:0;"></div>
-  <div class="still-line" id="stillTxt"></div>
-  <div id="still-thread-wrap" style="display:flex;flex-direction:column;align-items:center;gap:10px;
-    margin-top:16px;opacity:0;transition:opacity 1.5s ease;pointer-events:none;">
-    <div style="font-size:clamp(10px,2.4vw,12px);letter-spacing:.18em;color:rgba(240,230,208,.25);
-      text-align:center;" id="still-thread-prompt"></div>
-    <input id="still-thread-input" type="text" style="background:none;border:none;
-      border-bottom:1px solid rgba(240,230,208,.12);outline:none;font-family:'Cormorant Garamond',serif;
-      font-size:clamp(15px,3.8vw,18px);font-style:italic;letter-spacing:.06em;
-      color:rgba(240,230,208,.80);width:240px;padding:8px 0;text-align:center;
-      caret-color:rgba(201,169,110,.7);" placeholder="" />
+  <!-- Canvas layer — orb lives here, behind everything -->
+  <!-- injected by JS: still-canvas -->
+
+  <!-- Orb zone — top half, centred -->
+  <div id="still-orb-zone"></div>
+
+  <!-- Text zone — bottom half, scrollable if needed -->
+  <div id="still-text-zone">
+    <!-- Line from translation -->
+    <div id="stillTxt" class="still-line"></div>
+
+    <!-- Whisper: past session statement -->
+    <div id="still-whisper"></div>
+
+    <!-- Thread input area -->
+    <div id="still-thread-wrap">
+      <div id="still-thread-prompt"></div>
+      <input id="still-thread-input" type="text" placeholder="" autocomplete="off" autocorrect="off" />
+      <!-- AI response injected here by JS -->
+    </div>
+
+    <!-- Return home -->
+    <button class="still-back" id="stillBack"></button>
   </div>
-  <button class="still-back" id="stillBack"></button>
 </div>
 
 <div class="screen" id="s-storm">
