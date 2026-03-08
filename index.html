@@ -427,9 +427,9 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
   top:clamp(72px,14vh,110px);
   font-size:clamp(18px,5vw,24px);font-weight:300;letter-spacing:.10em;
   color:rgba(240,230,208,.95);display:flex;align-items:center;justify-content:center;
-  width:100%;max-width:320px;text-align:center;
-  transition:opacity 0.7s ease;opacity:0;overflow:hidden;line-height:1.4;
-  z-index:22;pointer-events:none;}
+  width:100%;max-width:360px;text-align:center;
+  opacity:0;overflow:hidden;line-height:1.5;
+  z-index:22;pointer-events:none;will-change:opacity;}
 #dec-bp-wrap{position:relative;
   width:min(55vw,260px);height:min(55vw,260px);display:flex;align-items:center;justify-content:center;z-index:14;}
 #dec-bp{position:absolute;inset:0;border-radius:50%;
@@ -454,10 +454,12 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 #dec-ack-layer{position:fixed;inset:0;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:20px;
   padding:clamp(24px,6vw,48px);padding-top:calc(56px + clamp(24px,6vw,48px));
-  text-align:center;opacity:0;transition:opacity 1s ease;pointer-events:none;z-index:50;}
+  text-align:center;opacity:0;transition:opacity 1s ease;pointer-events:none;z-index:50;
+  will-change:opacity;}
 #dec-breath-layer{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:clamp(24px,6vw,48px);padding-top:calc(56px + clamp(24px,6vw,48px));
-  text-align:center;opacity:0;transition:opacity 1s ease;pointer-events:none;z-index:13;gap:clamp(20px,5vh,40px);}
+  text-align:center;opacity:0;transition:opacity 1s ease;pointer-events:none;z-index:13;
+  gap:clamp(20px,5vh,40px);will-change:opacity;}
 
 /* Dissolution Chamber */
 #s-chamber{justify-content:flex-end;padding:0;overflow:hidden;}
@@ -481,8 +483,9 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
   font-size:clamp(24px,6.5vw,34px);text-align:center;align-self:center;
   max-width:82%;line-height:1.6;}
 .chamber-msg.user{font-size:clamp(14px,3.5vw,16px);font-weight:300;
-  font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:.08em;
-  color:rgba(240,230,208,.88);align-self:flex-end;text-align:right;}
+  font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:.06em;
+  color:rgba(201,169,110,.72);align-self:flex-end;text-align:right;
+  font-style:italic;}
 #chamber-input-wrap{display:flex;gap:10px;align-items:flex-end;
   border-top:1px solid rgba(240,230,208,.12);padding-top:16px;margin-top:8px;
   opacity:0;transition:opacity 1s ease;}

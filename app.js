@@ -3918,6 +3918,27 @@ function showVoiceSensingLayer(container, zoneKey, shadowWord, toneKey, onComple
         micLabel.style.color = 'rgba(201,169,110,.85)';
         interimEl.style.color = 'rgba(240,230,208,.70)';
         interimEl.textContent = '"' + spokenText + '"';
+        // Redo button
+        let redoBtn = layer.querySelector('.redo-btn');
+        if (!redoBtn) {
+          redoBtn = document.createElement('button');
+          redoBtn.className = 'redo-btn';
+          redoBtn.style.cssText = `background:none;border:none;font-size:clamp(10px,2.5vw,11px);
+            letter-spacing:.16em;color:rgba(240,230,208,.28);cursor:pointer;padding:4px 12px;
+            font-family:inherit;-webkit-tap-highlight-color:transparent;transition:color .3s ease;`;
+          redoBtn.textContent = t ? 'redo' : 'repetir';
+          redoBtn.addEventListener('click', () => {
+            spokenText = '';
+            interimEl.textContent = '';
+            micLabel.textContent = t ? 'tap to speak' : 'toca para hablar';
+            micLabel.style.color = 'rgba(240,230,208,.70)';
+            reflectionEl.style.opacity = '0';
+            continueBtn.style.opacity = '0.22';
+            continueBtn.style.pointerEvents = 'none';
+            redoBtn.remove();
+          });
+          micWrap.appendChild(redoBtn);
+        }
         if (apiKey) getVoiceReflection(spokenText, zoneKey, shadowWord, toneKey, reflectionEl, continueBtn);
         else { setTimeout(() => { continueBtn.style.opacity = '1'; continueBtn.style.pointerEvents = 'auto'; }, 1200); }
       } else {
@@ -4408,6 +4429,10 @@ Your first question should go deeper into what they already named — not restat
 
   applyDecoherePalette();
 
+  // Clean up voice sensing layer if still present
+  const oldLayer = document.getElementById('voice-sense-layer');
+  if (oldLayer) { oldLayer.remove(); }
+
   showScreen('s-chamber', () => {
     setTimeout(() => { contextEl.style.opacity = '1'; }, 600);
     // Opening AI question arrives after a beat
@@ -4587,19 +4612,20 @@ function startDecAcknowledge() {
       let readyEl = document.createElement('div');
       readyEl.style.cssText = `position:fixed;bottom:clamp(70px,14vh,110px);left:50%;
         transform:translateX(-50%);font-size:clamp(13px,3.2vw,16px);letter-spacing:.28em;
-        color:rgba(240,230,208,.0);font-weight:300;font-family:'Plus Jakarta Sans',sans-serif;
+        color:rgba(240,230,208,.32);font-weight:300;font-family:'Plus Jakarta Sans',sans-serif;
         text-transform:lowercase;cursor:pointer;z-index:52;padding:14px 28px;
-        transition:color 2.5s ease;white-space:nowrap;-webkit-tap-highlight-color:transparent;`;
+        opacity:0;transition:opacity 2.5s ease;white-space:nowrap;-webkit-tap-highlight-color:transparent;`;
       readyEl.textContent = lang === 'en' ? 'breathe' : 'respira';
       document.body.appendChild(readyEl);
-      setTimeout(() => { readyEl.style.color = 'rgba(240,230,208,.32)'; }, 4000);
+      setTimeout(() => { readyEl.style.opacity = '1'; }, 4000);
 
       let breathStarted = false;
       const beginBreath = () => {
         if (breathStarted) return;
         breathStarted = true;
-        readyEl.style.color = 'rgba(240,230,208,.0)';
-        setTimeout(() => { if (readyEl.parentNode) readyEl.remove(); }, 1800);
+        readyEl.style.transition = 'opacity 1.2s ease';
+        readyEl.style.opacity = '0';
+        setTimeout(() => { if (readyEl.parentNode) readyEl.remove(); }, 1200);
         startDecBreath(displayName);
       };
 
@@ -4619,37 +4645,34 @@ function startDecBreath(displayName) {
   const btext       = document.getElementById('dec-btext');
   const bdots       = document.getElementById('dec-bdots');
 
-  // Hide ack layer, reveal breath layer (just for btext + dots — orb is on canvas)
-  ackLayer.style.transition = 'opacity 1.2s ease';
+  // Smooth crossfade: ack out, then breath layer in
+  ackLayer.style.transition = 'opacity 1.0s ease';
   ackLayer.style.opacity = '0';
-  setTimeout(() => { ackLayer.style.pointerEvents = 'none'; }, 1200);
+  setTimeout(() => { ackLayer.style.pointerEvents = 'none'; }, 1000);
 
+  // Body map fades out in parallel
+  const bmap = document.getElementById('bodymapWrap');
+  if (bmap) {
+    bmap.style.transition = 'opacity 1.0s ease';
+    bmap.style.opacity = '0';
+    setTimeout(() => { if (bmap.parentNode) bmap.parentNode.removeChild(bmap); }, 1050);
+  }
+  const mainCv = document.getElementById('cv');
+  if (mainCv) { mainCv.style.transition = 'opacity 1.2s ease'; mainCv.style.opacity = '1'; }
+
+  // Breath layer fades in after ack is gone
+  breathLayer.style.opacity = '0';
   breathLayer.style.transition = 'opacity 1.2s ease';
-  setTimeout(() => { breathLayer.style.opacity = '1'; breathLayer.style.pointerEvents = 'all'; }, 400);
+  setTimeout(() => { breathLayer.style.opacity = '1'; breathLayer.style.pointerEvents = 'all'; }, 1000);
 
-  // Hide legacy CSS dec-bp so it doesn't interfere
+  // Hide legacy elements
   const bp = document.getElementById('dec-bp');
   if (bp) { bp.style.display = 'none'; }
   const wordOrb = document.getElementById('dec-word-orb');
   if (wordOrb) { wordOrb.style.display = 'none'; }
-
-  // bdots
   if (bdots) { bdots.style.top = 'auto'; bdots.style.bottom = 'clamp(80px,14vh,120px)'; }
-
   const backBtn = document.getElementById('backBtn');
   if (backBtn) { backBtn.style.opacity='1'; backBtn.style.pointerEvents='all'; backBtn.onclick = () => startDecohere(); }
-
-  // ── Violet BreathOrb on the shared canvas ──
-  // First: fade and remove the bodymapWrap that covers the canvas
-  const bmap = document.getElementById('bodymapWrap');
-  if (bmap) {
-    bmap.style.transition = 'opacity 1s ease';
-    bmap.style.opacity = '0';
-    setTimeout(() => { if (bmap.parentNode) bmap.parentNode.removeChild(bmap); }, 1050);
-  }
-  // Ensure main canvas is visible
-  const mainCv = document.getElementById('cv');
-  if (mainCv) { mainCv.style.transition = 'opacity 1s ease'; mainCv.style.opacity = '1'; }
 
   const decOrb = new BreathOrb(innerWidth * 0.5, innerHeight * 0.5, 'violet');
   decOrb.maxCycles = 3;
@@ -4686,14 +4709,25 @@ function startDecBreath(displayName) {
     if (!btext) return;
     const isVisible = parseFloat(btext.style.opacity||'0') > 0.05;
     if (isVisible) {
-      btext.style.transition = 'opacity 0.5s ease'; btext.style.opacity = '0';
-      const id = setTimeout(() => { btext.textContent = txt; btext.style.transition = 'opacity 1.2s ease'; btext.style.opacity = '1'; }, 550);
+      btext.style.transition = 'opacity 0.5s ease';
+      btext.style.opacity = '0';
+      const id = setTimeout(() => {
+        btext.textContent = txt;
+        btext.style.transition = 'opacity 1.0s ease';
+        btext.style.opacity = '1';
+      }, 500);
       decBreathTimers.push(id);
     } else {
-      btext.textContent = txt; btext.style.transition = 'opacity 1.4s ease'; btext.style.opacity = '1';
+      btext.textContent = txt;
+      btext.style.transition = 'opacity 1.2s ease';
+      btext.style.opacity = '1';
     }
   }
-  function hideBtext() { if (!btext) return; btext.style.transition = 'opacity 0.8s ease'; btext.style.opacity = '0'; }
+  function hideBtext(dur) {
+    if (!btext) return;
+    btext.style.transition = `opacity ${dur||0.8}s ease`;
+    btext.style.opacity = '0';
+  }
 
   function dronePitch(up) {
     if (!droneNodes.length) return;
@@ -4704,54 +4738,59 @@ function startDecBreath(displayName) {
     if (cycle >= 3) {
       if (backBtn) { backBtn.style.opacity='1'; backBtn.style.pointerEvents='all'; backBtn.onclick = () => goHome(); }
       dDelay(() => {
-        hideBtext();
-        // Scatter the word
+        hideBtext(1.2);
         if (window._decOrb) { window._decOrb.startPhase('crystallised'); }
         playDecohereRelease();
-      }, 400);
+      }, 600);
       dDelay(() => {
         if (window._decOrb) { window._decOrb.alpha = 0; window._decOrb = null; }
-      }, 3200);
-      dDelay(() => showDecEnd(), 5000);
+      }, 3400);
+      dDelay(() => showDecEnd(), 5200);
       return;
     }
     cycle++;
 
-    const inhaleText = t.decInhale;
-    const exhaleText = t.decExhale;
-    setBtext(inhaleText);
+    const inhaleText = lang === 'en' ? t.decInhale : t.decInhale;
+    const exhaleText = lang === 'en' ? t.decExhale : t.decExhale;
 
-    // Drive orb phase manually to sync with our timers
-    dDelay(() => { 
-      if (window._decOrb) { 
-        window._decOrb.startPhase('inhale'); 
+    // Inhale phase — text arrives with orb
+    setBtext(inhaleText);
+    dDelay(() => {
+      if (window._decOrb) {
+        window._decOrb.startPhase('inhale');
         window._decOrb.wordTargetAlpha = 0.45;
-      } 
-      dronePitch(true); 
+      }
+      dronePitch(true);
     }, 100);
+
+    // Hold
     dDelay(() => { if (window._decOrb) window._decOrb.startPhase('hold'); }, 4700);
+
+    // Exhale — text crossfades smoothly
     dDelay(() => {
       setBtext(exhaleText);
       if (navigator.vibrate) navigator.vibrate(22);
       dronePitch(false);
       if (window._decOrb) window._decOrb.startPhase('exhale');
-    }, 6400);
+    }, 6200);
 
+    // Dot lights at end of exhale
     dDelay(() => {
       const dot = document.getElementById('dec-dot'+(cycle-1));
       if (dot) dot.classList.add('done');
-    }, 11500);
-    dDelay(() => { hideBtext(); }, 10800);
-    dDelay(runCycle, 12400);
+    }, 11200);
+
+    // Text fades just before next cycle begins (no blank gap)
+    dDelay(() => { hideBtext(0.8); }, 11000);
+
+    // Next cycle starts with text already faded — setBtext handles it cleanly
+    dDelay(runCycle, 11800);
   }
 
-  // Pre-breath instructions during first 8s (orb sits still, word whispers in)
-  dDelay(() => setBtext(t ? 'breathe in' : 'inhala'), 800);
-  dDelay(() => setBtext(t ? `exhale into · ${displayName}` : `exhala hacia · ${displayName}`), 5000);
-  dDelay(() => {
-    if (window._decOrb) window._decOrb.wordTargetAlpha = 0.28;
-  }, 5000);
-
+  // Pre-breath instructions
+  dDelay(() => setBtext(lang === 'en' ? 'breathe in' : 'inhala'), 800);
+  dDelay(() => setBtext(lang === 'en' ? `exhale into · ${displayName}` : `exhala hacia · ${displayName}`), 5000);
+  dDelay(() => { if (window._decOrb) window._decOrb.wordTargetAlpha = 0.28; }, 5000);
   dDelay(runCycle, 9000);
 }
 
