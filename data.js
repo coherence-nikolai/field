@@ -9,9 +9,9 @@ const TRANSLATIONS = {
     welcomeCard0Small: 'Every version of you is real right now.\nCalm. Brave. Clear. Stuck. Afraid.\nAll equally present. None more true than another.',
     welcomeCard1Big: 'The state you <b>observe</b>\nbecomes the state you inhabit.',
     welcomeCard1Small: 'This is not metaphor.\nIt is the physics of attention.\nWhat you measure, you create.',
-    welcomeCard2Big: 'Three practices.\nOne field.',
-    wlcMvLabels: ['Observe','Collapse','Witness'],
-    wlcMvHints: ['train attention','choose a state','see what is present'],
+    welcomeCard2Big: 'Four movements.\nOne field.',
+    wlcMvLabels: ['Observe','Witness','Collapse','Still'],
+    wlcMvHints: ['train attention','meet what is here','choose a state','land in it'],
     wlcEnterBtn: 'enter the field',
     wlcTapHint: 'tap to continue',
     fieldArrival: 'The field is open.',
@@ -19,9 +19,11 @@ const TRANSLATIONS = {
     observeLabel: 'Observe',
     collapseLabel: 'Collapse',
     decohere_label: 'Witness',
+    stillLabel: 'Still',
     observeHint: 'train attention',
     collapseHint: 'choose a state',
-    decohereHint: 'see what is present',
+    decohereHint: 'meet what is here',
+    stillHint: 'land in it',
     fieldLine: 'These versions of you exist right now.',
     cLabel: 'you collapsed into',
     cSub: 'the field holds this now',
@@ -62,9 +64,9 @@ const TRANSLATIONS = {
     welcomeCard0Small: 'Cada versión tuya es real ahora mismo.\nSereno. Valiente. Claro. Bloqueado. Asustado.\nTodas igualmente presentes. Ninguna más verdadera que otra.',
     welcomeCard1Big: 'El estado que <b>observas</b>\nes el estado que habitas.',
     welcomeCard1Small: 'Esto no es metáfora.\nEs la física de la atención.\nLo que mides, lo creas.',
-    welcomeCard2Big: 'Tres prácticas.\nUn campo.',
-    wlcMvLabels: ['Observar','Colapsar','Atestiguar'],
-    wlcMvHints: ['entrenar la atención','elegir un estado','ver lo que está presente'],
+    welcomeCard2Big: 'Cuatro movimientos.\nUn campo.',
+    wlcMvLabels: ['Observar','Atestiguar','Colapsar','Quietud'],
+    wlcMvHints: ['entrenar la atención','encontrar lo que hay','elegir un estado','aterrizar en ello'],
     wlcEnterBtn: 'entrar al campo',
     wlcTapHint: 'toca para continuar',
     fieldArrival: 'El campo está abierto.',
@@ -74,7 +76,9 @@ const TRANSLATIONS = {
     decohere_label: 'Atestiguar',
     observeHint: 'entrenar la atención',
     collapseHint: 'elegir un estado',
-    decohereHint: 'ver lo que está presente',
+    decohereHint: 'encontrar lo que hay',
+    stillLabel: 'Quietud',
+    stillHint: 'aterrizar en ello',
     fieldLine: 'Estas versiones tuyas existen ahora mismo.',
     cLabel: 'colapsaste en',
     cSub: 'el campo sostiene esto ahora',
@@ -136,8 +140,8 @@ const STATES = {
 };
 
 const SHADOW_STATES = {
-  en: ['Anxious','Heavy','Stuck','Numb','Scattered','Angry','Tired','Overwhelmed','Disconnected','Afraid'],
-  es: ['Angustiado','Agobiado','Bloqueado','Apagado','Disperso','Enojado','Agotado','Sobrepasado','Desconectado','Asustado']
+  en: ['Anxious','Heavy','Stuck','Numb','Scattered','Angry','Tired','Overwhelmed','Disconnected','Afraid','Confused','Uncertain'],
+  es: ['Angustiado','Agobiado','Bloqueado','Apagado','Disperso','Enojado','Agotado','Sobrepasado','Desconectado','Asustado','Confundido','Incierto']
 };
 
 const STEPS = {

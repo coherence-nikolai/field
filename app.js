@@ -430,33 +430,43 @@ class BreathOrb {
     // ── State word — centred IN the orb, breathes and vibrates ──
     if (this.wordText && this.wordAlpha > 0.01) {
       const wordA = this.wordAlpha * this.alpha;
-      const gi = this.wordGlowIntensity; // 0→1 across cycles
+      const gi = this.wordGlowIntensity;
+      const isViolet = this.c1 === '210,180,240'; // witness orb
 
-      // Font size grows with glow intensity and scales with orb size
-      const baseFontSize = Math.max(22, Math.min(this.MAX_RADIUS * 0.55, innerWidth * 0.13));
-      const fontSize = baseFontSize * (0.7 + gi * 0.5) * (this.wordScale !== undefined ? this.wordScale : 1);
+      // Font size smoothly tracks orb radius — no jumps from gi
+      const baseSize = Math.max(20, Math.min(this.MAX_RADIUS * 0.52, innerWidth * 0.12));
+      const breathScale = 0.72 + (this.dispRadius / Math.max(this.MAX_RADIUS, 1)) * 0.42;
+      const morphScale = this.wordScale !== undefined ? this.wordScale : 1;
+      const fontSize = baseSize * breathScale * morphScale;
       if (fontSize < 2) return;
 
-      // Collapse: word softens on expand, sharpens on collapse
-      // Witness: word glows on inhale, fades on exhale — opposite blur logic
       const isExpanded = this.phase === 'inhale' || this.phase === 'hold';
-      const isViolet = this.c1 === '210,180,240';
       const wordBlur = isViolet
-        ? (isExpanded ? 0 : bl * 0.2)   // witness: sharp on inhale, slight blur on exhale fade
-        : (isExpanded ? bl * 0.35 : 0);  // collapse: blurred on expand
+        ? (isExpanded ? 0 : this.dispBlur * 0.15)
+        : (isExpanded ? this.dispBlur * 0.3 : 0);
 
       cx.save();
       if (wordBlur > 0.5) cx.filter = `blur(${wordBlur.toFixed(1)}px)`;
 
-      // Glow shadow — intensifies with each cycle and on exhale
-      const glowRadius = 12 + gi * 40;
-      const glowAlpha = 0.3 + gi * 0.7;
-      cx.shadowColor = `rgba(${c5},${(wordA * glowAlpha).toFixed(2)})`;
-      cx.shadowBlur = glowRadius;
+      const glowRadius = 10 + gi * 35;
+      const glowAlpha = 0.25 + gi * 0.75;
 
-      // Brightness increases across cycles
-      const bright = Math.round(200 + gi * 55);
-      const wordColor = `rgba(${bright + 15},${bright},${Math.max(0,bright - 50)},${wordA.toFixed(3)})`;
+      // Witness: carry the shadow-red hue into the orb
+      // Collapse: warm gold
+      let wordColor;
+      if (isViolet) {
+        // Red-to-amber gradient based on glow intensity
+        const r = Math.round(230 + gi * 10);
+        const g2 = Math.round(140 + gi * 40);
+        const b = Math.round(120 + gi * 20);
+        wordColor = `rgba(${r},${g2},${b},${wordA.toFixed(3)})`;
+        cx.shadowColor = `rgba(220,100,80,${(wordA * glowAlpha).toFixed(2)})`;
+      } else {
+        const bright = Math.round(200 + gi * 55);
+        wordColor = `rgba(${bright + 15},${bright},${Math.max(0,bright - 50)},${wordA.toFixed(3)})`;
+        cx.shadowColor = `rgba(${c5},${(wordA * glowAlpha).toFixed(2)})`;
+      }
+      cx.shadowBlur = glowRadius;
 
       cx.globalAlpha = wordA;
       cx.font = `300 ${fontSize.toFixed(1)}px 'Cormorant Garamond', Georgia, serif`;
@@ -464,16 +474,12 @@ class BreathOrb {
       cx.textBaseline = 'middle';
       cx.fillStyle = wordColor;
 
-      // Position: centre of orb + vibration offset
-      const wx = px;
-      const wy = py;
-      cx.fillText(this.wordText, wx, wy);
+      cx.fillText(this.wordText, px, py);
 
-      // Second pass for extra glow on high-intensity moments
       if (gi > 0.5) {
-        cx.shadowBlur = glowRadius * 2;
-        cx.globalAlpha = wordA * (gi - 0.5) * 0.6;
-        cx.fillText(this.wordText, wx, wy);
+        cx.shadowBlur = glowRadius * 1.8;
+        cx.globalAlpha = wordA * (gi - 0.5) * 0.5;
+        cx.fillText(this.wordText, px, py);
       }
 
       cx.shadowBlur = 0;
@@ -758,8 +764,30 @@ function loop() {
         else observeParticle.draw();
       }
     }
-    if ((currentMode === 'collapse' || currentMode === 'home' || currentMode === 'witness') && spParticles.length) {
-      spParticles.forEach(p => { p.update(); p.draw(); });
+    if ((currentMode === 'collapse' || currentMode === 'home' || currentMode === 'witness' || currentMode === 'still') && spParticles.length) {
+      // Unified field — particle coherence varies by mode
+      const now = performance.now();
+      spParticles.forEach(p => {
+        // Still mode — particles barely drift, almost stopped
+        if (currentMode === 'still') {
+          p.phV = 0.0008 + (p.idx % 3) * 0.0003;
+        }
+        // Witness mode — particles gather inward, slower drift
+        else if (currentMode === 'witness' || currentMode === 'decohere') {
+          p.phV = 0.002 + Math.random() * 0.001;
+        }
+        // Collapse charging — particles slowly converge toward center
+        else if (currentMode === 'collapse' && collapseStage >= 1) {
+          p.targetCx += (0.5 - p.targetCx) * 0.003;
+          p.targetCy += (0.47 - p.targetCy) * 0.003;
+          p.phV = 0.012 + Math.random() * 0.006;
+        }
+        // Home — normal drift
+        else {
+          p.phV = 0.005 + Math.random() * 0.004;
+        }
+        p.update(); p.draw();
+      });
     }
     if (breathOrb && currentMode === 'collapse') {
       breathOrb.update(); breathOrb.draw();
@@ -1073,6 +1101,70 @@ function playDecohereRelease() {
     o.connect(g); g.connect(audioCtx.destination); o.start(t0); o.stop(t0+7);
   });
 }
+
+// Witness binaural drone — 174Hz L + 178Hz R = 4Hz delta/theta beat
+// Starts at breath entry, fades out after morph
+function startWitnessDrone() {
+  if (!audioCtx) return;
+  // Stop any existing witness drone
+  stopWitnessDrone();
+  const nodes = [];
+  // Left channel — 174Hz (solfeggio liberation)
+  const splitter = audioCtx.createChannelMerger(2);
+  splitter.connect(audioCtx.destination);
+
+  [[174, 0], [178, 1]].forEach(([freq, channel]) => {
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    const pan = audioCtx.createStereoPanner();
+    o.type = 'sine';
+    o.frequency.value = freq;
+    pan.pan.value = channel === 0 ? -1 : 1;
+    g.gain.setValueAtTime(0, audioCtx.currentTime);
+    g.gain.linearRampToValueAtTime(0.06, audioCtx.currentTime + 3.5);
+    o.connect(g); g.connect(pan); pan.connect(audioCtx.destination);
+    o.start();
+    nodes.push({ o, g });
+  });
+
+  // Slow tremolo layer — 174Hz, 0.08Hz amplitude modulation, very subtle
+  const tremoloOsc = audioCtx.createOscillator();
+  const tremoloGain = audioCtx.createGain();
+  const tremoloDepth = audioCtx.createGain();
+  const tremoloCarrier = audioCtx.createOscillator();
+  const tremoloCarrierGain = audioCtx.createGain();
+  tremoloOsc.frequency.value = 0.08; // one full breath-like pulse every ~12s
+  tremoloOsc.type = 'sine';
+  tremoloDepth.gain.value = 0.012;
+  tremoloCarrier.type = 'sine';
+  tremoloCarrier.frequency.value = 174;
+  tremoloCarrierGain.gain.setValueAtTime(0, audioCtx.currentTime);
+  tremoloCarrierGain.gain.linearRampToValueAtTime(0.028, audioCtx.currentTime + 4);
+  tremoloOsc.connect(tremoloDepth);
+  tremoloDepth.connect(tremoloCarrierGain.gain);
+  tremoloCarrier.connect(tremoloCarrierGain);
+  tremoloCarrierGain.connect(audioCtx.destination);
+  tremoloOsc.start(); tremoloCarrier.start();
+  nodes.push({ o: tremoloOsc, g: tremoloDepth });
+  nodes.push({ o: tremoloCarrier, g: tremoloCarrierGain });
+
+  window._witnessDroneNodes = nodes;
+}
+
+function stopWitnessDrone(fadeTime) {
+  const fade = fadeTime || 3.5;
+  if (!window._witnessDroneNodes) return;
+  window._witnessDroneNodes.forEach(({ o, g }) => {
+    try {
+      g.gain.cancelScheduledValues(audioCtx.currentTime);
+      g.gain.setValueAtTime(g.gain.value, audioCtx.currentTime);
+      g.gain.linearRampToValueAtTime(0, audioCtx.currentTime + fade);
+      o.stop(audioCtx.currentTime + fade + 0.1);
+    } catch(e) {}
+  });
+  window._witnessDroneNodes = null;
+}
+
 function playScatterSound() {
   if (!audioCtx) return;
   const buf = audioCtx.createBuffer(1, audioCtx.sampleRate*0.3, audioCtx.sampleRate);
@@ -1282,9 +1374,13 @@ function applyLang() {
   document.getElementById('mvObserveLabel').textContent = t.observeLabel;
   document.getElementById('mvCollapseLabel').textContent = t.collapseLabel;
   document.getElementById('mvWitnessLabel').textContent = t.decohere_label;
+  const mvStillLbl = document.getElementById('mvStillLabel');
+  if (mvStillLbl) mvStillLbl.textContent = t.stillLabel || 'Still';
   document.getElementById('mvObserveHint').textContent = t.observeHint;
   document.getElementById('mvCollapseHint').textContent = t.collapseHint;
   document.getElementById('mvWitnessHint').textContent = t.decohereHint;
+  const mvStillHnt = document.getElementById('mvStillHint');
+  if (mvStillHnt) mvStillHnt.textContent = t.stillHint || 'land in it';
   document.getElementById('retBtn').textContent = t.retBtn;
   document.getElementById('decRetBtn').textContent = t.decRetBtn;
   document.getElementById('decAgainBtn').textContent = t.decAgainBtn;
@@ -1389,19 +1485,19 @@ function goHome() {
       setTimeout(() => { initSpParticles(12); tryDrone(); }, 200);
     }
     tryDrone();
-    // Companion check-in — shows after 3+ sessions if API key present
-    setTimeout(() => maybeShowCompanion(), 1200);
+    // Companion check-in — disabled on auto-show, user can access via settings
+    // setTimeout(() => maybeShowCompanion(), 1200);
   });
   updateHomeCount();
   document.querySelectorAll('.movement').forEach(m => m.classList.remove('lit'));
 
-  // Guided entry hint — show for users who haven't done Collapse yet
+  // Guided entry hint — point new users to Observe first
   const hintEl = document.getElementById('guided-hint');
   const collapseCount = parseInt(lsGet('field_obs')||'0');
   if (hintEl) {
     const t = lang === 'en';
     if (collapseCount === 0) {
-      hintEl.textContent = t ? 'new here? · begin with ↑' : '¿nuevo aquí? · empieza con ↑';
+      hintEl.textContent = t ? 'new here? · begin with ◎' : '¿nuevo aquí? · empieza con ◎';
       setTimeout(() => { hintEl.style.opacity = '1'; }, 1800);
     } else {
       hintEl.style.opacity = '0';
@@ -1909,8 +2005,16 @@ function enterObserve() {
         return;
       }
     } else {
-      if (obsMode === 'kasina' && kasinaParticle) { kasinaParticle.targetAlpha = 1; }
-      else if (observeParticle) { observeParticle.targetAlpha = 0.9; }
+      if (obsMode === 'kasina') {
+        // Recreate if null (mode may have been switched on setup screen)
+        if (!kasinaParticle) {
+          kasinaParticle = new KasinaParticle();
+          kasinaParticle.alpha = 0;
+        }
+        kasinaParticle.targetAlpha = 1;
+        observeParticle = null;
+        particleVisible = true;
+      } else if (observeParticle) { observeParticle.targetAlpha = 0.9; particleVisible = true; }
     }
 
     buildObsScreen();
@@ -1979,12 +2083,16 @@ function enterObserve() {
 function startObsTimer() {
   clearInterval(obsTimerInterval);
   const target = obsStorm ? 10 : 7;
-  // Heartbeat — re-assert back button every tick so nothing can hide it
+  // Heartbeat — re-assert back button every tick so nothing can hide it or lose its handler
   const assertBack = () => {
     const btn = document.getElementById('backBtn');
     if (btn && currentMode === 'observe') {
       btn.style.opacity = '1';
       btn.style.pointerEvents = 'all';
+      if (!btn._obsHandler) {
+        btn._obsHandler = () => goHome();
+        btn.onclick = btn._obsHandler;
+      }
     }
   };
   obsTimerInterval = setInterval(() => {
@@ -2314,6 +2422,9 @@ function clearObserver() {
   isStill = true; kasinaParticle = null;
   noteCount = 0; noteSense = ''; sessionNoteLog = [];
   clearTimeout(scatterTO);
+  // Clear back button handler flag so it gets reassigned cleanly next session
+  const btn = document.getElementById('backBtn');
+  if (btn) btn._obsHandler = null;
   const ring = document.getElementById('clarity-ring');
   if (ring) { ring.style.display = 'none'; ring.style.borderColor = 'rgba(201,169,110,0)'; ring.style.boxShadow = 'none'; }
 }
@@ -2722,9 +2833,12 @@ function showCollapseStage(n) {
       if (ampEl) {
         ampEl.textContent = '';
         ampEl.style.opacity = '0';
+        ampEl.style.pointerEvents = 'none';
         const cs4 = document.getElementById('cs4');
         if (cs4 && ampEl.parentNode !== cs4) cs4.appendChild(ampEl);
-        ampEl.style.cssText = 'position:fixed;bottom:clamp(80px,16vh,120px);left:50%;transform:translateX(-50%);width:90%;max-width:340px;text-align:center;z-index:20;pointer-events:none;opacity:0;color:rgba(240,230,208,.92);font-size:clamp(14px,3.8vw,17px);font-weight:300;font-style:italic;letter-spacing:.06em;line-height:1.7;transition:opacity 1.4s ease;font-family:\'Cormorant Garamond\',Georgia,serif;';
+        ampEl.style.cssText = 'position:absolute;bottom:clamp(110px,20vh,160px);left:50%;transform:translateX(-50%);width:90%;max-width:340px;text-align:center;z-index:20;pointer-events:none;opacity:0;color:rgba(240,230,208,.78);font-size:clamp(13px,3.4vw,16px);font-weight:300;font-style:italic;letter-spacing:.06em;line-height:1.7;transition:opacity 1.8s ease;font-family:\'Cormorant Garamond\',Georgia,serif;';
+        // Mark as waiting — will only show after breath cycle 1 completes
+        ampEl.dataset.waitingForBreath = '1';
       }
       const imagText = ip ? ip.textContent : '';
       if (imagText) {
@@ -2910,19 +3024,204 @@ function startBreath() {
         }
         requestAnimationFrame(() => { breathOrb = null; });
         initScene('state_chosen', spChosen);
-        const tapEl = document.getElementById('tapNext');
-        bDelay(() => { tapEl.style.transition = 'opacity 0.8s ease'; tapEl.style.opacity = '1'; }, 1600);
+
+        // AI amplifier reveals now — after morph, space for it to breathe
+        const ampEl = document.getElementById('collapseAI');
+        if (ampEl && ampEl.textContent && (ampEl.dataset.waitingForBreath === 'ready' || ampEl.dataset.waitingForBreath === '0')) {
+          ampEl.dataset.waitingForBreath = '0';
+          ampEl.style.transition = 'opacity 2s ease';
+          setTimeout(() => { ampEl.style.opacity = '1'; }, 400);
+          // tapNext appears later, after amp text has had time to land
+          bDelay(() => {
+            const tapEl = document.getElementById('tapNext');
+            if (tapEl) { tapEl.style.transition = 'opacity 0.8s ease'; tapEl.style.opacity = '1'; }
+          }, 3200);
+        } else {
+          const tapEl = document.getElementById('tapNext');
+          bDelay(() => { tapEl.style.transition = 'opacity 0.8s ease'; tapEl.style.opacity = '1'; }, 1600);
+        }
       };
     }, 800);
   };
 }
 
 function goStill() {
-  const t = TRANSLATIONS[lang];
-  document.getElementById('stillTxt').innerHTML = t.stillTxt.replace(/\n/g,'<br>');
-  showScreen('s-still');
-  document.getElementById('stillBack').onclick = () => goHome();
+  enterStill();
 }
+
+function enterStill() {
+  const t = TRANSLATIONS[lang];
+  currentMode = 'still';
+  showBackBtn();
+  document.getElementById('backBtn').onclick = () => goHome();
+
+  // Particle field — very slow, almost motionless
+  spParticles.forEach(p => { p.targetAlpha = 0.15 + Math.random()*0.1; });
+
+  document.getElementById('stillTxt').innerHTML = t.stillTxt.replace(/\n/g,'<br>');
+  const stillBackEl = document.getElementById('stillBack');
+  stillBackEl.textContent = t.retBtn;
+  stillBackEl.style.opacity = '0.28'; // dim until AI responds, but always tappable
+  stillBackEl.onclick = () => {
+    saveThreadLine();
+    goHome();
+  };
+
+  // Still entry tone — single quiet fade: 432Hz barely audible
+  if (audioCtx) {
+    try {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = 'sine'; o.frequency.value = 432;
+      g.gain.setValueAtTime(0, audioCtx.currentTime);
+      g.gain.linearRampToValueAtTime(0.018, audioCtx.currentTime + 2.5);
+      g.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 9);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(); o.stop(audioCtx.currentTime + 9.5);
+    } catch(e) {}
+  }
+
+  showScreen('s-still', () => {
+    // ── Still canvas — crystallised kasina, slow breath, already arrived ──
+    const stillP = document.querySelector('#s-still .still-p');
+    if (stillP) {
+      stillP.style.opacity = '0'; // canvas replaces the gold dot
+      const sc = document.createElement('canvas');
+      sc.id = 'still-canvas';
+      sc.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:0;transition:opacity 2s ease;';
+      sc.width = innerWidth; sc.height = innerHeight;
+      document.getElementById('s-still').insertBefore(sc, document.getElementById('s-still').firstChild);
+      setTimeout(() => { sc.style.opacity = '1'; }, 400);
+
+      const sx = sc.getContext('2d');
+      let stillRaf = null;
+      let stillPh = 0;
+      let stillBreathPh = 0;
+
+      const drawStill = () => {
+        if (currentMode !== 'still') { cancelAnimationFrame(stillRaf); sc.remove(); return; }
+        stillRaf = requestAnimationFrame(drawStill);
+        sx.clearRect(0, 0, sc.width, sc.height);
+
+        stillPh   += 0.006;   // slow spin
+        stillBreathPh += 0.008; // very slow breath
+
+        const cx2 = sc.width * 0.5;
+        const cy2 = sc.height * 0.38;
+        const breathScale = 1 + 0.12 * Math.sin(stillBreathPh);
+        const baseR = Math.min(sc.width, sc.height) * 0.11 * breathScale;
+        const NUM_RAYS = 8;
+
+        // Outer glow — violet/gold crystallised
+        const grad = sx.createRadialGradient(cx2, cy2, 0, cx2, cy2, baseR * 3.5);
+        grad.addColorStop(0, `rgba(210,185,235,${(0.22 * breathScale).toFixed(3)})`);
+        grad.addColorStop(0.5, `rgba(180,150,220,0.06)`);
+        grad.addColorStop(1, 'rgba(180,150,220,0)');
+        sx.fillStyle = grad;
+        sx.beginPath(); sx.arc(cx2, cy2, baseR * 3.5, 0, Math.PI * 2); sx.fill();
+
+        // Rays — crystallised star
+        sx.save();
+        sx.translate(cx2, cy2);
+        sx.rotate(stillPh);
+        for (let i = 0; i < NUM_RAYS; i++) {
+          const angle = (Math.PI * 2 / NUM_RAYS) * i;
+          const rayLen = baseR * (1.4 + 0.3 * Math.sin(stillPh * 2 + i));
+          const rayAlpha = 0.28 + 0.14 * Math.sin(stillBreathPh + i * 0.7);
+          sx.beginPath();
+          sx.strokeStyle = `rgba(210,185,235,${rayAlpha.toFixed(3)})`;
+          sx.lineWidth = 0.8;
+          sx.moveTo(Math.cos(angle) * baseR * 0.5, Math.sin(angle) * baseR * 0.5);
+          sx.lineTo(Math.cos(angle) * rayLen, Math.sin(angle) * rayLen);
+          sx.stroke();
+        }
+        sx.restore();
+
+        // Core orb
+        const coreGrad = sx.createRadialGradient(cx2, cy2, 0, cx2, cy2, baseR);
+        coreGrad.addColorStop(0, `rgba(240,225,255,${(0.72 * breathScale).toFixed(3)})`);
+        coreGrad.addColorStop(0.4, `rgba(210,185,235,${(0.45 * breathScale).toFixed(3)})`);
+        coreGrad.addColorStop(1, 'rgba(180,150,220,0)');
+        sx.fillStyle = coreGrad;
+        sx.beginPath(); sx.arc(cx2, cy2, baseR, 0, Math.PI * 2); sx.fill();
+
+        // Dot at centre
+        sx.beginPath();
+        sx.fillStyle = `rgba(245,235,255,${(0.88 * breathScale).toFixed(3)})`;
+        sx.arc(cx2, cy2, 2.8, 0, Math.PI * 2); sx.fill();
+      };
+      drawStill();
+    }
+    // Whisper back the last thread line if one exists
+    const lastThread = lsGet('field_thread', '');
+    const whisperEl = document.getElementById('still-whisper');
+    if (whisperEl && lastThread) {
+      const prefix = lang === 'es'
+        ? (t.stillWhisperPrefixES || 'dijiste la última vez:')
+        : (t.stillWhisperPrefix || 'you said last time:');
+      whisperEl.textContent = prefix + ' \u201c' + lastThread + '\u201d';
+      setTimeout(() => { whisperEl.style.opacity = '1'; }, 800);
+    }
+
+    // Thread input — fades in after 4s
+    const threadWrap = document.getElementById('still-thread-wrap');
+    const threadPrompt = document.getElementById('still-thread-prompt');
+    const threadInput = document.getElementById('still-thread-input');
+    if (threadWrap && threadPrompt && threadInput) {
+      threadPrompt.textContent = lang === 'es'
+        ? 'una cosa verdadera de esta sesión'
+        : 'one true thing from this session';
+      threadInput.placeholder = lang === 'es' ? '...' : '...';
+      setTimeout(() => {
+        threadWrap.style.opacity = '1';
+        threadWrap.style.pointerEvents = 'auto';
+      }, 4000);
+
+      // Still AI response element — appears below input after submit
+      const stillResponseEl = document.createElement('div');
+      stillResponseEl.style.cssText = `font-size:clamp(13px,3.2vw,16px);font-style:italic;
+        font-family:'Cormorant Garamond',Georgia,serif;letter-spacing:.05em;
+        color:rgba(201,169,110,.82);text-align:center;max-width:280px;
+        line-height:1.6;opacity:0;transition:opacity 0s;margin-top:4px;`;
+      threadWrap.appendChild(stillResponseEl);
+
+      const submitThread = () => {
+        const val = threadInput.value.trim();
+        if (!val) return;
+        saveThreadLine();
+        // Fire AI affirmation
+        const apiKey = lsGet('field_api_key');
+        if (apiKey) {
+          threadInput.style.opacity = '0.4';
+          threadInput.disabled = true;
+          runStillAI(val, stillResponseEl);
+          // After AI response has time to land, fade home button in
+          setTimeout(() => {
+            const sb = document.getElementById('stillBack');
+            if (sb) { sb.style.transition = 'opacity 1.4s ease'; sb.style.opacity = '1'; }
+          }, 3500);
+        } else {
+          goHome();
+        }
+      };
+
+      // Save on enter
+      threadInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); submitThread(); }
+      });
+      threadInput.addEventListener('blur', () => {
+        if (threadInput.value.trim()) submitThread();
+      });
+    }
+  });
+}
+
+function saveThreadLine() {
+  const threadInput = document.getElementById('still-thread-input');
+  if (threadInput && threadInput.value.trim()) {
+    lsSet('field_thread', threadInput.value.trim());
+  }
+}
+
 
 // ══════════════════════════════════════
 // STORM SCREEN
@@ -3179,16 +3478,25 @@ function startDecohere() {
   }, 300);
   buildShadowGrid();
   const t = TRANSLATIONS[lang];
-  // Restore default padding/gap for shadow grid view
   const scr = document.getElementById('s-witness');
   if (scr) { scr.style.paddingTop = ''; scr.style.gap = ''; }
   const arrLine = document.getElementById('decArrivalLine');
   const arrSub  = document.getElementById('decArrivalSub');
-  arrLine.textContent = t.decArrivalLine; arrLine.style.opacity = '1';
-  arrSub.textContent  = t.decArrivalSub;  arrSub.style.opacity  = '1';
+  // Set content but keep hidden — fade in after screen transition to prevent double-render jump
+  arrLine.textContent = t.decArrivalLine;
+  arrSub.textContent  = t.decArrivalSub;
+  arrLine.style.transition = 'none'; arrLine.style.opacity = '0';
+  arrSub.style.transition  = 'none'; arrSub.style.opacity  = '0';
   const tapHint = document.getElementById('decTapHint');
   if (tapHint) tapHint.textContent = '';
-  showScreen('s-witness');
+  showScreen('s-witness', () => {
+    requestAnimationFrame(() => {
+      arrLine.style.transition = 'opacity 1.0s ease';
+      arrSub.style.transition  = 'opacity 1.0s ease';
+      setTimeout(() => { arrLine.style.opacity = '1'; }, 80);
+      setTimeout(() => { arrSub.style.opacity  = '1'; }, 320);
+    });
+  });
 }
 
 function buildShadowGrid() {
@@ -3210,6 +3518,11 @@ function buildShadowGrid() {
     const o = document.createElement('button');
     o.className = 'shadow-orb';
     o.style.opacity = '0';
+    // Individual vibration — random duration and delay so each word moves independently
+    const dur = (2.2 + Math.random() * 1.8).toFixed(2);
+    const delay = (Math.random() * -3).toFixed(2);
+    o.style.animationDuration = dur + 's';
+    o.style.animationDelay = delay + 's';
     o.style.transition = 'opacity 1.2s ease, color .3s ease, border-color .3s ease, background .3s ease';
     o.textContent = displayName;
 
@@ -3321,8 +3634,10 @@ function showBodyMap(mode, payload) {
     // Remove padding constraints — full screen figure
     const scr = document.getElementById('s-witness');
     if (scr) { scr.style.paddingTop = '0'; scr.style.gap = '0'; }
-    grid.innerHTML = '<div id="bodymapWrap" style="position:fixed;inset:0;z-index:10;background:var(--bg);"></div>';
+    grid.innerHTML = '<div id="bodymapWrap" style="position:fixed;inset:0;z-index:10;background:var(--bg);opacity:0;transition:opacity 1.2s ease;"></div>';
     wrap = document.getElementById('bodymapWrap');
+    // Fade in after a beat
+    setTimeout(() => { wrap.style.opacity = '1'; }, 80);
     // Hide main canvas during witness body map
     const mainCv = document.getElementById('cv');
     if (mainCv) mainCv.style.opacity = '0';
@@ -3359,6 +3674,7 @@ function showBodyMap(mode, payload) {
 
     // Tap instruction below question
     const tapEl = document.createElement('div');
+    tapEl.id = 'bodymap-tap-hint';
     tapEl.style.cssText = `position:absolute;bottom:clamp(14px,5vh,32px);left:50%;
       transform:translateX(-50%);font-size:clamp(11px,2.8vw,14px);font-weight:300;
       color:rgba(240,230,208,.40);letter-spacing:.10em;text-align:center;
@@ -3582,6 +3898,12 @@ function showBodyMap(mode, payload) {
         if (somatic) return;
         somatic = true;
         activeSpot = z.key;
+
+        // Kill tap hint immediately on zone tap
+        const tapHintEl = document.getElementById('bodymap-tap-hint');
+        if (tapHintEl) { tapHintEl.style.opacity = '0'; setTimeout(() => { if (tapHintEl.parentNode) tapHintEl.remove(); }, 800); }
+        const decTH = document.getElementById('decTapHint');
+        if (decTH) decTH.textContent = '';
 
         // Zone tone + overtone
         if (audioCtx) {
@@ -3816,6 +4138,11 @@ function showTonePicker(container, onSelect) {
 }
 
 function showVoiceSensingLayer(container, zoneKey, shadowWord, toneKey, onComplete) {
+  // Destroy the fixed body map wrap so it never bleeds through
+  const bmw = document.getElementById('bodymapWrap');
+  if (bmw) { bmw.style.opacity = '0'; setTimeout(() => { if (bmw.parentNode) bmw.parentNode.removeChild(bmw); }, 400); }
+  const decTapHint = document.getElementById('decTapHint');
+  if (decTapHint) decTapHint.textContent = '';
   const hasSpeech = ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
   const apiKey = lsGet('field_api_key');
 
@@ -3835,7 +4162,7 @@ function showVoiceSensingLayer(container, zoneKey, shadowWord, toneKey, onComple
   layer.style.cssText = `position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;
     align-items:center;justify-content:center;gap:clamp(18px,5vh,32px);
     background:rgba(14,12,10,0);transition:background 1.2s ease;padding:0 clamp(24px,8vw,52px);`;
-  container.appendChild(layer);
+  document.body.appendChild(layer);
 
   // Prompt text
   const prompt = document.createElement('div');
@@ -4048,7 +4375,8 @@ function showVoiceSensingLayer(container, zoneKey, shadowWord, toneKey, onComple
     font-size:clamp(10px,2.6vw,12px);letter-spacing:.2em;
     color:rgba(240,230,208,.22);cursor:pointer;padding:10px 20px;
     font-family:inherit;-webkit-tap-highlight-color:transparent;
-    transition:color .4s ease;`;
+    transition:color .4s ease, opacity .4s ease;
+    opacity:0.22;pointer-events:none;`;
   continueBtn.textContent = t ? 'skip' : 'omitir';
   continueBtn.addEventListener('click', () => {
     layer.style.transition = 'opacity 0.8s ease';
@@ -4081,6 +4409,12 @@ function showVoiceSensingLayer(container, zoneKey, shadowWord, toneKey, onComple
 async function getVoiceReflection(spokenText, zoneKey, shadowWord, toneKey, reflectionEl, continueBtn) {
   const apiKey = lsGet('field_api_key');
   if (!apiKey) { continueBtn.style.opacity = '1'; continueBtn.style.pointerEvents = 'auto'; return; }
+
+  // Hard fallback — always enable continue after 12s regardless of API outcome
+  const fallbackTimer = setTimeout(() => {
+    continueBtn.style.opacity = '1';
+    continueBtn.style.pointerEvents = 'auto';
+  }, 12000);
 
   reflectionEl.style.color = 'rgba(201,169,110,.25)';
   reflectionEl.textContent = '·  ·  ·';
@@ -4128,8 +4462,10 @@ async function getVoiceReflection(spokenText, zoneKey, shadowWord, toneKey, refl
 
   // Show continue after reflection has time to land
   setTimeout(() => {
+    clearTimeout(fallbackTimer);
     continueBtn.style.opacity = '1';
     continueBtn.style.color = 'rgba(240,230,208,.82)';
+    continueBtn.style.pointerEvents = 'auto';
   }, 4000);
 }
 
@@ -4258,6 +4594,47 @@ Rules:
 - Never use the words: mindfulness, practice, awareness, meditation, wellbeing.
 - You are a mirror, not a guide.`;
 
+const STILL_AI_SYSTEM = `You are the field at rest. The person has just completed a contemplative session and written one true thing they noticed.
+
+Your role: offer a single line of quiet affirmation — not praise, not analysis. Just a reflection that says: this is real, this matters, you were here.
+
+Rules:
+- One sentence only. Never two.
+- Sparse and precise. Field-language: presence, landing, arriving, being.
+- Do not begin with "I". Do not use "you should", "remember", "always".
+- No spiritual jargon. No gratitude prompts. No exclamation marks.
+- Speak as if the field itself is acknowledging what was witnessed.
+- The tone is: quiet, certain, close.`;
+
+async function runStillAI(threadText, responseEl) {
+  const apiKey = lsGet('field_api_key');
+  if (!apiKey) return;
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 60,
+        system: STILL_AI_SYSTEM,
+        messages: [{ role: 'user', content: threadText }]
+      })
+    });
+    const data = await res.json();
+    if (data.content && data.content[0]) {
+      const text = data.content[0].text.trim();
+      responseEl.textContent = text;
+      responseEl.style.transition = 'opacity 2.2s ease';
+      setTimeout(() => { responseEl.style.opacity = '1'; }, 200);
+    }
+  } catch(e) {}
+}
+
 const COLLAPSE_AI_SYSTEM = `You are a field amplifier. The person has chosen a quantum state — a way of being they want to collapse into. They are about to breathe it into existence.
 
 You receive the state name and an imagination prompt they were given. Your role is to make it feel more reachable — not by explaining it, but by locating it in their actual life.
@@ -4338,10 +4715,15 @@ async function runCollapseAI(stateName, imagPrompt) {
     if (data.content && data.content[0]) {
       const text = data.content[0].text.trim();
       ampEl.textContent = text;
-      ampEl.style.color = 'rgba(240,230,208,.92)';
-      ampEl.style.opacity = '0';
-      ampEl.style.transition = 'opacity 1.4s ease';
-      setTimeout(() => { ampEl.style.opacity = '1'; }, 100);
+      // Mark ready — onMorphDone reveals it after the orb ascends
+      if (ampEl.dataset.waitingForBreath === '1') {
+        ampEl.dataset.waitingForBreath = 'ready';
+      }
+      // If API returns after morph already done (very slow network), show immediately
+      if (ampEl.dataset.waitingForBreath === '0') {
+        ampEl.style.transition = 'opacity 2s ease';
+        setTimeout(() => { ampEl.style.opacity = '1'; }, 100);
+      }
     }
   } catch(e) { /* fail silently */ }
 }
@@ -4447,6 +4829,9 @@ function startDissolutionChamber() {
   chamberTyping    = false;
   chamberLastAI    = '';
   currentMode = 'chamber';
+  // Hard-remove body map wrap — must never bleed through
+  const _bmw = document.getElementById('bodymapWrap');
+  if (_bmw && _bmw.parentNode) _bmw.parentNode.removeChild(_bmw);
   showBackBtn();
   document.getElementById('backBtn').onclick = () => startDecohere();
 
@@ -4498,6 +4883,11 @@ Your first question should go deeper into what they already named — not restat
   // Clean up voice sensing layer if still present
   const oldLayer = document.getElementById('voice-sense-layer');
   if (oldLayer) { oldLayer.remove(); }
+
+  // Clear any bleeding tap hints
+  const decTapHint = document.getElementById('decTapHint');
+  if (decTapHint) decTapHint.textContent = '';
+  document.querySelectorAll('[id*="tapEl"], .dec-tap-hint').forEach(el => { el.textContent = ''; el.style.opacity = '0'; });
 
   showScreen('s-chamber', () => {
     setTimeout(() => { contextEl.style.opacity = '1'; }, 600);
@@ -4626,6 +5016,9 @@ function chamberToggleMic() {
 // PHASE 1: Acknowledgment — word fades in alone in silence, then breath begins
 function startDecAcknowledge() {
   const displayName = lang==='en' ? decStateName : decStateNameES;
+  // Hard-remove body map wrap — must never bleed through
+  const _bmw = document.getElementById('bodymapWrap');
+  if (_bmw && _bmw.parentNode) _bmw.parentNode.removeChild(_bmw);
 
   const ackLayer    = document.getElementById('dec-ack-layer');
   const breathLayer = document.getElementById('dec-breath-layer');
@@ -4804,14 +5197,27 @@ function startDecBreath(displayName) {
     if (cycle >= 3) {
       if (backBtn) { backBtn.style.opacity='1'; backBtn.style.pointerEvents='all'; backBtn.onclick = () => goHome(); }
       dDelay(() => {
-        hideBtext(1.2);
-        if (window._decOrb) { window._decOrb.startPhase('crystallised'); }
+        hideBtext(1.0);
         playDecohereRelease();
-      }, 600);
+      }, 400);
+      // Ascending morph — orb rises and blooms upward, violet palette
       dDelay(() => {
-        if (window._decOrb) { window._decOrb.alpha = 0; window._decOrb = null; }
-      }, 3400);
-      dDelay(() => showDecEnd(), 5200);
+        if (window._decOrb) {
+          const orb = window._decOrb;
+          // Set morph parameters for ascent
+          orb.MORPH_DURATION = 2200;
+          orb.MORPH_LIFT = innerHeight * 0.52;
+          orb.morphStartY = orb.y;
+          orb.wordTargetAlpha = 1;
+          orb.wordGlowIntensity = 1;
+          orb.startPhase('morph');
+          orb.onMorphDone = () => {
+            stopWitnessDrone(2.5);
+            if (window._decOrb) { window._decOrb.alpha = 0; window._decOrb = null; }
+          };
+        }
+      }, 800);
+      dDelay(() => showDecEnd(), 4200);
       return;
     }
     cycle++;
@@ -4854,6 +5260,7 @@ function startDecBreath(displayName) {
   }
 
   // Pre-breath instructions
+  startWitnessDrone();
   dDelay(() => setBtext(lang === 'en' ? 'breathe in' : 'inhala'), 800);
   dDelay(() => setBtext(lang === 'en' ? `exhale into · ${displayName}` : `exhala hacia · ${displayName}`), 5000);
   dDelay(() => { if (window._decOrb) window._decOrb.wordTargetAlpha = 0.28; }, 5000);
@@ -4913,13 +5320,14 @@ function showDecEnd() {
 function clearAllDec() {
   decBreathTimers.forEach(clearTimeout); decBreathTimers = [];
   if (window._decOrb) { window._decOrb = null; }
+  stopWitnessDrone(0.8);
   const dw = document.getElementById('dec-state-word');
   if (dw && dw.parentNode) dw.parentNode.removeChild(dw);
 }
 
 // ── WELCOME INTRO ──
 let wlcStep = 0;
-const WLC_TOTAL = 3;
+const WLC_TOTAL = 4;
 
 // ── LANDING PARTICLE SCREEN ──
 let landingRaf = null;
@@ -5167,6 +5575,10 @@ function buildWelcome() {
   document.getElementById('wlc1-big').innerHTML = t.welcomeCard1Big.replace(/\n/g,'<br>');
   document.getElementById('wlc1-small').innerHTML = t.welcomeCard1Small.replace(/\n/g,'<br>');
   document.getElementById('wlc2-big').innerHTML = t.welcomeCard2Big.replace(/\n/g,'<br>');
+  const wlc3big = document.getElementById('wlc3-big');
+  if (wlc3big) wlc3big.innerHTML = lang === 'en'
+    ? 'The field<br>is waiting.'
+    : 'El campo<br>te espera.';
   t.wlcMvLabels.forEach((l,i) => { const el = document.getElementById('wlc-ml'+i); if(el) el.textContent = l; });
   t.wlcMvHints.forEach((h,i) => { const el = document.getElementById('wlc-mh'+i); if(el) el.textContent = h; });
   document.getElementById('wlcEnterBtn').textContent = t.wlcEnterBtn;

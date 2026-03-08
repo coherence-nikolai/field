@@ -146,6 +146,7 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 .movement:hover .mv-glyph,.movement.lit .mv-glyph{
   color:var(--gold-bright);text-shadow:0 0 20px rgba(240,204,136,.4);}
 /* ↑ crystallise charge effect */
+#mv-still .mv-glyph{font-size:clamp(52px,14vw,72px);line-height:.6;color:rgba(201,169,110,.88);}
 #mv-collapse .mv-glyph{transition:color .3s ease,text-shadow .3s ease,transform .3s cubic-bezier(.2,0,.2,1.4);}
 #mv-collapse.charging .mv-glyph{
   color:rgba(255,248,200,1);
@@ -789,15 +790,20 @@ body.fs-large .imag-prompt{font-size:clamp(18px,4.8vw,24px);}
     <div class="wlc-big" id="wlc2-big"></div>
     <div class="wlc-movements">
       <div class="wlc-mv"><div class="wlc-mv-glyph">◎</div><div class="wlc-mv-label" id="wlc-ml0"></div><div class="wlc-mv-hint" id="wlc-mh0"></div></div>
-      <div class="wlc-mv"><div class="wlc-mv-glyph">↑</div><div class="wlc-mv-label" id="wlc-ml1"></div><div class="wlc-mv-hint" id="wlc-mh1"></div></div>
-      <div class="wlc-mv"><div class="wlc-mv-glyph">◯</div><div class="wlc-mv-label" id="wlc-ml2"></div><div class="wlc-mv-hint" id="wlc-mh2"></div></div>
+      <div class="wlc-mv"><div class="wlc-mv-glyph">◯</div><div class="wlc-mv-label" id="wlc-ml1"></div><div class="wlc-mv-hint" id="wlc-mh1"></div></div>
+      <div class="wlc-mv"><div class="wlc-mv-glyph">↑</div><div class="wlc-mv-label" id="wlc-ml2"></div><div class="wlc-mv-hint" id="wlc-mh2"></div></div>
+      <div class="wlc-mv"><div class="wlc-mv-glyph" style="font-size:clamp(32px,8vw,44px);line-height:.7;">·</div><div class="wlc-mv-label" id="wlc-ml3"></div><div class="wlc-mv-hint" id="wlc-mh3"></div></div>
     </div>
+  </div>
+  <div class="wlc-card" id="wlc3" style="justify-content:center;gap:clamp(24px,6vh,40px);">
+    <div class="wlc-big" id="wlc3-big" style="font-size:clamp(28px,7vw,42px);"></div>
     <button class="wlc-enter" id="wlcEnterBtn"></button>
   </div>
   <div class="wlc-dots">
     <div class="wlc-dot on" id="wdot0"></div>
     <div class="wlc-dot" id="wdot1"></div>
     <div class="wlc-dot" id="wdot2"></div>
+    <div class="wlc-dot" id="wdot3"></div>
   </div>
   <div class="wlc-tap-hint" id="wlcTapHint"></div>
 </div>
@@ -811,15 +817,20 @@ body.fs-large .imag-prompt{font-size:clamp(18px,4.8vw,24px);}
       <div class="mv-label" id="mvObserveLabel"></div>
       <div class="mv-hint" id="mvObserveHint"></div>
     </div>
+    <div class="movement" id="mv-witness" onclick="startDecohere()">
+      <div class="mv-glyph">◯</div>
+      <div class="mv-label" id="mvWitnessLabel"></div>
+      <div class="mv-hint" id="mvWitnessHint"></div>
+    </div>
     <div class="movement" id="mv-collapse" onmousedown="chargeCollapse(event)" ontouchstart="chargeCollapse(event)" onmouseup="releaseCollapse(event)" ontouchend="releaseCollapse(event)" onmouseleave="cancelCharge()">
       <div class="mv-glyph">↑</div>
       <div class="mv-label" id="mvCollapseLabel"></div>
       <div class="mv-hint" id="mvCollapseHint"></div>
     </div>
-    <div class="movement" id="mv-witness" onclick="startDecohere()">
-      <div class="mv-glyph">◯</div>
-      <div class="mv-label" id="mvWitnessLabel"></div>
-      <div class="mv-hint" id="mvWitnessHint"></div>
+    <div class="movement" id="mv-still" onclick="enterStill()">
+      <div class="mv-glyph">·</div>
+      <div class="mv-label" id="mvStillLabel"></div>
+      <div class="mv-hint" id="mvStillHint"></div>
     </div>
   </div>
   <div class="obs-count-home" id="homeCount"></div>
@@ -917,7 +928,20 @@ body.fs-large .imag-prompt{font-size:clamp(18px,4.8vw,24px);}
 
 <div class="screen" id="s-still">
   <div class="still-p"></div>
+  <div id="still-whisper" style="font-family:'Cormorant Garamond',serif;font-size:clamp(13px,3.2vw,16px);
+    font-style:italic;color:rgba(240,230,208,.30);letter-spacing:.08em;text-align:center;
+    max-width:280px;line-height:1.7;min-height:24px;transition:opacity 1.5s ease;opacity:0;"></div>
   <div class="still-line" id="stillTxt"></div>
+  <div id="still-thread-wrap" style="display:flex;flex-direction:column;align-items:center;gap:10px;
+    margin-top:16px;opacity:0;transition:opacity 1.5s ease;pointer-events:none;">
+    <div style="font-size:clamp(10px,2.4vw,12px);letter-spacing:.18em;color:rgba(240,230,208,.25);
+      text-align:center;" id="still-thread-prompt"></div>
+    <input id="still-thread-input" type="text" style="background:none;border:none;
+      border-bottom:1px solid rgba(240,230,208,.12);outline:none;font-family:'Cormorant Garamond',serif;
+      font-size:clamp(15px,3.8vw,18px);font-style:italic;letter-spacing:.06em;
+      color:rgba(240,230,208,.80);width:240px;padding:8px 0;text-align:center;
+      caret-color:rgba(201,169,110,.7);" placeholder="" />
+  </div>
   <button class="still-back" id="stillBack"></button>
 </div>
 
