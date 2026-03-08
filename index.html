@@ -299,11 +299,11 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
   color:rgba(240,230,208,.0);line-height:1.7;max-width:300px;text-align:center;
   transition:color 2.2s ease;margin-top:8px;}
 .bwrap{display:flex;flex-direction:column;align-items:center;gap:20px;width:100%;}
-.btext-slot{height:clamp(64px,16vw,88px);display:flex;align-items:center;justify-content:center;width:100%;position:relative;overflow:hidden;}
-.btext{font-size:var(--fh);font-weight:300;letter-spacing:.14em;color:var(--cream-dim);
-  position:absolute;left:50%;transform:translateX(-50%);
-  width:90vw;max-width:340px;
-  transition:opacity .5s ease;text-align:center;white-space:normal;line-height:1.4;}
+.btext-slot{height:clamp(44px,10vw,60px);display:flex;align-items:center;justify-content:center;width:100%;position:relative;overflow:hidden;}
+.btext{position:fixed;top:clamp(88px,18vh,140px);left:50%;transform:translateX(-50%);
+  font-size:var(--fh);font-weight:300;letter-spacing:.14em;color:var(--cream-dim);
+  text-align:center;z-index:22;pointer-events:none;white-space:nowrap;
+  width:90vw;max-width:340px;transition:opacity .5s ease;line-height:1.4;}
 /* intro instructions — large and prominent */
 .btext.intro{font-size:clamp(18px,4.8vw,26px);letter-spacing:.08em;color:rgba(240,230,208,.82);line-height:1.6;}
 .btext.intro-gold{font-size:clamp(22px,6vw,34px);letter-spacing:.06em;color:var(--gold-bright);
@@ -413,12 +413,12 @@ html,body { margin:0;padding:0;width:100%;height:100%;background:var(--bg);
 /* Witness breath */
 #s-dec-breath{gap:0;text-align:center;cursor:default;overflow:hidden;}
 #dec-btext{position:fixed;left:50%;transform:translateX(-50%);
-  top:calc(50% - clamp(90px,18vw,120px));
+  top:clamp(88px,18vh,140px);
   font-size:var(--fh);font-weight:300;letter-spacing:.10em;
   color:rgba(240,230,208,.72);display:flex;align-items:center;justify-content:center;
   width:100%;max-width:320px;text-align:center;
   transition:opacity 0.7s ease;opacity:0;overflow:hidden;line-height:1.4;
-  z-index:16;pointer-events:none;}
+  z-index:22;pointer-events:none;}
 #dec-bp-wrap{position:relative;
   width:min(55vw,260px);height:min(55vw,260px);display:flex;align-items:center;justify-content:center;z-index:14;}
 #dec-bp{position:absolute;inset:0;border-radius:50%;
