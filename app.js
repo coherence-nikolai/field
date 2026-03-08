@@ -1534,6 +1534,8 @@ function buildObsScreen() {
         chooseNoteSense(s.key, b);
       };
       b.onclick = fireSense;
+      b.addEventListener('touchstart', e => { e.stopPropagation(); }, { passive: true });
+      b.addEventListener('touchend', e => { e.preventDefault(); e.stopPropagation(); fireSense(); });
       senseRow.appendChild(b);
     });
 
@@ -1550,10 +1552,12 @@ function buildObsScreen() {
       const fireTone = () => {
         if (_toneFired) return;
         _toneFired = true;
-        setTimeout(() => { _toneFired = false; }, 800);
+        setTimeout(() => { _toneFired = false; }, 400);
         chooseNoteTone(tone.key, b);
       };
       b.onclick = fireTone;
+      b.addEventListener('touchstart', e => { e.stopPropagation(); }, { passive: true });
+      b.addEventListener('touchend', e => { e.preventDefault(); e.stopPropagation(); fireTone(); });
       toneRow.appendChild(b);
     });
 

@@ -647,7 +647,7 @@ body.fs-large .imag-prompt{font-size:clamp(18px,4.8vw,24px);}
 /* Two-screen noting flow */
 .noting-phase{position:absolute;inset:0;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:clamp(16px,4vh,28px);
-  padding:clamp(80px,18vh,110px) clamp(24px,6vw,40px) clamp(60px,14vh,80px);
+  padding:clamp(80px,18vh,110px) clamp(24px,6vw,40px) calc(clamp(100px,20vh,130px) + env(safe-area-inset-bottom, 0px));
   opacity:0;pointer-events:none;box-sizing:border-box;}
 .noting-phase.active-phase{opacity:1;pointer-events:all;}
 .noting-step-dots{display:flex;gap:8px;margin-bottom:4px;}
@@ -664,18 +664,19 @@ body.fs-large .imag-prompt{font-size:clamp(18px,4.8vw,24px);}
 .sense-chip-full{display:flex;flex-direction:column;align-items:center;gap:8px;
   background:rgba(201,169,110,.06);border:1px solid rgba(201,169,110,.28);
   border-radius:16px;padding:20px 8px;cursor:pointer;
-  -webkit-tap-highlight-color:transparent;transition:all .3s ease;font-family:inherit;}
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation;
+  transition:all .3s ease;font-family:inherit;}
 .scf-glyph{font-size:22px;color:rgba(201,169,110,.90);line-height:1;}
 .scf-label{font-size:clamp(12px,3vw,14px);letter-spacing:.10em;color:rgba(240,230,208,.78);}
 .sense-chip-full.active,.sense-chip-full:active{
   background:rgba(201,169,110,.16);border-color:rgba(201,169,110,.85);
   box-shadow:0 0 20px rgba(201,169,110,.2);}
-.tone-row-full{display:flex;flex-direction:column;gap:14px;width:100%;max-width:300px;}
+.tone-row-full{display:flex;flex-direction:column;gap:14px;width:100%;max-width:300px;touch-action:manipulation;}
 .tone-chip-full{display:flex;align-items:center;gap:20px;
   background:rgba(201,169,110,.06);border:1px solid rgba(201,169,110,.22);
   border-radius:18px;padding:20px 28px;cursor:pointer;
-  -webkit-tap-highlight-color:transparent;transition:all .3s ease;font-family:inherit;
-  text-align:left;}
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation;
+  transition:all .3s ease;font-family:inherit;text-align:left;}
 .tcf-symbol{font-size:28px;line-height:1;flex-shrink:0;width:32px;text-align:center;}
 .tcf-word{font-size:clamp(16px,4.5vw,20px);letter-spacing:.08em;color:rgba(240,230,208,.82);font-weight:300;}
 .tone-chip-full[data-tone-key="pleasant"] .tcf-symbol{color:rgba(240,190,80,.82);}
