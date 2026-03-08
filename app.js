@@ -54,6 +54,8 @@ let motionCheckInterval = null;
 // Witness state
 let decStateName = '', decStateNameES = '';
 let decBodySpot = 'chest';
+let decSomaticTone = '';    // pleasant | unpleasant | neutral
+let decSomaticSpoken = '';  // what they said in voice sensing
 let collapseBodySpot = 'chest';
 
 // Voice noting state
@@ -1321,6 +1323,7 @@ function goHome() {
   if (fc) { fc.style.opacity = '0'; }
   if (window._decOrb) { window._decOrb = null; }
   companionAsked = false;
+  decSomaticTone = ''; decSomaticSpoken = ''; chamberSystemActive = '';
   restoreCircadianPalette();
   const cw = document.getElementById('companion-wrap');
   if (cw) { cw.innerHTML = ''; } // restore from any movement-specific palette
@@ -3628,10 +3631,13 @@ function showBodyMap(mode, payload) {
 
             // Tone picker — pleasant / unpleasant / neutral
             showTonePicker(wrap, (toneKey) => {
+              decSomaticTone = toneKey;
+              decSomaticSpoken = ''; // reset for new session
               // Log the somatic data
               logSession({ type: 'somatic', shadow: decStateName, zone: z.key, tone: toneKey, ts: Date.now() });
               // Voice sensing layer — speak into the zone before chamber
-              showVoiceSensingLayer(wrap, z.key, decStateName, toneKey, () => {
+              showVoiceSensingLayer(wrap, z.key, decStateName, toneKey, (spokenText) => {
+                if (spokenText) decSomaticSpoken = spokenText;
                 const apiKey = localStorage.getItem('field_api_key');
                 if (apiKey) { startDissolutionChamber(); } else { startDecAcknowledge(); }
               });
@@ -3976,7 +3982,7 @@ function showVoiceSensingLayer(container, zoneKey, shadowWord, toneKey, onComple
     layer.style.transition = 'opacity 0.8s ease';
     layer.style.opacity = '0';
     if (recog) { try { recog.abort(); } catch(e){} }
-    setTimeout(() => { layer.remove(); onComplete(); }, 800);
+    setTimeout(() => { layer.remove(); onComplete(spokenText || ''); }, 800);
   });
   continueBtn.addEventListener('touchend', e => { e.preventDefault(); continueBtn.click(); });
 
@@ -4279,6 +4285,7 @@ Rules:
 
 
 let chamberLastAI = '';
+let chamberSystemActive = ''; // set per-session with somatic context
 
 function appendChamberMsg(text, role) {
   const msgs = document.getElementById('chamber-messages');
@@ -4321,7 +4328,7 @@ async function chamberCallAI(onDone) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 180,
-        system: CHAMBER_SYSTEM,
+        system: chamberSystemActive || CHAMBER_SYSTEM,
         messages: chamberHistory
       })
     });
@@ -4358,6 +4365,18 @@ function startDissolutionChamber() {
 
   const shadowName = lang === 'en' ? decStateName : decStateNameES;
   const zoneName   = decBodySpot || 'body';
+  const toneLabel  = decSomaticTone === 'pleasant' ? 'pleasant' : decSomaticTone === 'unpleasant' ? 'unpleasant' : decSomaticTone === 'neutral' ? 'neutral' : '';
+  const spokenLine = decSomaticSpoken ? `\nWhat they said about it: "${decSomaticSpoken}"` : '';
+  const toneNote   = toneLabel ? `\nThe quality they named: ${toneLabel}.` : '';
+
+  // Dynamic system prompt enriched with full somatic context
+  const chamberSystemFull = CHAMBER_SYSTEM + `
+
+Context for this session:
+- Shadow state: "${shadowName}"
+- Body location: ${zoneName}${toneNote}${spokenLine}
+
+Your first question should go deeper into what they already named — not restate it. If they spoke something specific, begin there.`;
 
   const contextEl = document.getElementById('chamber-context');
   const msgsEl    = document.getElementById('chamber-messages');
@@ -4373,13 +4392,19 @@ function startDissolutionChamber() {
   skipEl.style.opacity = '0';
   skipEl.textContent = lang === 'en' ? 'continue to breath →' : 'continuar a la respiración →';
   contextEl.style.opacity = '0';
-  contextEl.textContent = shadowName.toLowerCase() + ' · ' + zoneName;
+  contextEl.textContent = shadowName.toLowerCase() + ' · ' + zoneName + (toneLabel ? ' · ' + toneLabel : '');
 
-  // Seed history with context
+  // Seed history with full somatic context
+  const seedParts = [`I am with ${shadowName}, and I feel it in my ${zoneName}.`];
+  if (toneLabel) seedParts.push(`It feels ${toneLabel}.`);
+  if (decSomaticSpoken) seedParts.push(`I described it as: "${decSomaticSpoken}".`);
+
   chamberHistory = [{
     role: 'user',
-    content: `I am with ${shadowName}, and I feel it in my ${zoneName}.`
+    content: seedParts.join(' ')
   }];
+
+  chamberSystemActive = chamberSystemFull;
 
   applyDecoherePalette();
 
