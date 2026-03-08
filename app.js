@@ -1980,6 +1980,10 @@ function enterObserve() {
       return;
     }
 
+    // Assert back button immediately — before field activation delay
+    showBackBtn();
+    document.getElementById('backBtn').onclick = () => goHome();
+
     setTimeout(() => {
       const hint = document.getElementById('obs-hint-txt');
       if (hint) { hint.style.transition = 'opacity 1.5s ease'; hint.style.opacity = '1'; }
@@ -2053,7 +2057,7 @@ function startObsTimer() {
       clearInterval(obsTimerInterval);
       reachObsCoherence();
     }
-  }, 1000);
+  }, 500);
 }
 
 function startAttentionTimer() {
@@ -2763,11 +2767,11 @@ function showCollapseStage(n) {
       const ampEl = document.getElementById('collapseAI');
       if (ampEl) {
         ampEl.textContent = '';
-        ampEl.style.color = 'rgba(240,230,208,.0)';
+        ampEl.style.opacity = '0';
         // Move out of imagPre so it survives imagPre fade
         const cs4 = document.getElementById('cs4');
         if (cs4 && ampEl.parentNode !== cs4) cs4.appendChild(ampEl);
-        ampEl.style.cssText += ';position:fixed;bottom:clamp(80px,16vh,120px);left:50%;transform:translateX(-50%);width:90%;max-width:340px;text-align:center;z-index:20;pointer-events:none;';
+        ampEl.style.cssText = 'position:fixed;bottom:clamp(80px,16vh,120px);left:50%;transform:translateX(-50%);width:90%;max-width:340px;text-align:center;z-index:20;pointer-events:none;opacity:0;color:rgba(240,230,208,.92);font-size:clamp(14px,3.8vw,17px);font-weight:300;font-style:italic;letter-spacing:.06em;line-height:1.7;transition:opacity 1.4s ease;font-family:\'Cormorant Garamond\',Georgia,serif;';
       }
       if (ip && ip.textContent) {
         setTimeout(() => runCollapseAI(curStateName, ip.textContent), 800);
@@ -4307,7 +4311,10 @@ async function runCollapseAI(stateName, imagPrompt) {
     if (data.content && data.content[0]) {
       const text = data.content[0].text.trim();
       ampEl.textContent = text;
-      setTimeout(() => { ampEl.style.color = 'rgba(240,230,208,.92)'; }, 600);
+      ampEl.style.color = 'rgba(240,230,208,.92)';
+      ampEl.style.opacity = '0';
+      ampEl.style.transition = 'opacity 1.4s ease';
+      setTimeout(() => { ampEl.style.opacity = '1'; }, 100);
     }
   } catch(e) { /* fail silently */ }
 }
