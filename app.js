@@ -1558,6 +1558,13 @@ function buildObsScreen() {
 
       let _fired = false;
       const fire = () => {
+        // DEBUG — show what's happening
+        const dbg = document.createElement('div');
+        dbg.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:red;color:white;padding:8px 16px;z-index:9999;font-size:16px;border-radius:8px;pointer-events:none;';
+        dbg.textContent = `tap:${tone.key} sense:${noteSense} fired:${_fired}`;
+        document.body.appendChild(dbg);
+        setTimeout(() => dbg.remove(), 2000);
+
         if (_fired) return;
         _fired = true;
         z.style.background = tone.bg.replace('.07)', '.18)').replace('.05)', '.14)');
