@@ -1404,7 +1404,6 @@ function buildObsScreen() {
     stormLink.style.cssText = 'position:absolute;bottom:clamp(28px,7vh,48px);left:50%;transform:translateX(-50%);font-size:clamp(11px,2.8vw,13px);letter-spacing:.18em;color:rgba(240,204,136,.58);cursor:pointer;padding:8px 16px;white-space:nowrap;-webkit-tap-highlight-color:transparent;';
     stormLink.textContent = lang === 'en' ? 'enter storm' : 'entrar tormenta';
     stormLink.addEventListener('click', () => { if(audioCtx) playTap(); const obsScr = document.getElementById('s-observe'); if (obsScr) { obsScr.style.transition = 'opacity 0.3s ease'; obsScr.style.opacity = '0'; } setTimeout(() => { clearObserver(); startStormScreen(); }, 280); });
-    document.getElementById('noting-sense-screen').appendChild(stormLink);
 
     // Voice noting button — only if Web Speech API available
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -1437,10 +1436,10 @@ function buildObsScreen() {
       voiceWrap.appendChild(micBtn);
       voiceWrap.appendChild(voiceLabel);
       voiceWrap.appendChild(voiceTranscriptEl);
-      document.querySelector('.observe-alt-wrap').appendChild(voiceWrap);
+      document.getElementById('noting-sense-screen').appendChild(voiceWrap);
     }
 
-    document.querySelector('.observe-alt-wrap').appendChild(stormLink);
+    document.getElementById('noting-sense-screen').appendChild(stormLink);
     return;
   }
 
@@ -4749,30 +4748,76 @@ function startLandingScreen() {
         return;
       }
     } else {
-      // Normal drifting particle — alive, pulsing, vibrating
+      // SpParticle-matched rendering — same visual language, 1.4× scale
       pulsePhase += 0.031;
-      const vibrate = 1 + 0.08 * Math.sin(pulsePhase * 3.7) + 0.04 * Math.sin(pulsePhase * 7.1);
-      const coreR = (18 + focusLevel * 10) * breathe * vibrate;
-      const glowR = coreR * (5.5 - focusLevel * 2);
-      const coreAlpha = 0.62 + focusLevel * 0.35;
-      const glowAlpha = 0.22 + focusLevel * 0.25 + 0.06 * Math.sin(pulsePhase);
+      const microPulse = 1 + 0.07 * Math.sin(pulsePhase);
+      const flicker = 0.88 + 0.12 * Math.sin(pulsePhase * 3.7);
+      const f = focusLevel;
 
-      // Soft gaussian glow
-      const g = lc.createRadialGradient(px, py, 0, px, py, glowR);
-      g.addColorStop(0, `rgba(240,204,136,${(glowAlpha * 1.8).toFixed(3)})`);
-      g.addColorStop(0.3, `rgba(240,204,136,${glowAlpha.toFixed(3)})`);
-      g.addColorStop(1, 'rgba(240,204,136,0)');
-      lc.fillStyle = g;
-      lc.beginPath(); lc.arc(px, py, glowR, 0, Math.PI * 2); lc.fill();
+      // Core radius — matches SpParticle r but larger
+      const r = (11 + f * 6) * breathe * microPulse;
 
-      // Core dot
-      lc.globalAlpha = coreAlpha;
-      lc.fillStyle = 'rgba(255,240,200,1)';
-      lc.beginPath(); lc.arc(px, py, coreR, 0, Math.PI * 2); lc.fill();
+      // Glow halos
+      const g1 = (28 + f * 32) * breathe;   // inner
+      const g2 = (70 + f * 80) * breathe;   // mid
+      const g3 = (140 + f * 120) * breathe; // corona
+
+      // Corona
+      const corona = lc.createRadialGradient(px, py, g2 * 0.5, px, py, g3);
+      corona.addColorStop(0, `rgba(240,190,80,${(0.06 * breathe).toFixed(3)})`);
+      corona.addColorStop(1, 'rgba(240,190,80,0)');
+      lc.fillStyle = corona;
+      lc.beginPath(); lc.arc(px, py, g3, 0, Math.PI * 2); lc.fill();
+
+      // Mid halo
+      const midGrad = lc.createRadialGradient(px, py, 0, px, py, g2);
+      midGrad.addColorStop(0, `rgba(255,220,140,${(0.22 * breathe * flicker).toFixed(3)})`);
+      midGrad.addColorStop(0.4, `rgba(240,190,80,${(0.14 * breathe).toFixed(3)})`);
+      midGrad.addColorStop(1, 'rgba(240,190,80,0)');
+      lc.fillStyle = midGrad;
+      lc.beginPath(); lc.arc(px, py, g2, 0, Math.PI * 2); lc.fill();
+
+      // Rays — emerge as focusLevel rises (matching SpParticle ray logic)
+      if (f > 0.15) {
+        const rayAlphaBase = (f - 0.15) / 0.85;
+        const NUM_RAYS = 8;
+        const rayPh = phase * 0.28; // slow rotation from phase
+        for (let i = 0; i < NUM_RAYS; i++) {
+          const angle = rayPh + (Math.PI * 2 / NUM_RAYS) * i;
+          const lenPulse = 0.55 + 0.45 * Math.sin(phase * 1.3 + i * 0.8);
+          const rayLen = (g1 * 2.2 + f * 70) * lenPulse * breathe;
+          const rayWidth = r * 0.18;
+          const rayAlpha = (0.12 + f * 0.22) * lenPulse * flicker * rayAlphaBase;
+          lc.save();
+          lc.translate(px, py); lc.rotate(angle);
+          const rg = lc.createLinearGradient(r, 0, r + rayLen, 0);
+          rg.addColorStop(0, `rgba(255,220,140,${rayAlpha.toFixed(3)})`);
+          rg.addColorStop(0.5, `rgba(240,190,80,${(rayAlpha*0.5).toFixed(3)})`);
+          rg.addColorStop(1, 'rgba(240,190,80,0)');
+          lc.fillStyle = rg;
+          lc.beginPath();
+          lc.moveTo(r, -rayWidth); lc.lineTo(r + rayLen, 0); lc.lineTo(r, rayWidth);
+          lc.closePath(); lc.fill();
+          lc.restore();
+        }
+      }
+
+      // Inner glow
+      const innerGrad = lc.createRadialGradient(px, py, 0, px, py, g1);
+      innerGrad.addColorStop(0, `rgba(255,240,180,${(0.9 * flicker).toFixed(3)})`);
+      innerGrad.addColorStop(0.3, `rgba(255,210,120,${(0.55 * breathe).toFixed(3)})`);
+      innerGrad.addColorStop(1, 'rgba(240,190,80,0)');
+      lc.fillStyle = innerGrad;
+      lc.beginPath(); lc.arc(px, py, g1, 0, Math.PI * 2); lc.fill();
+
+      // Hard core
+      lc.globalAlpha = 0.62 + f * 0.35;
+      lc.fillStyle = 'rgba(255,248,220,1)';
+      lc.beginPath(); lc.arc(px, py, r, 0, Math.PI * 2); lc.fill();
       // Hot centre
-      lc.globalAlpha = coreAlpha * 0.7;
-      lc.fillStyle = 'rgba(255,255,255,1)';
-      lc.beginPath(); lc.arc(px, py, coreR * 0.35, 0, Math.PI * 2); lc.fill();
+      lc.globalAlpha = (0.62 + f * 0.35) * 0.7;
+      lc.fillStyle = 'rgba(255,255,240,1)';
+      lc.beginPath(); lc.arc(px, py, r * 0.4, 0, Math.PI * 2); lc.fill();
       lc.globalAlpha = 1;
     }
 
