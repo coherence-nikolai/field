@@ -1356,6 +1356,7 @@ function buildObsScreen() {
         <div id="senseRow" class="sense-row-full"></div>
         <div id="stormWord" class="storm-word"></div>
         <div id="noteCounter" class="note-counter">${t?'notes':'notas'} · 0</div>
+        <div id="obs-timer-noting" style="font-size:clamp(11px,2.8vw,13px);letter-spacing:.18em;color:rgba(201,169,110,.35);"></div>
         <div id="noting-progress" style="display:flex;gap:6px;justify-content:center;margin-top:4px;"></div>
       </div>
       <div id="noting-tone-screen" class="noting-phase">
@@ -1674,8 +1675,10 @@ function buildObsSetupScreen() {
     'font-size:clamp(16px,4vw,20px);letter-spacing:.22em;color:rgba(201,169,110,.85);' +
     'cursor:pointer;padding:20px 56px;-webkit-tap-highlight-color:transparent;transition:all .4s ease;min-height:64px;';
   enterBtn.textContent = t ? 'enter' : 'entrar';
-  enterBtn.addEventListener('click', () => { if(audioCtx) playTap(); enterObserve(); });
-  enterBtn.addEventListener('touchend', e => { e.preventDefault(); if(audioCtx) playTap(); enterObserve(); });
+  let _enterFired = false;
+  const fireEnter = () => { if (_enterFired) return; _enterFired = true; if(audioCtx) playTap(); enterObserve(); };
+  enterBtn.addEventListener('click', fireEnter);
+  enterBtn.addEventListener('touchend', e => { e.preventDefault(); fireEnter(); });
   wrap.appendChild(enterBtn);
 
   screen.appendChild(wrap);
@@ -1744,6 +1747,9 @@ function setObsTime(mins) {
 }
 
 function enterObserve() {
+  if (enterObserve._running) return;
+  enterObserve._running = true;
+  setTimeout(() => { enterObserve._running = false; }, 2000);
   initAudio();
   if (audioCtx && audioCtx.state === 'suspended') {
     audioCtx.resume().then(() => {
