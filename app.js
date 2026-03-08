@@ -1533,8 +1533,7 @@ function buildObsScreen() {
         setTimeout(() => { _senseFired = false; }, 800);
         chooseNoteSense(s.key, b);
       };
-      b.addEventListener('click', fireSense);
-      b.addEventListener('touchend', e => { e.preventDefault(); fireSense(); });
+      b.onclick = fireSense;
       senseRow.appendChild(b);
     });
 
@@ -1554,8 +1553,7 @@ function buildObsScreen() {
         setTimeout(() => { _toneFired = false; }, 800);
         chooseNoteTone(tone.key, b);
       };
-      b.addEventListener('click', fireTone);
-      b.addEventListener('touchend', e => { e.preventDefault(); fireTone(); });
+      b.onclick = fireTone;
       toneRow.appendChild(b);
     });
 
@@ -3848,8 +3846,7 @@ function showTonePicker(container, onSelect) {
         setTimeout(() => { layer.remove(); onSelect(tone.key); }, 700);
       }, 280);
     };
-    b.addEventListener('click', select);
-    b.addEventListener('touchend', e => { e.preventDefault(); select(); });
+    b.onclick = select;
     btnRow.appendChild(b);
   });
 
