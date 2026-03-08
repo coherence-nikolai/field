@@ -1542,12 +1542,12 @@ function buildObsScreen() {
     // Tone zones — full screen thirds, no centering issues
     const toneRow = document.getElementById('toneRow');
     const toneZones = lang === 'en'
-      ? [{key:'pleasant',  symbol:'+', word:'good',      color:'rgba(201,169,110,', bg:'rgba(201,169,110,.07)'},
-         {key:'unpleasant',symbol:'–', word:'difficult',  color:'rgba(110,150,201,', bg:'rgba(110,150,201,.07)'},
-         {key:'neutral',   symbol:'○', word:'neither',    color:'rgba(180,175,165,', bg:'rgba(180,175,165,.05)'}]
-      : [{key:'pleasant',  symbol:'+', word:'bueno',      color:'rgba(201,169,110,', bg:'rgba(201,169,110,.07)'},
-         {key:'unpleasant',symbol:'–', word:'difícil',    color:'rgba(110,150,201,', bg:'rgba(110,150,201,.07)'},
-         {key:'neutral',   symbol:'○', word:'ninguno',    color:'rgba(180,175,165,', bg:'rgba(180,175,165,.05)'}];
+      ? [{key:'neutral',   symbol:'○', word:'neither',    color:'rgba(180,175,165,', bg:'rgba(180,175,165,.05)'},
+         {key:'pleasant',  symbol:'+', word:'good',       color:'rgba(201,169,110,', bg:'rgba(201,169,110,.07)'},
+         {key:'unpleasant',symbol:'–', word:'difficult',  color:'rgba(110,150,201,', bg:'rgba(110,150,201,.07)'}]
+      : [{key:'neutral',   symbol:'○', word:'ninguno',    color:'rgba(180,175,165,', bg:'rgba(180,175,165,.05)'},
+         {key:'pleasant',  symbol:'+', word:'bueno',      color:'rgba(201,169,110,', bg:'rgba(201,169,110,.07)'},
+         {key:'unpleasant',symbol:'–', word:'difícil',    color:'rgba(110,150,201,', bg:'rgba(110,150,201,.07)'}];
 
     toneZones.forEach(tone => {
       const z = document.createElement('div');
