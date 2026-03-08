@@ -452,8 +452,8 @@ class BreathOrb {
       cx.fillStyle = wordColor;
 
       // Position: centre of orb + vibration offset
-      const wx = px + (this.wordVibX || 0);
-      const wy = py + (this.wordVibY || 0);
+      const wx = px;
+      const wy = py;
       cx.fillText(this.wordText, wx, wy);
 
       // Second pass for extra glow on high-intensity moments
@@ -1211,7 +1211,7 @@ function updateSettingsToggles() {
   if (apiInput) apiInput.value = apiKey ? '••••••••••••••••••••••••' : '';
   if (apiInput) apiInput.placeholder = apiKey ? '' : 'sk-ant-...';
   if (apiStatus) apiStatus.textContent = apiKey ? 'key saved ·' : 'no key';
-  if (apiStatus) apiStatus.style.color = apiKey ? 'rgba(201,169,110,.5)' : 'rgba(240,230,208,.2)';
+  if (apiStatus) apiStatus.style.color = apiKey ? 'rgba(201,169,110,.85)' : 'rgba(240,230,208,.2)';
 }
 function saveApiKey() {
   const input = document.getElementById('st-api-input');
@@ -1551,7 +1551,7 @@ function buildObsScreen() {
       micBtn.id = 'mic-btn';
       micBtn.innerHTML = '&#127908;';
       micBtn.style.cssText = 'background:none;border:1px solid rgba(201,169,110,.18);border-radius:50%;' +
-        'width:52px;height:52px;font-size:22px;color:rgba(201,169,110,.45);cursor:pointer;' +
+        'width:52px;height:52px;font-size:22px;color:rgba(201,169,110,.80);cursor:pointer;' +
         '-webkit-tap-highlight-color:transparent;transition:all .4s ease;display:flex;' +
         'align-items:center;justify-content:center;line-height:1;';
       micBtn.title = t ? 'voice note' : 'nota de voz';
@@ -1589,9 +1589,9 @@ function buildObsScreen() {
     <div id="obs-hint-txt" style="position:fixed;top:${hintTop};left:50%;transform:translate(-50%,-50%);
       text-align:center;opacity:0;transition:opacity 1.5s ease;z-index:20;pointer-events:none;">
       <div style="font-size:clamp(22px,6vw,30px);font-weight:300;letter-spacing:.12em;
-        color:rgba(201,169,110,.5);margin-bottom:18px;">${obsMode==='kasina'?'·':'◎'}</div>
+        color:rgba(201,169,110,.85);margin-bottom:18px;">${obsMode==='kasina'?'·':'◎'}</div>
       <div style="font-size:clamp(15px,3.8vw,19px);letter-spacing:.10em;
-        color:rgba(240,230,208,.5);line-height:1.9;">${modeHint}</div>
+        color:rgba(240,230,208,.88);line-height:1.9;">${modeHint}</div>
     </div>
     <div id="clarity-ring"></div>
     <div id="obs-timer" style="position:fixed;top:72px;left:50%;transform:translateX(-50%);
@@ -1613,11 +1613,11 @@ function buildObsScreen() {
         <div class="sig-label">${t?'here':'aquí'}</div>
       </div>
       <button id="affirmBtn" onclick="doAffirm()"
-        style="background:none;border:1px solid rgba(201,169,110,.55);border-radius:30px;
+        style="background:none;border:1px solid rgba(201,169,110,.85);border-radius:30px;
         padding:8px 18px;cursor:pointer;margin-left:8px;
         -webkit-tap-highlight-color:transparent;touch-action:manipulation;
         font-family:inherit;font-size:clamp(10px,2.5vw,12px);letter-spacing:.16em;
-        color:rgba(201,169,110,.45);transition:border-color .3s ease,color .3s ease;
+        color:rgba(201,169,110,.80);transition:border-color .3s ease,color .3s ease;
         min-height:36px;white-space:nowrap;">
         ${obsMode === 'kasina' ? (t?'crystallise':'cristalizar') : (t?'i am here':'estoy aquí')}
       </button>
@@ -1626,7 +1626,7 @@ function buildObsScreen() {
       transform:translateX(-50%);display:flex;gap:6px;align-items:center;
       z-index:20;opacity:0;transition:opacity 1.5s ease;"></div>
     <div id="scatter-text" style="position:fixed;top:36%;left:50%;transform:translateX(-50%);
-      font-size:clamp(13px,3.2vw,16px);letter-spacing:.14em;color:rgba(240,230,208,.45);
+      font-size:clamp(13px,3.2vw,16px);letter-spacing:.14em;color:rgba(240,230,208,.82);
       white-space:nowrap;opacity:0;transition:opacity 1s ease;z-index:20;pointer-events:none;"></div>
   `;
   buildObsMeter();
@@ -1661,10 +1661,10 @@ function updateSignalDots() {
   const sp = document.getElementById('sig-present');
   const sa = document.getElementById('sig-affirm');
   if (ss) ss.style.background = isStill ? 'var(--gold)' : 'rgba(201,169,110,.18)';
-  if (ss) ss.style.boxShadow = isStill ? '0 0 8px rgba(201,169,110,.6)' : 'none';
+  if (ss) ss.style.boxShadow = isStill ? '0 0 8px rgba(201,169,110,.88)' : 'none';
   const isPresent = clarityLevel > 0.05 && isStill;
   if (sp) sp.style.background = isPresent ? 'var(--gold)' : 'rgba(201,169,110,.18)';
-  if (sp) sp.style.boxShadow = isPresent ? '0 0 8px rgba(201,169,110,.6)' : 'none';
+  if (sp) sp.style.boxShadow = isPresent ? '0 0 8px rgba(201,169,110,.88)' : 'none';
   const recentAffirm = Date.now() - lastAffirmTime < 4000;
   if (sa) sa.style.background = recentAffirm ? 'rgba(240,204,136,.9)' : 'rgba(201,169,110,.18)';
   if (sa) sa.style.boxShadow = recentAffirm ? '0 0 12px rgba(240,204,136,.7)' : 'none';
@@ -1718,7 +1718,7 @@ function buildObsSetupScreen() {
     'margin:auto;opacity:0;transition:opacity 1.2s ease;';
 
   const title = document.createElement('div');
-  title.style.cssText = 'font-size:clamp(14px,3.5vw,17px);letter-spacing:.18em;color:rgba(201,169,110,.45);text-transform:uppercase;';
+  title.style.cssText = 'font-size:clamp(14px,3.5vw,17px);letter-spacing:.18em;color:rgba(201,169,110,.80);text-transform:uppercase;';
   title.textContent = t ? 'observe' : 'observar';
   wrap.appendChild(title);
 
@@ -1726,7 +1726,7 @@ function buildObsSetupScreen() {
   const modeSection = document.createElement('div');
   modeSection.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;';
   const modeLabel = document.createElement('div');
-  modeLabel.style.cssText = 'font-size:clamp(12px,3vw,15px);letter-spacing:.14em;color:rgba(240,230,208,.65);';
+  modeLabel.style.cssText = 'font-size:clamp(12px,3vw,15px);letter-spacing:.14em;color:rgba(240,230,208,.90);';
   modeLabel.textContent = t ? 'particle' : 'partícula';
   modeSection.appendChild(modeLabel);
   const modeRow = document.createElement('div');
@@ -1755,7 +1755,7 @@ function buildObsSetupScreen() {
   stormWrap.id = 'stormWrap';
   stormWrap.style.cssText = 'display:none;flex-direction:column;align-items:center;gap:12px;width:100%;';
   const stormLabel = document.createElement('div');
-  stormLabel.style.cssText = 'font-size:clamp(12px,3vw,15px);letter-spacing:.14em;color:rgba(240,230,208,.65);';
+  stormLabel.style.cssText = 'font-size:clamp(12px,3vw,15px);letter-spacing:.14em;color:rgba(240,230,208,.90);';
   stormLabel.textContent = t ? 'style' : 'estilo';
   const stormRow = document.createElement('div');
   stormRow.style.cssText = 'display:flex;gap:12px;width:100%;max-width:320px;';
@@ -1783,7 +1783,7 @@ function buildObsSetupScreen() {
   timeSection.id = 'obs-time-section';
   timeSection.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;';
   const timeLabel = document.createElement('div');
-  timeLabel.style.cssText = 'font-size:clamp(12px,3vw,15px);letter-spacing:.14em;color:rgba(240,230,208,.65);';
+  timeLabel.style.cssText = 'font-size:clamp(12px,3vw,15px);letter-spacing:.14em;color:rgba(240,230,208,.90);';
   timeLabel.textContent = t ? 'duration' : 'duración';
   timeSection.appendChild(timeLabel);
   const timeRow = document.createElement('div');
@@ -1837,8 +1837,8 @@ function setObsMode(mode) {
   ids.forEach(id => {
     const el = document.getElementById('obs-mode-'+id);
     if (el) {
-      el.style.borderColor = id===mode ? 'rgba(201,169,110,.7)' : 'rgba(201,169,110,.18)';
-      el.style.color = id===mode ? 'rgba(240,204,136,.9)' : 'rgba(240,230,208,.45)';
+      el.style.borderColor = id===mode ? 'rgba(201,169,110,.90)' : 'rgba(201,169,110,.18)';
+      el.style.color = id===mode ? 'rgba(240,204,136,.9)' : 'rgba(240,230,208,.82)';
     }
   });
   const stormWrap = document.getElementById('stormWrap');
@@ -1863,12 +1863,12 @@ function setStormMode(on) {
   const calm = document.getElementById('obs-storm-calm');
   const storm = document.getElementById('obs-storm-storm');
   if (calm) {
-    calm.style.borderColor = !obsStorm ? 'rgba(201,169,110,.7)' : 'rgba(201,169,110,.18)';
-    calm.style.color = !obsStorm ? 'rgba(240,204,136,.9)' : 'rgba(240,230,208,.45)';
+    calm.style.borderColor = !obsStorm ? 'rgba(201,169,110,.90)' : 'rgba(201,169,110,.18)';
+    calm.style.color = !obsStorm ? 'rgba(240,204,136,.9)' : 'rgba(240,230,208,.82)';
   }
   if (storm) {
-    storm.style.borderColor = obsStorm ? 'rgba(201,169,110,.7)' : 'rgba(201,169,110,.18)';
-    storm.style.color = obsStorm ? 'rgba(240,204,136,.9)' : 'rgba(240,230,208,.45)';
+    storm.style.borderColor = obsStorm ? 'rgba(201,169,110,.90)' : 'rgba(201,169,110,.18)';
+    storm.style.color = obsStorm ? 'rgba(240,204,136,.9)' : 'rgba(240,230,208,.82)';
   }
 }
 
@@ -1877,8 +1877,8 @@ function setObsTime(mins) {
   [1,5,10].forEach(m => {
     const btn = document.getElementById('obs-time-'+m);
     if (!btn) return;
-    btn.style.borderColor = m===mins ? 'rgba(201,169,110,.7)' : 'rgba(201,169,110,.18)';
-    btn.style.color = m===mins ? 'rgba(240,204,136,.9)' : 'rgba(240,230,208,.45)';
+    btn.style.borderColor = m===mins ? 'rgba(201,169,110,.90)' : 'rgba(201,169,110,.18)';
+    btn.style.color = m===mins ? 'rgba(240,204,136,.9)' : 'rgba(240,230,208,.82)';
   });
 }
 
@@ -2105,7 +2105,7 @@ function doAffirm() {
   // Drift mode
   affirmBonus = Math.min(affirmBonus + 1.5, 12);
   const btn = document.getElementById('affirmBtn');
-  if (btn) { btn.style.borderColor = 'rgba(201,169,110,.7)'; btn.style.color = 'rgba(240,210,140,.9)'; btn.style.boxShadow = '0 0 20px rgba(201,169,110,.3)'; }
+  if (btn) { btn.style.borderColor = 'rgba(201,169,110,.90)'; btn.style.color = 'rgba(240,210,140,.9)'; btn.style.boxShadow = '0 0 20px rgba(201,169,110,.3)'; }
   const ring = document.getElementById('clarity-ring');
   if (ring) { ring.style.boxShadow = `0 0 ${40+clarityLevel*60}px rgba(201,169,110,.4)`; }
   setTimeout(() => {
@@ -2198,7 +2198,7 @@ function startVoiceNoting(micBtn, transcriptEl) {
 
   voiceActive = true;
   micBtn.innerHTML = '&#9679;';
-  micBtn.style.borderColor = 'rgba(201,169,110,.7)';
+  micBtn.style.borderColor = 'rgba(201,169,110,.90)';
   micBtn.style.color = 'rgba(240,204,136,.9)';
   micBtn.style.boxShadow = '0 0 18px rgba(201,169,110,.3)';
   micBtn.style.animation = 'micPulse 1.4s ease-in-out infinite';
@@ -2256,7 +2256,7 @@ function stopVoiceNoting(micBtn, transcriptEl) {
   if (micBtn) {
     micBtn.innerHTML = '&#127908;';
     micBtn.style.borderColor = 'rgba(201,169,110,.18)';
-    micBtn.style.color = 'rgba(201,169,110,.45)';
+    micBtn.style.color = 'rgba(201,169,110,.80)';
     micBtn.style.boxShadow = 'none';
     micBtn.style.animation = 'none';
   }
@@ -2611,7 +2611,7 @@ function buildCollapseField() {
     const orbpDelay = (-Math.random()*6).toFixed(2)+'s';
     o.style.cssText = `--drift-dur:${driftDur};animation-delay:${orbpDelay};`;
     const len = st.name.length;
-    const size = len<=5?'clamp(32px,9vw,46px)':len<=7?'clamp(28px,7.5vw,38px)':len<=8?'clamp(24px,6.5vw,32px)':len<=10?'clamp(20px,5.5vw,28px)':'clamp(18px,4.8vw,24px)';
+    const size = len<=5?'clamp(38px,11vw,54px)':len<=7?'clamp(32px,9vw,46px)':len<=8?'clamp(28px,7.5vw,38px)':len<=10?'clamp(24px,6.5vw,32px)':'clamp(21px,5.5vw,28px)';
     o.innerHTML = `<div class="oname" style="font-size:${size}">${st.name}</div>`;
     // [AE2] Orb hover: brief sharp-pulse before collapse
     const go = () => {
@@ -3107,22 +3107,22 @@ function spawnStormWord() {
 let stormAmbientNodes = [];
 function playStormAmbient() {
   if (!audioCtx || stormAmbientNodes.length) return;
-  // Low irregular rumble — 3 detuned oscillators with slow LFO modulation
-  const freqs = [48, 72, 96];
+  // Calming tones — soft sine harmonics with slow breathing LFO
+  const freqs = [110, 165, 220];
   freqs.forEach((f, i) => {
     const o = audioCtx.createOscillator();
     const g = audioCtx.createGain();
     const lfo = audioCtx.createOscillator();
     const lfoGain = audioCtx.createGain();
-    o.type = 'sawtooth';
-    o.frequency.value = f + (Math.random() - 0.5) * 8;
+    o.type = 'sine';
+    o.frequency.value = f;
     lfo.type = 'sine';
-    lfo.frequency.value = 0.08 + i * 0.03; // very slow wobble
-    lfoGain.gain.value = f * 0.15;
+    lfo.frequency.value = 0.06 + i * 0.02; // very slow breath-like swell
+    lfoGain.gain.value = 0.006;
     lfo.connect(lfoGain);
-    lfoGain.connect(o.frequency);
+    lfoGain.connect(g.gain);
     g.gain.setValueAtTime(0, audioCtx.currentTime);
-    g.gain.linearRampToValueAtTime(0.018 - i * 0.004, audioCtx.currentTime + 2);
+    g.gain.linearRampToValueAtTime(0.022 - i * 0.006, audioCtx.currentTime + 3);
     o.connect(g); g.connect(audioCtx.destination);
     o.start(); lfo.start();
     stormAmbientNodes.push({ o, g, lfo });
@@ -3844,7 +3844,7 @@ function showVoiceSensingLayer(container, zoneKey, shadowWord, toneKey, onComple
     color:rgba(240,230,208,.0);font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;
     text-align:center;line-height:1.6;transition:color 1.4s ease;max-width:320px;`;
   const locationLine = t ? `in your ${zoneLabel}` : `en tu ${zoneLabel}`;
-  prompt.innerHTML = `${shadowWord}<br><span style="font-size:.72em;color:rgba(240,230,208,.45);letter-spacing:.08em;font-style:normal;">${locationLine}</span>`;
+  prompt.innerHTML = `${shadowWord}<br><span style="font-size:.72em;color:rgba(240,230,208,.82);letter-spacing:.08em;font-style:normal;">${locationLine}</span>`;
   layer.appendChild(prompt);
 
   // AI reflection line
@@ -3879,22 +3879,29 @@ function showVoiceSensingLayer(container, zoneKey, shadowWord, toneKey, onComple
 
     const micLabel = document.createElement('div');
     micLabel.style.cssText = `font-size:clamp(10px,2.6vw,12px);letter-spacing:.16em;
-      color:rgba(240,230,208,.28);transition:color .4s ease;`;
-    micLabel.textContent = t ? 'speak' : 'hablar';
+      color:rgba(240,230,208,.70);transition:color .4s ease;`;
+    micLabel.textContent = t ? 'tap to speak' : 'toca para hablar';
+
+    // Instruction line — what to say
+    const instrEl = document.createElement('div');
+    instrEl.style.cssText = `font-size:clamp(11px,2.8vw,13px);letter-spacing:.06em;font-style:italic;
+      color:rgba(240,230,208,.50);text-align:center;max-width:240px;line-height:1.5;margin-top:4px;`;
+    instrEl.textContent = t ? 'describe what you feel there' : 'describe lo que sientes ahí';
 
     const interimEl = document.createElement('div');
-    interimEl.style.cssText = `font-size:clamp(12px,3.2vw,15px);font-style:italic;
-      color:rgba(240,230,208,.38);text-align:center;min-height:20px;max-width:260px;
-      transition:opacity .4s ease;letter-spacing:.03em;`;
+    interimEl.style.cssText = `font-size:clamp(13px,3.2vw,15px);font-style:italic;
+      color:rgba(240,230,208,.80);text-align:center;min-height:20px;max-width:260px;
+      transition:opacity .4s ease;letter-spacing:.03em;margin-top:8px;`;
 
     startListening = () => {
       if (isListening) return;
       isListening = true;
-      micOrb.style.borderColor = 'rgba(201,169,110,.7)';
+      micOrb.style.borderColor = 'rgba(201,169,110,.90)';
       micOrb.style.boxShadow = '0 0 24px rgba(201,169,110,.3)';
       micOrb.style.animation = 'micPulse 1.8s ease-in-out infinite';
       micLabel.textContent = t ? 'listening...' : 'escuchando...';
-      micLabel.style.color = 'rgba(201,169,110,.65)';
+      micLabel.style.color = 'rgba(201,169,110,.88)';
+      instrEl.style.opacity = '0';
       if (navigator.vibrate) navigator.vibrate(10);
       try { recog.start(); } catch(e) {}
     };
@@ -3914,15 +3921,17 @@ function showVoiceSensingLayer(container, zoneKey, shadowWord, toneKey, onComple
       micOrb.style.borderColor = '';
       micOrb.style.boxShadow = '';
       micOrb.style.animation = '';
+      instrEl.style.opacity = '1';
       if (spokenText) {
         micLabel.textContent = t ? 'received' : 'recibido';
-        micLabel.style.color = 'rgba(201,169,110,.5)';
-        interimEl.style.opacity = '0';
+        micLabel.style.color = 'rgba(201,169,110,.85)';
+        interimEl.style.color = 'rgba(240,230,208,.70)';
+        interimEl.textContent = '"' + spokenText + '"';
         if (apiKey) getVoiceReflection(spokenText, zoneKey, shadowWord, toneKey, reflectionEl, continueBtn);
-        else { continueBtn.style.opacity = '1'; continueBtn.style.pointerEvents = 'auto'; }
+        else { setTimeout(() => { continueBtn.style.opacity = '1'; continueBtn.style.pointerEvents = 'auto'; }, 1200); }
       } else {
         micLabel.textContent = t ? 'tap to speak' : 'toca para hablar';
-        micLabel.style.color = 'rgba(240,230,208,.28)';
+        micLabel.style.color = 'rgba(240,230,208,.70)';
       }
     };
 
@@ -3933,6 +3942,7 @@ function showVoiceSensingLayer(container, zoneKey, shadowWord, toneKey, onComple
 
     micWrap.appendChild(micOrb);
     micWrap.appendChild(micLabel);
+    micWrap.appendChild(instrEl);
     micWrap.appendChild(interimEl);
   } else {
     // Text fallback — small input
@@ -3941,7 +3951,7 @@ function showVoiceSensingLayer(container, zoneKey, shadowWord, toneKey, onComple
     textInput.placeholder = t ? 'describe what you feel...' : 'describe lo que sientes...';
     textInput.style.cssText = `background:none;border:none;border-bottom:1px solid rgba(240,230,208,.14);
       outline:none;font-family:inherit;font-size:clamp(13px,3.2vw,15px);letter-spacing:.06em;
-      color:rgba(240,230,208,.62);width:260px;padding:10px 0;text-align:center;
+      color:rgba(240,230,208,.90);width:260px;padding:10px 0;text-align:center;
       caret-color:rgba(201,169,110,.8);`;
     textInput.addEventListener('change', () => { spokenText = textInput.value.trim(); });
     textInput.addEventListener('keydown', e => {
@@ -4019,7 +4029,7 @@ async function getVoiceReflection(spokenText, zoneKey, shadowWord, toneKey, refl
     const reflection = data.content?.[0]?.text?.trim();
     if (reflection) {
       reflectionEl.textContent = reflection;
-      reflectionEl.style.color = 'rgba(201,169,110,.72)';
+      reflectionEl.style.color = 'rgba(201,169,110,.90)';
     } else {
       reflectionEl.textContent = '';
     }
@@ -4027,11 +4037,11 @@ async function getVoiceReflection(spokenText, zoneKey, shadowWord, toneKey, refl
     reflectionEl.textContent = '';
   }
 
-  // Show continue after reflection appears
+  // Show continue after reflection has time to land
   setTimeout(() => {
     continueBtn.style.opacity = '1';
-    continueBtn.style.color = 'rgba(240,230,208,.45)';
-  }, 800);
+    continueBtn.style.color = 'rgba(240,230,208,.82)';
+  }, 4000);
 }
 
 // ══════════════════════════════════════
@@ -4116,7 +4126,7 @@ Total sessions: ${sessions.length}.`;
     input.placeholder = lang === 'en' ? 'respond...' : 'responder...';
     input.style.cssText = 'background:none;border:none;border-bottom:1px solid rgba(240,230,208,.12);' +
       'outline:none;font-family:inherit;font-size:clamp(13px,3.2vw,15px);letter-spacing:.06em;' +
-      'color:rgba(240,230,208,.62);width:100%;max-width:280px;padding:8px 0;text-align:center;' +
+      'color:rgba(240,230,208,.90);width:100%;max-width:280px;padding:8px 0;text-align:center;' +
       'caret-color:rgba(201,169,110,.8);margin-top:10px;';
 
     const sendCompanion = async () => {
@@ -4203,7 +4213,7 @@ async function runObserveAI(noteLog) {
     if (data.content && data.content[0]) {
       const text = data.content[0].text.trim();
       mirrorEl.textContent = text;
-      setTimeout(() => { mirrorEl.style.color = 'rgba(240,230,208,.72)'; }, 400);
+      setTimeout(() => { mirrorEl.style.color = 'rgba(240,230,208,.92)'; }, 400);
     }
   } catch(e) { /* fail silently */ }
 }
@@ -4238,7 +4248,7 @@ async function runCollapseAI(stateName, imagPrompt) {
     if (data.content && data.content[0]) {
       const text = data.content[0].text.trim();
       ampEl.textContent = text;
-      setTimeout(() => { ampEl.style.color = 'rgba(240,230,208,.72)'; }, 600);
+      setTimeout(() => { ampEl.style.color = 'rgba(240,230,208,.92)'; }, 600);
     }
   } catch(e) { /* fail silently */ }
 }
@@ -4428,7 +4438,7 @@ function chamberSend() {
           skipEl.style.fontFamily = "'Cormorant Garamond',Georgia,serif";
           skipEl.style.fontStyle = 'italic';
           skipEl.style.letterSpacing = '.04em';
-          skipEl.style.color = 'rgba(240,230,208,.72)';
+          skipEl.style.color = 'rgba(240,230,208,.92)';
           skipEl.style.opacity = '1';
         }
       }, 1400);
@@ -4656,14 +4666,11 @@ function startDecBreath(displayName) {
       dDelay(() => {
         hideBtext();
         // Scatter the word
-        if (decWordEl) { decWordEl.style.transition = 'opacity 1.5s ease, transform 1.5s ease, filter 1.5s ease'; decWordEl.style.opacity = '0'; decWordEl.style.filter = 'blur(10px)'; decWordEl.style.transform = 'translateX(-50%) translateY(-20px)'; }
-        // Crystallise the orb
         if (window._decOrb) { window._decOrb.startPhase('crystallised'); }
         playDecohereRelease();
       }, 400);
       dDelay(() => {
         if (window._decOrb) { window._decOrb.alpha = 0; window._decOrb = null; }
-        if (decWordEl && decWordEl.parentNode) decWordEl.parentNode.removeChild(decWordEl);
       }, 3200);
       dDelay(() => showDecEnd(), 5000);
       return;
@@ -4698,7 +4705,14 @@ function startDecBreath(displayName) {
     dDelay(runCycle, 12400);
   }
 
-  dDelay(runCycle, 1200);
+  // Pre-breath instructions during first 8s (orb sits still, word whispers in)
+  dDelay(() => setBtext(t ? 'breathe in' : 'inhala'), 800);
+  dDelay(() => setBtext(t ? `exhale into · ${displayName}` : `exhala hacia · ${displayName}`), 5000);
+  dDelay(() => {
+    if (window._decOrb) window._decOrb.wordTargetAlpha = 0.28;
+  }, 5000);
+
+  dDelay(runCycle, 9000);
 }
 
 function showDecEnd() {
