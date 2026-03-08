@@ -196,6 +196,7 @@ class BreathOrb {
     this.dispRadius = 9;
     this.dispBlur = 0;
     this.dispGlow = 1;
+    this.MAX_RADIUS = palette === 'violet' ? Math.min(innerWidth, innerHeight) * 0.36 : 100;
     this.SETTLE = 9500;   // Extended — instructions play during this window
     this.INHALE = 5000;
     this.HOLD   = 1200;
@@ -256,7 +257,7 @@ class BreathOrb {
       // Expand dramatically — all possibilities
       const p = Math.min(t / this.INHALE, 1);
       const ease = 1 - Math.pow(1 - p, 3);
-      targetRadius = 9 + 91 * ease;     // 9 → 100 (was 60)
+      targetRadius = 9 + (this.MAX_RADIUS - 9) * ease;
       targetBlur   = 0 + 16 * ease;     // more blur = more superposition
       targetGlow   = 1 - 0.5 * ease;
       // Word gets softer, more diffuse as possibilities expand
@@ -269,7 +270,7 @@ class BreathOrb {
       }
 
     } else if (this.phase === 'hold') {
-      targetRadius = 100;
+      targetRadius = this.MAX_RADIUS;
       targetBlur   = 15;
       targetGlow   = 0.45;
       this.wordVibPh += 0.06;
@@ -281,7 +282,7 @@ class BreathOrb {
       // Collapse — wave function collapses, word becomes dominant
       const p = Math.min(t / this.EXHALE, 1);
       const ease = p < 0.5 ? 2*p*p : 1-Math.pow(-2*p+2,2)/2;
-      targetRadius = 100 - 88 * ease;   // 100 → 12
+      targetRadius = this.MAX_RADIUS - (this.MAX_RADIUS - 12) * ease;
       targetBlur   = 15  - 15  * ease;
       targetGlow   = 0.45 + (1.2 + this.cycleCount * (this.cycleCount === 2 ? 1.2 : 0.4)) * ease;
       // Word vibration calms to stillness as it crystallises
@@ -425,14 +426,18 @@ class BreathOrb {
       const wordA = this.wordAlpha * this.alpha;
       const gi = this.wordGlowIntensity; // 0→1 across cycles
 
-      // Font size grows with glow intensity — word becomes more dominant
-      const baseFontSize = Math.max(22, Math.min(58, innerWidth * 0.13));
+      // Font size grows with glow intensity and scales with orb size
+      const baseFontSize = Math.max(22, Math.min(this.MAX_RADIUS * 0.55, innerWidth * 0.13));
       const fontSize = baseFontSize * (0.7 + gi * 0.5) * (this.wordScale !== undefined ? this.wordScale : 1);
       if (fontSize < 2) return;
 
-      // During inhale/hold: word softens with blur, during exhale/rest: sharp and bright
+      // Collapse: word softens on expand, sharpens on collapse
+      // Witness: word glows on inhale, fades on exhale — opposite blur logic
       const isExpanded = this.phase === 'inhale' || this.phase === 'hold';
-      const wordBlur = isExpanded ? bl * 0.35 : 0;
+      const isViolet = this.c1 === '210,180,240';
+      const wordBlur = isViolet
+        ? (isExpanded ? 0 : bl * 0.2)   // witness: sharp on inhale, slight blur on exhale fade
+        : (isExpanded ? bl * 0.35 : 0);  // collapse: blurred on expand
 
       cx.save();
       if (wordBlur > 0.5) cx.filter = `blur(${wordBlur.toFixed(1)}px)`;
@@ -1991,7 +1996,16 @@ function enterObserve() {
 function startObsTimer() {
   clearInterval(obsTimerInterval);
   const target = obsStorm ? 10 : 7;
+  // Heartbeat — re-assert back button every tick so nothing can hide it
+  const assertBack = () => {
+    const btn = document.getElementById('backBtn');
+    if (btn && currentMode === 'observe') {
+      btn.style.opacity = '1';
+      btn.style.pointerEvents = 'all';
+    }
+  };
   obsTimerInterval = setInterval(() => {
+    assertBack();
     if (!fieldActive || isCoherent || currentMode !== 'observe') return;
     const remaining = obsTimerEnd - Date.now();
 
@@ -4649,14 +4663,18 @@ function startDecBreath(displayName) {
 
   decOrb.onPhaseChange = (phase) => {
     if (phase === 'inhale') {
-      // Word stays present but soft on inhale
-      decOrb.wordTargetAlpha = 0.45;
-    } else if (phase === 'exhale') {
-      // Word brightens gently on exhale — being witnessed, held
-      decOrb.wordTargetAlpha = 0.75;
-      decOrb.wordGlowIntensity = Math.min(0.7, 0.4 + decOrb.cycleCount * 0.1);
+      // Word glows on inhale — being seen, held in awareness
+      decOrb.wordTargetAlpha = 0.85;
+      decOrb.wordGlowIntensity = 0.5 + decOrb.cycleCount * 0.15;
     } else if (phase === 'hold') {
-      decOrb.wordTargetAlpha = 0.38;
+      decOrb.wordTargetAlpha = 0.65;
+      decOrb.wordGlowIntensity = 0.4;
+    } else if (phase === 'exhale') {
+      // Word fades on exhale — releasing
+      decOrb.wordTargetAlpha = 0.18;
+      decOrb.wordGlowIntensity = 0.1;
+    } else if (phase === 'rest') {
+      decOrb.wordTargetAlpha = 0.25;
     }
   };
 
