@@ -1550,21 +1550,15 @@ function buildObsScreen() {
          {key:'unpleasant',symbol:'–', word:'difícil',    color:'rgba(110,150,201,', bg:'rgba(110,150,201,.07)'}];
 
     toneZones.forEach(tone => {
-      const z = document.createElement('div');
+      const z = document.createElement('button');
       z.className = 'tone-zone';
+      z.type = 'button';
       z.dataset.toneKey = tone.key;
-      z.style.cssText = `background:${tone.bg};border-bottom:1px solid rgba(240,230,208,.06);`;
+      z.style.cssText = `background:${tone.bg};border:none;border-bottom:1px solid rgba(240,230,208,.06);`;
       z.innerHTML = `<span class="tz-symbol" style="color:${tone.color}0.85)">${tone.symbol}</span><span class="tz-word" style="color:${tone.color}0.75)">${tone.word}</span>`;
 
       let _fired = false;
       const fire = () => {
-        // DEBUG — show what's happening
-        const dbg = document.createElement('div');
-        dbg.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:red;color:white;padding:8px 16px;z-index:9999;font-size:16px;border-radius:8px;pointer-events:none;';
-        dbg.textContent = `tap:${tone.key} sense:${noteSense} fired:${_fired}`;
-        document.body.appendChild(dbg);
-        setTimeout(() => dbg.remove(), 2000);
-
         if (_fired) return;
         _fired = true;
         z.style.background = tone.bg.replace('.07)', '.18)').replace('.05)', '.14)');
