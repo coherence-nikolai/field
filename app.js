@@ -700,6 +700,13 @@ class ObsParticle {
     cx.beginPath(); cx.arc(this.x,this.y,r,0,Math.PI*2); cx.fill();
     cx.restore();
   }
+  ripple() {
+    this.phV += 0.06 + Math.random()*0.04;
+    const angle = Math.random()*Math.PI*2;
+    this.cx += Math.cos(angle)*0.06;
+    this.cy += Math.sin(angle)*0.06;
+    setTimeout(() => { this.phV = 0.004 + Math.random()*0.003; }, 600);
+  }
   scatter() {
     this.scattering = true; this.scatterParts = [];
     for (let i = 0; i < 12; i++) {
@@ -1530,18 +1537,18 @@ function buildObsScreen() {
         b.classList.add('sb-active');
         setTimeout(() => b.classList.remove('sb-active'), 300);
         if (navigator.vibrate) navigator.vibrate(8);
+        if (observeParticle) observeParticle.ripple();
+        if (!audioCtx) initAudio();
+        if (audioCtx) playNoteSense(s.key);
         // Log
         noteCount++;
         sessionNoteLog.push(s.key);
         const progEl = document.getElementById('noting-progress');
         if (progEl) {
           const pips = progEl.querySelectorAll('.ndot-pip');
-          pips.forEach((p, i) => p.classList.toggle('pip-lit', i < noteCount));
-        }
-        if (audioCtx) playNoteSense(s.key);
-        if (noteCount >= target) {
-          clearInterval(obsTimerInterval);
-          reachObsCoherence();
+          const cyclePos = (noteCount - 1) % pips.length;
+          if (cyclePos === 0 && noteCount > 1) pips.forEach(p => p.classList.remove('pip-lit'));
+          pips[cyclePos].classList.add('pip-lit');
         }
       };
       b.onclick = fire;
@@ -1985,11 +1992,7 @@ function startObsTimer() {
         const s = secs % 60;
         timerEl.textContent = m + ':' + String(s).padStart(2, '0');
       }
-      for (let i = 0; i < target; i++) {
-        const d = document.getElementById('ndot' + i);
-        if (d) d.classList.toggle('lit', i < noteCount);
-      }
-      if (remaining <= 0 || noteCount >= target) {
+      if (remaining <= 0) {
         clearInterval(obsTimerInterval);
         reachObsCoherence();
       }
@@ -2361,11 +2364,7 @@ function chooseNoteTone(key, el) {
   const savedSense = noteSense;
   noteSense = '';
 
-  if (noteCount >= target) {
-    clearInterval(obsTimerInterval);
-    reachObsCoherence();
-    return;
-  }
+  // noting mode no longer uses tone — timer is the only exit
 
   // Slide back to sense screen
   setTimeout(() => {
