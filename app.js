@@ -1261,14 +1261,14 @@ function showScreen(id, postCb) {
   };
 
   if (current) {
-    current.style.transition = 'opacity 0.65s ease';
+    current.style.transition = 'opacity 0.55s ease';
     current.style.opacity = '0';
     setTimeout(() => {
       current.classList.remove('active');
       current.style.opacity = '';
       current.style.transition = '';
-      setTimeout(showNext, 40);
-    }, 660);
+      showNext();
+    }, 560);
   } else {
     showNext();
   }
@@ -1447,6 +1447,21 @@ function goHome() {
   currentMode = 'home';
   clearAllBreath(); clearObserver(); clearAllDec();
   stopStillDrone(1.0);
+
+  // ── Still screen cleanup — prevent bleed-through on transition ──
+  const stillCanvas = document.getElementById('still-canvas');
+  if (stillCanvas) { stillCanvas.style.opacity = '0'; setTimeout(() => stillCanvas.remove(), 800); }
+  const stillWhisper = document.getElementById('still-whisper');
+  if (stillWhisper) { stillWhisper.style.transition = 'none'; stillWhisper.style.opacity = '0'; }
+  const stillAIResp = document.getElementById('still-ai-response');
+  if (stillAIResp) { stillAIResp.style.transition = 'none'; stillAIResp.style.opacity = '0'; }
+  const stillThreadWrap = document.getElementById('still-thread-wrap');
+  if (stillThreadWrap) { stillThreadWrap.style.transition = 'none'; stillThreadWrap.style.opacity = '0'; stillThreadWrap.style.pointerEvents = 'none'; }
+  const stillTxt = document.getElementById('stillTxt');
+  if (stillTxt) { stillTxt.style.transition = 'none'; stillTxt.style.opacity = '0'; }
+  const stillOrbZone = document.getElementById('still-orb-zone');
+  if (stillOrbZone) { stillOrbZone.style.transition = 'none'; stillOrbZone.style.opacity = '0'; }
+
   clearGhosts();
   // Clear witness/decohere state
   const grid = document.getElementById('shadowGrid');
@@ -1473,6 +1488,16 @@ function goHome() {
   if (stormAutoExitTimer) { clearTimeout(stormAutoExitTimer); stormAutoExitTimer = null; }
 
   showScreen('s-home', () => {
+    // Reset still screen for next entry
+    const stillWhisper = document.getElementById('still-whisper');
+    if (stillWhisper) { stillWhisper.style.opacity = '0'; }
+    const stillTxt = document.getElementById('stillTxt');
+    if (stillTxt) { stillTxt.style.opacity = ''; }
+    const stillOrbZone = document.getElementById('still-orb-zone');
+    if (stillOrbZone) { stillOrbZone.innerHTML = ''; stillOrbZone.style.opacity = ''; }
+    const stillThreadWrap = document.getElementById('still-thread-wrap');
+    if (stillThreadWrap) { stillThreadWrap.style.opacity = '0'; stillThreadWrap.style.pointerEvents = 'none'; }
+
     document.querySelectorAll('.al').forEach(a => a.classList.add('on'));
     if (cameFromDecohere) {
       setTimeout(() => {
@@ -3077,7 +3102,15 @@ function enterStill() {
   const stillBackEl = document.getElementById('stillBack');
   stillBackEl.textContent = t.retBtn;
   stillBackEl.style.opacity = '0';
-  stillBackEl.onclick = () => { saveThreadLine(); goHome(); };
+  stillBackEl.onclick = () => {
+    saveThreadLine();
+    // Collapse all still content instantly before screen transition
+    const textZone = document.getElementById('still-text-zone');
+    if (textZone) { textZone.style.transition = 'opacity 0.3s ease'; textZone.style.opacity = '0'; }
+    const orbZone = document.getElementById('still-orb-zone');
+    if (orbZone) { orbZone.style.transition = 'opacity 0.3s ease'; orbZone.style.opacity = '0'; }
+    setTimeout(() => goHome(), 300);
+  };
 
   showScreen('s-still', () => {
     const orbZone = document.getElementById('still-orb-zone');
