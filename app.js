@@ -459,9 +459,9 @@ class BreathOrb {
         const phase = this.wordColorPhase || 0;
         let r, g2, b;
         if (phase === 0) {
-          // red-amber
-          r = Math.round(220 + gi * 10); g2 = Math.round(100 + gi * 50); b = Math.round(80 + gi * 20);
-          cx.shadowColor = `rgba(210,90,70,${(wordA * glowAlpha).toFixed(2)})`;
+          // deep red-amber — saturated from the start
+          r = Math.round(215 + gi * 8); g2 = Math.round(72 + gi * 38); b = Math.round(52 + gi * 18);
+          cx.shadowColor = `rgba(200,60,40,${(wordA * glowAlpha * 1.1).toFixed(2)})`;
         } else if (phase === 1) {
           // rose
           r = Math.round(210 + gi * 10); g2 = Math.round(130 + gi * 40); b = Math.round(110 + gi * 30);
@@ -2744,7 +2744,6 @@ function initScene(scene, chosen) {
 function buildCollapseField() {
   const t = TRANSLATIONS[lang];
   document.getElementById('fline').textContent = t.fieldLine;
-  document.getElementById('stillTxt').innerHTML = t.stillTxt.replace(/\n/g,'<br>');
   document.getElementById('stillBack').textContent = t.retBtn;
   document.getElementById('obsCt').textContent = totalObs > 0 ? t.obsCount(totalObs) : '';
   document.getElementById('revisitBtn').textContent = 'revisit introduction';
@@ -5370,7 +5369,6 @@ function startDecBreath(displayName) {
       dDelay(() => {
         if (window._decOrb) {
           const orb = window._decOrb;
-          // Set morph parameters for ascent
           orb.MORPH_DURATION = 2200;
           orb.MORPH_LIFT = innerHeight * 0.52;
           orb.morphStartY = orb.y;
@@ -5380,6 +5378,26 @@ function startDecBreath(displayName) {
           orb.onMorphDone = () => {
             stopWitnessDrone(2.5);
             if (window._decOrb) { window._decOrb.alpha = 0; window._decOrb = null; }
+
+            // Bridge message — fills the gap before s-dec-end arrives
+            const bridge = document.createElement('div');
+            bridge.style.cssText = `position:fixed;inset:0;display:flex;align-items:center;
+              justify-content:center;z-index:30;pointer-events:none;
+              opacity:0;transition:opacity 1.6s ease;`;
+            bridge.innerHTML = `<div style="font-size:clamp(18px,5vw,26px);font-weight:300;
+              font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;
+              letter-spacing:.06em;color:rgba(240,230,208,.88);text-align:center;
+              line-height:1.6;max-width:300px;padding:0 32px;">
+              ${lang === 'en' ? displayName + ' was witnessed.' : displayName + ' fue atestiguado.'}
+            </div>`;
+            document.body.appendChild(bridge);
+            requestAnimationFrame(() => { bridge.style.opacity = '1'; });
+            // Remove when dec-end screen takes over
+            setTimeout(() => {
+              bridge.style.transition = 'opacity 0.8s ease';
+              bridge.style.opacity = '0';
+              setTimeout(() => bridge.remove(), 800);
+            }, 1800);
           };
         }
       }, 800);
