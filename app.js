@@ -2744,7 +2744,6 @@ function initScene(scene, chosen) {
 function buildCollapseField() {
   const t = TRANSLATIONS[lang];
   document.getElementById('fline').textContent = t.fieldLine;
-  document.getElementById('stillBack').textContent = t.retBtn;
   document.getElementById('obsCt').textContent = totalObs > 0 ? t.obsCount(totalObs) : '';
   document.getElementById('revisitBtn').textContent = 'revisit introduction';
   const grid = document.getElementById('grid'); grid.innerHTML = '';
@@ -4585,8 +4584,9 @@ async function getVoiceReflection(spokenText, zoneKey, shadowWord, toneKey, refl
   // Show continue after reflection has time to land
   setTimeout(() => {
     clearTimeout(fallbackTimer);
+    continueBtn.textContent = lang === 'en' ? 'continue →' : 'continuar →';
     continueBtn.style.opacity = '1';
-    continueBtn.style.color = 'rgba(240,230,208,.82)';
+    continueBtn.style.color = 'rgba(240,230,208,.88)';
     continueBtn.style.pointerEvents = 'auto';
   }, 4000);
 }
