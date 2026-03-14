@@ -35,62 +35,9 @@ let audioCtx = null, droneNodes = [], breathTimers = [], decBreathTimers = [];
 let breathRunning = false, breathCycle = 0, curStateName = '', spChosen = 0;
 let breathOrb = null;
 let collapseStage = 0, isTransitioning = false, particlesHidden = false;
-let screenTransitionToken = 0;
-
-
-// Global activity guard — prevents stale delayed UI callbacks from older screens
-let activityToken = 0;
-let activityFrameIds = new Set();
-function clearActivityFrames() {
-  activityFrameIds.forEach(id => { try { cancelAnimationFrame(id); } catch(e) {} });
-  activityFrameIds.clear();
-}
-function nextActivityToken() {
-  activityToken += 1;
-  clearActivityFrames();
-  clearActivityTimers();
-  return activityToken;
-}
-function isCurrentActivity(token) {
-  return token === activityToken;
-}
-function activityFrame(token, fn) {
-  const id = requestAnimationFrame(() => {
-    activityFrameIds.delete(id);
-    if (!isCurrentActivity(token)) return;
-    try { fn(); } catch(e) {}
-  });
-  activityFrameIds.add(id);
-  return id;
-}
-
-let activityTimeoutIds = new Set();
-let activityIntervalIds = new Set();
-function clearActivityTimers() {
-  activityTimeoutIds.forEach(id => { try { clearTimeout(id); } catch(e) {} });
-  activityIntervalIds.forEach(id => { try { clearInterval(id); } catch(e) {} });
-  activityTimeoutIds.clear();
-  activityIntervalIds.clear();
-}
-function activityTimeout(token, fn, delay) {
-  const id = setTimeout(() => {
-    activityTimeoutIds.delete(id);
-    if (!isCurrentActivity(token)) return;
-    try { fn(); } catch(e) {}
-  }, delay);
-  activityTimeoutIds.add(id);
-  return id;
-}
-function activityInterval(token, fn, delay) {
-  const id = setInterval(() => {
-    if (!isCurrentActivity(token)) return;
-    try { fn(); } catch(e) {}
-  }, delay);
-  activityIntervalIds.add(id);
-  return id;
-}
 let totalObs = (() => { try { return parseInt(lsGet('field_obs') || '0'); } catch(e) { return 0; } })();
 let currentMode = 'home';
+let activityToken = 0; // incremented on goHome() — stale callbacks check this before touching DOM
 let audioEnabled = true;
 let fontLarge = (() => { try { return lsGet('field_font_large') === '1'; } catch(e) { return false; } })();
 
@@ -175,9 +122,6 @@ class Pt {
 }
 const bgPts = Array.from({length:70}, () => new Pt());
 let bgDimTarget = 1; let bgDimLevel = 1;
-let bgPauseUntil = 0;
-let obsHelperTimer = null;
-let obsCeremonyTimer = null;
 
 // ── DEVICE TILT PARALLAX ──
 let tiltX = 0, tiltY = 0; // -1 to 1 smoothed
@@ -241,67 +185,6 @@ class SpParticle {
   }
 }
 let spParticles = [];
-
-let collapseSeedParticle = null;
-
-function chooseSeedParticle(targetRect) {
-  if (!spParticles.length) return null;
-  const tx = targetRect.left + targetRect.width / 2;
-  const ty = targetRect.top + targetRect.height / 2;
-  let best = null, bestDist = Infinity;
-  spParticles.forEach((p, i) => {
-    const d = Math.hypot((p.x || 0) - tx, (p.y || 0) - ty);
-    if (d < bestDist) { bestDist = d; best = { p, i }; }
-  });
-  return best;
-}
-
-function seedSelectedState(st, idx, orbEl) {
-  if (isTransitioning) return;
-  isTransitioning = true;
-  const targetRect = orbEl.getBoundingClientRect();
-  const choice = chooseSeedParticle(targetRect);
-  const centerX = targetRect.left + targetRect.width / 2;
-  const centerY = targetRect.top + targetRect.height / 2;
-  const targetCx = centerX / innerWidth;
-  const targetCy = centerY / innerHeight;
-
-  document.querySelectorAll('.orb').forEach(el => {
-    el.classList.remove('collapsing', 'seeded');
-    if (el !== orbEl) el.classList.add('fading');
-  });
-  orbEl.classList.remove('fading');
-  orbEl.classList.add('seeded');
-
-  if (choice) {
-    collapseSeedParticle = choice.i;
-    spParticles.forEach((p, i) => {
-      p._flickering = false;
-      if (i === choice.i) {
-        p.targetAlpha = 1;
-        p.targetClarity = 1;
-        p.targetCx = targetCx;
-        p.targetCy = targetCy;
-        p.phV *= 0.45;
-        p.driftR *= 0.25;
-      } else {
-        p.targetAlpha = 0.03;
-        p.targetClarity = 0;
-      }
-    });
-  }
-
-  orbEl.querySelector('.oname').style.color = 'rgba(255,238,184,1)';
-  orbEl.querySelector('.oname').style.textShadow = '0 0 34px rgba(255,220,100,.88), 0 0 78px rgba(255,190,40,.42)';
-
-  setTimeout(() => {
-    orbEl.classList.remove('seeded');
-    orbEl.classList.add('collapsing');
-    spChosen = choice ? choice.i : idx;
-    isTransitioning = false;
-    selectState(st);
-  }, 540);
-}
 
 // ── BREATH ORB — pure canvas, quantum collapse breathing ──
 // Driven entirely by elapsed time in RAF loop. No CSS transitions.
@@ -629,7 +512,7 @@ let clarityLevel = 0, particleVisible = false;
 class KasinaParticle {
   constructor() {
     this.x = innerWidth * 0.5;
-    this.y = innerHeight * 0.47;
+    this.y = innerHeight * 0.5;
     this.r = 6;
     this.alpha = 0; this.targetAlpha = 1;
     this.breathPh = 0;
@@ -638,8 +521,6 @@ class KasinaParticle {
     this.shudderPh = 0;
     this.rayPh = 0;
     this.flickPh = 0;
-    this.tapPulse = 0;
-    this.tapSharp = 0;
     this.NUM_RAYS = 8;
 
     // Evolution state — 0 (diffuse) to 7 (crystallised)
@@ -657,10 +538,8 @@ class KasinaParticle {
     this.stage++;
     this.crystallinity = this.stage / this.maxStage;
     this.lastTapTime = performance.now();
-    this.tapPulse = 1;
-    this.tapSharp = 1;
     // Add crystallisation ripple
-    this.pulseRipples.push({ r: 10, alpha: 0.95, speed: 3.5 });
+    this.pulseRipples.push({ r: 10, alpha: 0.9, speed: 3.2 });
     if (navigator.vibrate) navigator.vibrate([12, 18, 22, 26, 30, 36, 44][Math.min(this.stage-1,6)]);
     return this.stage >= this.maxStage; // true = complete
   }
@@ -668,31 +547,21 @@ class KasinaParticle {
   update() {
     this.breathPh  += 0.016;
     this.pulsePh   += 0.08;
-    this.shudderPh += 0.028;
+    this.shudderPh += 0.28;
+    this.rayPh     += 0.003 + this.crystallinityDisp * 0.005; // rays spin faster as crystallised
     this.flickPh   += 0.35;
+
+    // Shudder reduces as crystallinity increases — becomes perfectly still when done
+    const baseShudder = isStill
+      ? 0.6 + 0.9 * Math.sin(this.shudderPh) * Math.cos(this.shudderPh * 1.7)
+      : 2.5 + 5 * Math.random();
+    const shudderFactor = 1 - this.crystallinityDisp * 0.92;
+    this.shudderX = (Math.random() - 0.5) * baseShudder * shudderFactor;
+    this.shudderY = (Math.random() - 0.5) * baseShudder * shudderFactor;
     this.alpha += (this.targetAlpha - this.alpha) * 0.025;
 
     // Smooth crystallinity toward target
     this.crystallinityDisp += (this.crystallinity - this.crystallinityDisp) * 0.04;
-    const c = this.crystallinityDisp;
-
-    // Subtle orbital micro-motion instead of random jitter.
-    // Early stages feel alive but remain centered; full crystallisation locks perfectly still.
-    if (this.stage >= this.maxStage || c > 0.985) {
-      this.shudderX += (0 - this.shudderX) * 0.25;
-      this.shudderY += (0 - this.shudderY) * 0.25;
-    } else {
-      const calmAmp = isStill ? 0.42 : 0.9;
-      const orbitAmp = calmAmp * Math.max(0, 1 - c * 0.92);
-      this.shudderX = Math.sin(this.shudderPh * 1.05) * orbitAmp;
-      this.shudderY = Math.cos(this.shudderPh * 0.82) * orbitAmp * 0.72;
-    }
-
-    const raySpin = this.stage >= this.maxStage ? 0 : (0.002 + c * 0.0035);
-    this.rayPh += raySpin;
-
-    this.tapPulse *= 0.92;
-    this.tapSharp *= 0.88;
 
     // Age ripples
     this.pulseRipples = this.pulseRipples.filter(rp => {
@@ -709,15 +578,15 @@ class KasinaParticle {
     // Breath is dampened as crystallinity increases — stillness
     const breathAmp = 0.32 * (1 - c * 0.75);
     const breathFactor = 0.68 + breathAmp * Math.sin(this.breathPh);
-    const microPulse   = 1 + (0.07 - c * 0.05) * Math.sin(this.pulsePh) + this.tapPulse * 0.08;
+    const microPulse   = 1 + (0.07 - c * 0.05) * Math.sin(this.pulsePh);
     const flicker      = 0.88 + 0.12 * Math.sin(this.flickPh);
 
     // Core grows and sharpens with crystallinity
     const r = (6 + c * 10) * microPulse;
 
     // Glow halos: at c=0 very large/blurry, at c=1 tight and bright
-    const blurScale  = Math.max(0.18, 1 - c * 0.7 - this.tapSharp * 0.12);  // blur reduces
-    const glowScale  = 0.3 + c * 0.7 + this.tapSharp * 0.18; // glow intensity increases
+    const blurScale  = 1 - c * 0.65;  // blur reduces
+    const glowScale  = 0.3 + c * 0.7; // glow intensity increases
     const g1 = (22 + c * 18) * breathFactor * blurScale;   // inner
     const g2 = (80 - c * 30) * breathFactor * blurScale;   // mid
     const g3 = (160 - c * 80) * breathFactor * blurScale;  // corona
@@ -756,17 +625,16 @@ class KasinaParticle {
       cx.filter = 'none';
     }
 
-    // ── Rays — emerge later, then settle into the final star ──
-    if (c > 0.34) {
-      const rayAlphaBase = Math.min(1, (c - 0.34) / 0.56); // 0→1 as c goes 0.34→0.90
+    // ── Rays — emerge from stage 2 onward, sharpen fully ──
+    if (c > 0.2) {
+      const rayAlphaBase = (c - 0.2) / 0.8; // 0→1 as c goes 0.2→1
       const rayCount = this.NUM_RAYS;
       for (let i = 0; i < rayCount; i++) {
         const angle = this.rayPh + (Math.PI * 2 / rayCount) * i;
         const lenPulse = 0.55 + 0.45 * Math.sin(this.breathPh * 1.3 + i * 0.8);
-        const settled = this.stage >= this.maxStage ? 1 : 0;
-        const rayLen   = (g1 * 1.4 + c * 76 + this.tapSharp * 8) * (settled ? 1 : lenPulse) * breathFactor;
+        const rayLen   = (g1 * 1.8 + c * 80) * lenPulse * breathFactor;
         const rayWidth = r * (0.18 - c * 0.08);
-        const rayAlpha = (0.08 + c * 0.30 + this.tapSharp * 0.08) * this.alpha * (settled ? 1 : lenPulse) * flicker * rayAlphaBase;
+        const rayAlpha = (0.10 + c * 0.28) * this.alpha * lenPulse * flicker * rayAlphaBase;
 
         cx.save();
         cx.translate(px, py);
@@ -792,7 +660,7 @@ class KasinaParticle {
     cx.beginPath(); cx.arc(px, py, g1, 0, Math.PI * 2); cx.fill();
 
     // ── Hard core — defined and sharp ──
-    const coreAlpha = (0.55 + c * 0.45 + this.tapSharp * 0.12) * this.alpha * (0.85 + 0.15 * flicker);
+    const coreAlpha = (0.55 + c * 0.45) * this.alpha * (0.85 + 0.15 * flicker);
     cx.globalAlpha = coreAlpha;
     cx.fillStyle = c > 0.7 ? `rgba(255,252,230,1)` : `rgba(240,220,160,1)`;
     cx.beginPath(); cx.arc(px, py, r, 0, Math.PI * 2); cx.fill();
@@ -902,8 +770,7 @@ function loop() {
     // Smooth tilt
     tiltX += (rawTiltX - tiltX) * 0.06;
     tiltY += (rawTiltY - tiltY) * 0.06;
-    const bgPaused = performance.now() < bgPauseUntil;
-    bgPts.forEach(p => { if (!bgPaused) p.update(); p.draw(); });
+    bgPts.forEach(p => { p.update(); p.draw(); });
     if (currentMode === 'observe' && particleVisible) {
       if (obsMode === 'kasina' && kasinaParticle) {
         kasinaParticle.update(); kasinaParticle.draw();
@@ -1367,61 +1234,44 @@ function playDecohereSignature() {
 // ── SCREEN TRANSITIONS ──
 function showScreen(id, postCb) {
   resumeAudio();
-  const token = ++screenTransitionToken;
   const gh = document.getElementById('ghosts');
-  if (gh && id !== 's-collapse' && id !== 's-field') {
-    gh.style.transition = 'none';
-    gh.style.opacity = '0';
-    gh.innerHTML = '';
+  if (gh) {
+    if (id !== 's-collapse' && id !== 's-field') {
+      gh.style.transition = 'none';
+      gh.style.opacity = '0';
+      gh.innerHTML = '';
+    }
   }
-
   const next = document.getElementById(id);
-  if (!next) { if (postCb) postCb(); return; }
-  const activeScreens = Array.from(document.querySelectorAll('.screen.active'));
-  const current = activeScreens.find(el => el !== next) || null;
+  const current = document.querySelector('.screen.active');
+  if (current === next) { if (postCb) postCb(); return; }
 
-  if (current === next && activeScreens.length === 1) {
-    if (postCb) requestAnimationFrame(postCb);
-    return;
-  }
-
-  const activateNext = () => {
-    if (token !== screenTransitionToken) return;
-    activeScreens.forEach(el => {
-      if (el !== next) {
-        el.classList.remove('active');
-        el.style.opacity = '';
-        el.style.transition = '';
-      }
-    });
-    next.classList.add('active');
+  const showNext = () => {
     next.style.opacity = '0';
     next.style.transition = 'none';
-    requestAnimationFrame(() => {
-      if (token !== screenTransitionToken) return;
-      next.style.transition = 'opacity 0.72s ease';
+    next.classList.add('active');
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      next.style.transition = 'opacity 0.8s ease';
       next.style.opacity = '1';
       setTimeout(() => {
-        if (token !== screenTransitionToken) return;
         next.style.opacity = '';
         next.style.transition = '';
         if (postCb) postCb();
-      }, 740);
-    });
+      }, 820);
+    }));
   };
 
   if (current) {
-    current.style.transition = 'opacity 0.42s ease';
+    current.style.transition = 'opacity 0.55s ease';
     current.style.opacity = '0';
     setTimeout(() => {
-      if (token !== screenTransitionToken) return;
       current.classList.remove('active');
       current.style.opacity = '';
       current.style.transition = '';
-      activateNext();
-    }, 430);
+      showNext();
+    }, 560);
   } else {
-    activateNext();
+    showNext();
   }
 }
 
@@ -1522,30 +1372,19 @@ function settingsToggleFont() {
   updateSettingsToggles();
 }
 function settingsToggleLang() {
-  setLang(lang === 'en' ? 'es' : 'en');
-}
-
-// ── LANG ──
-function setLang(nextLang) {
-  if (nextLang !== 'en' && nextLang !== 'es') return;
-  if (lang === nextLang) {
-    applyLang();
-    updateSettingsToggles();
-    return;
-  }
-  lang = nextLang;
+  lang = lang === 'en' ? 'es' : 'en';
   lsSet('field_lang', lang);
   applyLang();
   updateSettingsToggles();
 }
-function toggleLang() {
 
+// ── LANG ──
+function toggleLang() {
   lang = lang === 'en' ? 'es' : 'en';
   lsSet('field_lang', lang);
   applyLang();
 }
 function applyLang() {
-  document.documentElement.lang = lang;
   const t = TRANSLATIONS[lang];
   document.getElementById('homeFieldSub').textContent = t.fieldSub;
   document.getElementById('mvObserveLabel').textContent = t.observeLabel;
@@ -1566,16 +1405,8 @@ function applyLang() {
   document.getElementById('obsCohTap').textContent = t.obsCoherenceTap;
   document.getElementById('revisitBtn').textContent = 'revisit introduction';
   // Home screen lang toggle — shows the OTHER language as the option
-  const hlEn = document.getElementById('homeLangEn');
-  const hlEs = document.getElementById('homeLangEs');
-  if (hlEn) {
-    hlEn.classList.toggle('active', lang === 'en');
-    hlEn.setAttribute('aria-pressed', lang === 'en' ? 'true' : 'false');
-  }
-  if (hlEs) {
-    hlEs.classList.toggle('active', lang === 'es');
-    hlEs.setAttribute('aria-pressed', lang === 'es' ? 'true' : 'false');
-  }
+  const hlb = document.getElementById('homeLangBtn');
+  if (hlb) hlb.textContent = lang === 'en' ? 'español' : 'english';
   updateHomeCount();
 }
 function updateHomeCount() {
@@ -1613,7 +1444,7 @@ function clearGhosts() {
 }
 function goHome() {
   closeSettings();
-  const homeToken = nextActivityToken();
+  activityToken++; // invalidate all in-flight witness/decohere callbacks
   const cameFromDecohere = currentMode === 'witness-end' || currentMode === 'witness';
   currentMode = 'home';
   clearAllBreath(); clearObserver(); clearAllDec();
@@ -1633,46 +1464,33 @@ function goHome() {
   const stillOrbZone = document.getElementById('still-orb-zone');
   if (stillOrbZone) { stillOrbZone.style.transition = 'none'; stillOrbZone.style.opacity = '0'; }
 
+  // Remove witness breathe CTA if goHome fires before it auto-dismisses
+  const breatheCta = document.getElementById('dec-breathe-cta');
+  if (breatheCta) breatheCta.remove();
+  // Clear chamber loading dot interval if goHome fires mid-API call
+  if (window._chamberDotInterval) { clearInterval(window._chamberDotInterval); window._chamberDotInterval = null; }
+
   clearGhosts();
   // Clear witness/decohere state
-  const witnessScreen = document.getElementById('s-witness');
-  if (witnessScreen) {
-    witnessScreen.style.transition = 'none';
-    witnessScreen.style.opacity = '1';
-    witnessScreen.style.paddingTop = '';
-    witnessScreen.style.gap = '';
-  }
   const grid = document.getElementById('shadowGrid');
-  if (grid) {
-    grid.innerHTML = '';
-    grid.style.opacity = '';
-    grid.style.transition = '';
-  }
-  const decArrivalLine = document.getElementById('decArrivalLine');
-  if (decArrivalLine) {
-    decArrivalLine.textContent = '';
-    decArrivalLine.style.transition = 'none';
-    decArrivalLine.style.opacity = '0';
-  }
-  const decArrivalSub = document.getElementById('decArrivalSub');
-  if (decArrivalSub) {
-    decArrivalSub.textContent = '';
-    decArrivalSub.style.transition = 'none';
-    decArrivalSub.style.opacity = '0';
-  }
-  const decTapHint = document.getElementById('decTapHint');
-  if (decTapHint) decTapHint.textContent = '';
-  const lingeringBodyMap = document.getElementById('bodymapWrap');
-  if (lingeringBodyMap && lingeringBodyMap.parentNode) lingeringBodyMap.parentNode.removeChild(lingeringBodyMap);
-  const lingeringVoiceLayer = document.getElementById('voice-sense-layer');
-  if (lingeringVoiceLayer && lingeringVoiceLayer.parentNode) lingeringVoiceLayer.parentNode.removeChild(lingeringVoiceLayer);
-  const lingeringTapHint = document.getElementById('bodymap-tap-hint');
-  if (lingeringTapHint && lingeringTapHint.parentNode) lingeringTapHint.parentNode.removeChild(lingeringTapHint);
+  if (grid) grid.innerHTML = '';
   const fc = document.getElementById('fc');
   if (fc) { fc.style.opacity = '0'; }
-  const mainCv = document.getElementById('cv');
-  if (mainCv) mainCv.style.opacity = '';
   if (window._decOrb) { window._decOrb = null; }
+
+  // Hide witness arrival text & tap hint
+  const arrLine = document.getElementById('decArrivalLine');
+  const arrSub  = document.getElementById('decArrivalSub');
+  const decTH   = document.getElementById('decTapHint');
+  if (arrLine) { arrLine.style.transition = 'none'; arrLine.style.opacity = '0'; }
+  if (arrSub)  { arrSub.style.transition  = 'none'; arrSub.style.opacity  = '0'; }
+  if (decTH)   { decTH.textContent = ''; decTH.style.opacity = '0'; }
+
+  // Remove injected layers
+  const bmw = document.getElementById('bodymapWrap');
+  if (bmw) bmw.remove();
+  const vsl = document.getElementById('voice-sense-layer');
+  if (vsl) vsl.remove();
   companionAsked = false;
   decSomaticTone = ''; decSomaticSpoken = ''; chamberSystemActive = '';
   restoreCircadianPalette();
@@ -1691,12 +1509,13 @@ function goHome() {
   // Clear storm auto-exit timer
   if (stormAutoExitTimer) { clearTimeout(stormAutoExitTimer); stormAutoExitTimer = null; }
 
+  const _homeToken = activityToken; // capture for guarding deferred home callbacks
   showScreen('s-home', () => {
     // Reset still screen for next entry
     const stillWhisper = document.getElementById('still-whisper');
     if (stillWhisper) { stillWhisper.style.opacity = '0'; }
     const stillTxt = document.getElementById('stillTxt');
-    if (stillTxt) { stillTxt.style.transition = ''; stillTxt.style.opacity = ''; }
+    if (stillTxt) { stillTxt.style.opacity = ''; }
     const stillOrbZone = document.getElementById('still-orb-zone');
     if (stillOrbZone) { stillOrbZone.innerHTML = ''; stillOrbZone.style.opacity = ''; }
     const stillThreadWrap = document.getElementById('still-thread-wrap');
@@ -1705,7 +1524,6 @@ function goHome() {
     document.querySelectorAll('.al').forEach(a => a.classList.add('on'));
     if (cameFromDecohere) {
       setTimeout(() => {
-        if (!isCurrentActivity(homeToken)) return;
         spParticles = Array.from({length:12}, (_,i) => new SpParticle(i,12));
         spParticles.forEach(p => {
           p._flickering = false;
@@ -1715,12 +1533,10 @@ function goHome() {
           p.targetClarity = 0;
         });
         setTimeout(() => {
-          if (!isCurrentActivity(homeToken)) return;
           spParticles.forEach(p => { p.targetAlpha = 0.42+Math.random()*0.22; });
         }, 300);
         // Pulse movement glyphs once — gentle acknowledgement
         setTimeout(() => {
-          if (!isCurrentActivity(homeToken)) return;
           document.querySelectorAll('.movement').forEach((m, i) => {
             setTimeout(() => {
               m.classList.add('lit');
@@ -1730,7 +1546,7 @@ function goHome() {
         }, 1800);
       }, 100);
     } else {
-      setTimeout(() => { if (!isCurrentActivity(homeToken)) return; initSpParticles(12); tryDrone(); }, 200);
+      setTimeout(() => { initSpParticles(12); tryDrone(); }, 200);
     }
     tryDrone();
     // Companion check-in — disabled on auto-show, user can access via settings
@@ -1739,14 +1555,17 @@ function goHome() {
   updateHomeCount();
   document.querySelectorAll('.movement').forEach(m => m.classList.remove('lit'));
 
-  // Guided entry hint removed — discovery stays with the user
+  // Guided entry hint — point new users to Observe first
   const hintEl = document.getElementById('guided-hint');
   const collapseCount = parseInt(lsGet('field_obs')||'0');
   if (hintEl) {
-    hintEl.textContent = '';
-    hintEl.style.opacity = '0';
-    hintEl.style.pointerEvents = 'none';
-    hintEl.setAttribute('aria-hidden', 'true');
+    const t = lang === 'en';
+    if (collapseCount === 0) {
+      hintEl.textContent = t ? 'new here? · begin with ◎' : '¿nuevo aquí? · empieza con ◎';
+      setTimeout(() => { hintEl.style.opacity = '1'; }, 1800);
+    } else {
+      hintEl.style.opacity = '0';
+    }
   }
 
   // Returning user whisper — quiet continuity, no gamification
@@ -1763,11 +1582,12 @@ function goHome() {
       : (lang === 'en' ? `session ${collapseCount + 1}` : `sesión ${collapseCount + 1}`);
     whisperEl.textContent = sessionLabel;
     document.body.appendChild(whisperEl);
-    setTimeout(() => { whisperEl.style.opacity = '1'; }, 2800);
-    setTimeout(() => { whisperEl.style.opacity = '0'; }, 7000);
-    setTimeout(() => { whisperEl.remove(); }, 9000);
+    setTimeout(() => { if (activityToken === _homeToken) whisperEl.style.opacity = '1'; }, 2800);
+    setTimeout(() => { if (activityToken === _homeToken) whisperEl.style.opacity = '0'; }, 7000);
+    setTimeout(() => { if (activityToken === _homeToken) whisperEl.remove(); }, 9000);
   }
   setTimeout(() => {
+    if (activityToken !== _homeToken) return;
     const obs = parseInt(lsGet('field_obs')||'0');
     const dec = parseInt(lsGet('field_obs_witness')||'0');
     const obv = parseInt(lsGet('field_obs_observe')||'0');
@@ -1843,8 +1663,6 @@ const STORM_WORDS = {
 function buildObsScreen() {
   const t = lang === 'en';
   const screen = document.getElementById('s-observe');
-  clearTimeout(obsHelperTimer); obsHelperTimer = null;
-  clearTimeout(obsCeremonyTimer); obsCeremonyTimer = null;
 
   if (obsMode === 'noting') {
     noteCount = 0;
@@ -1914,9 +1732,6 @@ function buildObsScreen() {
   const modeHint = obsMode === 'kasina'
     ? (t ? 'Hold it in attention.<br>Each touch crystallises it.' : 'Sostenlo en atención.<br>Cada toque lo cristaliza.')
     : (t ? 'One particle.<br>Just watch it.' : 'Una partícula.<br>Solo obsérvala.');
-  const helperHint = obsMode === 'kasina'
-    ? (t ? 'tap to reinforce attention' : 'toca para reforzar la atención')
-    : '';
   const hintTop = obsMode === 'kasina' ? '62%' : '42%';
   screen.innerHTML = `
     <div id="obs-hint-txt" style="position:fixed;top:${hintTop};left:50%;transform:translate(-50%,-50%);
@@ -1926,9 +1741,6 @@ function buildObsScreen() {
       <div style="font-size:clamp(15px,3.8vw,19px);letter-spacing:.10em;
         color:rgba(240,230,208,.88);line-height:1.9;">${modeHint}</div>
     </div>
-    <div id="obs-helper-txt" style="position:fixed;top:calc(${hintTop} + 78px);left:50%;transform:translateX(-50%);
-      text-align:center;opacity:0;transition:opacity 1.2s ease;z-index:20;pointer-events:none;
-      font-size:clamp(11px,2.8vw,13px);letter-spacing:.16em;color:rgba(201,169,110,.72);text-transform:uppercase;">${helperHint}</div>
     <div id="clarity-ring"></div>
     <div id="obs-timer" style="position:fixed;top:72px;left:50%;transform:translateX(-50%);
       font-size:clamp(14px,3.5vw,17px);letter-spacing:.14em;color:rgba(201,169,110,.3);
@@ -2045,8 +1857,6 @@ function startObserve() {
 function buildObsSetupScreen() {
   const t = lang === 'en';
   const screen = document.getElementById('s-observe');
-  clearTimeout(obsHelperTimer); obsHelperTimer = null;
-  clearTimeout(obsCeremonyTimer); obsCeremonyTimer = null;
   screen.innerHTML = '';
 
   const wrap = document.createElement('div');
@@ -2186,8 +1996,7 @@ function setObsMode(mode) {
     const curAlpha = (observeParticle ? observeParticle.alpha : 0) || (kasinaParticle ? kasinaParticle.alpha : 0);
     if (mode === 'kasina' && !kasinaParticle) {
       kasinaParticle = new KasinaParticle();
-      kasinaParticle.alpha = curAlpha;
-      kasinaParticle.targetAlpha = fieldActive ? 0.96 : curAlpha;
+      kasinaParticle.alpha = curAlpha; kasinaParticle.targetAlpha = curAlpha;
       observeParticle = null;
     } else if ((mode === 'drift' || mode === 'noting') && !observeParticle) {
       observeParticle = new ObsParticle();
@@ -2251,9 +2060,10 @@ function enterObserve() {
       observeParticle = null; kasinaParticle = null; particleVisible = false;
 
       if (obsStorm) {
-        // Storm + noting — go straight to storm screen without flashing the noting UI first
+        // Storm + noting — go straight to storm screen
+        buildObsScreen();
         const obsScr = document.getElementById('s-observe');
-        if (obsScr) { obsScr.innerHTML = ''; obsScr.style.transition = 'none'; obsScr.style.opacity = '1'; }
+        if (obsScr) { obsScr.style.transition = 'none'; obsScr.style.opacity = '1'; }
         obsTimerEnd = Date.now() + obsMinutes * 60 * 1000;
         startObsTimer();
         startStormScreen();
@@ -2266,24 +2076,13 @@ function enterObserve() {
           kasinaParticle = new KasinaParticle();
           kasinaParticle.alpha = 0;
         }
-        kasinaParticle.alpha = 0;
-        kasinaParticle.targetAlpha = 0;
+        kasinaParticle.targetAlpha = 1;
         observeParticle = null;
         particleVisible = true;
       } else if (observeParticle) { observeParticle.targetAlpha = 0.9; particleVisible = true; }
     }
 
     buildObsScreen();
-    if (obsMode === 'kasina' && kasinaParticle) {
-      kasinaParticle.alpha = 0;
-      kasinaParticle.targetAlpha = 0;
-      clearTimeout(obsCeremonyTimer);
-      obsCeremonyTimer = setTimeout(() => {
-        if (currentMode === 'observe' && obsMode === 'kasina' && kasinaParticle) {
-          kasinaParticle.targetAlpha = 0.96;
-        }
-      }, 1100);
-    }
     // Reset any opacity from setup screen fade
     const obsScr = document.getElementById('s-observe');
     if (obsScr) { obsScr.style.transition = 'none'; obsScr.style.opacity = '1'; }
@@ -2444,7 +2243,6 @@ function doAffirm() {
   if (!fieldActive || isCoherent) return;
   lastAffirmTime = Date.now();
   playAffirmSound();
-  const helper = document.getElementById('obs-helper-txt'); if (helper) helper.style.opacity = '0';
 
   if (obsMode === 'kasina' && kasinaParticle) {
     // Kasina: each tap crystallises the object one stage
@@ -2466,7 +2264,7 @@ function doAffirm() {
       // Full crystallisation — brief hold then coherence
       const btn2 = document.getElementById('affirmBtn');
       if (btn2) { btn2.textContent = lang === 'en' ? 'crystallised' : 'cristalizado'; btn2.style.color = 'rgba(255,248,200,.95)'; btn2.style.borderColor = 'rgba(255,240,160,.8)'; }
-      setTimeout(() => reachObsCoherence(), 2200);
+      setTimeout(() => reachObsCoherence(), 1800);
     } else {
       updateSignalDots();
     }
@@ -2533,7 +2331,6 @@ function reachObsCoherence() {
         : 'Nombraste lo que estaba presente.\nEl campo lo recibió.\nEso es suficiente.')
     : TRANSLATIONS[lang].obsCoherenceLine;
 
-  bgPauseUntil = performance.now() + 1400;
   setTimeout(() => {
     particleVisible = false;
     document.getElementById('obsCohWord').textContent = cohWord;
@@ -2547,7 +2344,7 @@ function reachObsCoherence() {
     if (isNoting && sessionNoteLog.length >= 3) {
       // AI mirror removed — observe is pure attention, no feedback
     }
-  }, 3200);
+  }, 2200);
 }
 
 // ── VOICE NOTING ──
@@ -2987,7 +2784,14 @@ function buildCollapseField() {
       if (isTransitioning) return; // [TECH3]
       o.style.filter = 'blur(0px)';
       o.style.opacity = '1';
-      seedSelectedState(st, idx, o);
+      o.querySelector('.oname').style.color = 'rgba(255,235,180,1)';
+      o.querySelector('.oname').style.textShadow = '0 0 40px rgba(255,210,80,.75), 0 0 80px rgba(255,190,40,.4)';
+      setTimeout(() => {
+        document.querySelectorAll('.orb').forEach(el => { el.classList.remove('collapsing'); el.classList.add('fading'); });
+        o.classList.remove('fading'); o.classList.add('collapsing');
+        spChosen = idx;
+        setTimeout(() => selectState(st), 320);
+      }, 180);
     };
     o.addEventListener('click', go);
     o.addEventListener('touchend', e => { e.preventDefault(); go(); });
@@ -3002,7 +2806,9 @@ function selectState(state) {
   isTransitioning = true; // [TECH3]
   if (navigator.vibrate) navigator.vibrate(38);
   initAudio(); if(audioCtx.state==='suspended') audioCtx.resume();
+  playCollapseSound();
   const b = document.getElementById('burst');
+  b.classList.remove('go'); void b.offsetWidth; b.classList.add('go');
   const t = TRANSLATIONS[lang];
   curStateName = state.name;
   document.getElementById('cword').textContent = state.name;
@@ -3024,12 +2830,9 @@ function selectState(state) {
   document.getElementById('obsNote5').innerHTML = '';
   document.getElementById('closing').style.opacity = '0'; document.getElementById('closing').textContent = '';
   document.getElementById('qlabel6').textContent = t.qlabel;
-  const chosenIndex = Number.isInteger(collapseSeedParticle) ? collapseSeedParticle : spChosen;
-  const chosen = spParticles[chosenIndex%Math.max(spParticles.length,1)];
+  const chosen = spParticles[spChosen%Math.max(spParticles.length,1)];
   if (chosen) { chosen.cx=0.5; chosen.cy=0.14; chosen.x=0.5*innerWidth; chosen.y=0.14*innerHeight; }
-  initScene('state_chosen', chosenIndex);
-  spChosen = chosenIndex;
-  collapseSeedParticle = null;
+  initScene('state_chosen', spChosen);
   collapseStage = 0;
   document.querySelectorAll('.cp-stage').forEach(s => { s.classList.remove('on'); s.style.cssText=''; });
   // cs3 (imagination prompt stage) resets naturally with cp-stage cssText clear
@@ -3038,9 +2841,6 @@ function selectState(state) {
   particlesHidden = false;
   fadeDrone(true, 1.5);
   showScreen('s-collapse', () => {
-    const b = document.getElementById('burst');
-    if (b) { b.classList.remove('go'); void b.offsetWidth; b.classList.add('go'); }
-    playCollapseSound();
     isTransitioning = false; // [TECH3] clear after transition completes
     setTimeout(() => {
       const gh = document.getElementById('ghosts');
@@ -3082,9 +2882,9 @@ function showCollapseStage(n) {
     el.style.cssText = 'opacity:0;pointer-events:none;transition:none;visibility:hidden;';
     el.classList.add('on');
     requestAnimationFrame(() => requestAnimationFrame(() => {
-      el.style.visibility = 'visible'; el.style.transition = 'opacity 1.9s ease';
+      el.style.visibility = 'visible'; el.style.transition = 'opacity 1.4s ease';
       el.style.opacity = '1'; el.style.pointerEvents = 'all';
-      setTimeout(() => { el.style.cssText = ''; }, 1950);
+      setTimeout(() => { el.style.cssText = ''; }, 1450);
     }));
     const tapEl = document.getElementById('tapNext');
     tapEl.style.transition = 'opacity 0.7s ease';
@@ -3320,10 +3120,7 @@ function enterStill() {
 
   spParticles.forEach(p => { p.targetAlpha = 0.12 + Math.random()*0.08; });
 
-  const stillTxtEl = document.getElementById('stillTxt');
-  stillTxtEl.style.transition = 'none';
-  stillTxtEl.style.opacity = '0';
-  stillTxtEl.innerHTML = t.stillTxt.replace(/\n/g,'<br>');
+  document.getElementById('stillTxt').innerHTML = t.stillTxt.replace(/\n/g,'<br>');
   const stillBackEl = document.getElementById('stillBack');
   stillBackEl.textContent = t.retBtn;
   stillBackEl.style.opacity = '0';
@@ -3346,12 +3143,6 @@ function enterStill() {
     sc.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:0;transition:opacity 2.5s ease;';
     orbZone.appendChild(sc);
     setTimeout(() => { sc.style.opacity = '1'; }, 300);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        stillTxtEl.style.transition = 'opacity 1.6s ease';
-        stillTxtEl.style.opacity = '1';
-      });
-    });
 
     const sx = sc.getContext('2d');
     let stillPh = 0, stillBreathPh = 0;
@@ -3458,8 +3249,6 @@ function enterStill() {
         ? 'una cosa verdadera de esta sesión'
         : 'one true thing from this session';
 
-      const oldStillResponse = document.getElementById('still-ai-response');
-      if (oldStillResponse) oldStillResponse.remove();
       const stillResponseEl = document.createElement('div');
       stillResponseEl.id = 'still-ai-response';
       threadWrap.appendChild(stillResponseEl);
@@ -3762,153 +3551,100 @@ function getDecBodyPos(spot) {
   };
 }
 
-
 function startDecohere() {
-  const witnessToken = nextActivityToken();
   if (navigator.vibrate) navigator.vibrate(18);
   initAudio();
   if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{});
   playDecohereSignature();
-  currentMode = 'witness';
-  showBackBtn();
-  const backBtn = document.getElementById('backBtn');
-  if (backBtn) backBtn.onclick = () => goHome();
-
+  currentMode = 'witness'; showBackBtn();
+  document.getElementById('backBtn').onclick = () => goHome();
   clearGhosts();
+  const _witnessToken = activityToken; // capture — stale if goHome() fires
+  // Violet colour temperature for Witness movement
   applyDecoherePalette();
-  fadeDrone(true, 1.5);
-  spParticles = [];
-
+  fadeDrone(true, 1.5); spParticles = [];
+  setTimeout(() => {
+    if (activityToken !== _witnessToken) return;
+    initSpParticles(10);
+    spParticles.forEach(p => {
+      p.targetAlpha = 0.18 + Math.random()*0.15;
+      p.targetClarity = 0;
+      p.phV *= 0.4;
+    });
+  }, 300);
+  buildShadowGrid(_witnessToken);
   const t = TRANSLATIONS[lang];
   const scr = document.getElementById('s-witness');
-  const grid = document.getElementById('shadowGrid');
+  if (scr) { scr.style.paddingTop = ''; scr.style.gap = ''; }
   const arrLine = document.getElementById('decArrivalLine');
   const arrSub  = document.getElementById('decArrivalSub');
+  // Set content but keep hidden — fade in after screen transition to prevent double-render jump
+  arrLine.textContent = t.decArrivalLine;
+  arrSub.textContent  = t.decArrivalSub;
+  arrLine.style.transition = 'none'; arrLine.style.opacity = '0';
+  arrSub.style.transition  = 'none'; arrSub.style.opacity  = '0';
   const tapHint = document.getElementById('decTapHint');
-
-  if (scr) {
-    scr.style.paddingTop = '';
-    scr.style.gap = '';
-  }
-  if (grid) {
-    grid.innerHTML = '';
-    grid.style.opacity = '0';
-    grid.style.transform = 'translateY(10px)';
-    grid.style.transition = 'none';
-  }
-  if (arrLine) {
-    arrLine.textContent = t.decArrivalLine;
-    arrLine.style.opacity = '0';
-    arrLine.style.transform = 'translateY(8px)';
-    arrLine.style.transition = 'none';
-  }
-  if (arrSub) {
-    arrSub.textContent = t.decArrivalSub;
-    arrSub.style.opacity = '0';
-    arrSub.style.transform = 'translateY(8px)';
-    arrSub.style.transition = 'none';
-  }
   if (tapHint) tapHint.textContent = '';
-
   showScreen('s-witness', () => {
-    if (!isCurrentActivity(witnessToken)) return;
-
-    activityTimeout(witnessToken, () => {
-      initSpParticles(10);
-      spParticles.forEach(p => {
-        p.targetAlpha = 0.18 + Math.random() * 0.15;
-        p.targetClarity = 0;
-        p.phV *= 0.4;
-      });
-    }, 180);
-
-    activityFrame(witnessToken, () => {
-      if (arrLine) arrLine.style.transition = 'opacity .55s ease, transform .55s ease';
-      if (arrSub)  arrSub.style.transition  = 'opacity .55s ease, transform .55s ease';
-      if (arrLine) {
-        arrLine.style.opacity = '1';
-        arrLine.style.transform = 'translateY(0)';
-      }
-      activityTimeout(witnessToken, () => {
-        if (arrSub) {
-          arrSub.style.opacity = '1';
-          arrSub.style.transform = 'translateY(0)';
-        }
-      }, 120);
-      activityTimeout(witnessToken, () => buildShadowGrid(witnessToken), 220);
+    if (activityToken !== _witnessToken) return;
+    requestAnimationFrame(() => {
+      if (activityToken !== _witnessToken) return;
+      arrLine.style.transition = 'opacity 1.0s ease';
+      arrSub.style.transition  = 'opacity 1.0s ease';
+      setTimeout(() => { if (activityToken === _witnessToken) arrLine.style.opacity = '1'; }, 80);
+      setTimeout(() => { if (activityToken === _witnessToken) arrSub.style.opacity  = '1'; }, 320);
     });
   });
 }
 
-
-
-function buildShadowGrid(token = activityToken) {
+function buildShadowGrid(_tok = activityToken) {
   const grid = document.getElementById('shadowGrid');
-  if (!grid) return;
-
-  const en = SHADOW_STATES.en;
-  const es = SHADOW_STATES.es;
-  let selected = false;
-
   grid.innerHTML = '';
-  grid.style.cssText =
-    'width:100%;flex:1;min-height:0;display:flex;flex-wrap:wrap;' +
+  grid.style.cssText = 'width:100%;flex:1;min-height:0;display:flex;flex-wrap:wrap;' +
     'align-content:center;justify-content:center;gap:clamp(8px,2.5vw,16px);' +
-    'padding:0 clamp(16px,5vw,32px);' +
-    'opacity:0;transform:translateY(10px);transition:opacity .45s ease, transform .45s ease;';
+    'padding:0 clamp(16px,5vw,32px);';
+
+  const en = SHADOW_STATES.en, es = SHADOW_STATES.es;
+
+  grid.style.opacity = '0';
+  grid.style.transition = 'opacity 1.2s ease';
+  setTimeout(() => { if (activityToken === _tok) grid.style.opacity = '1'; }, 600);
 
   en.forEach((name, i) => {
     const displayName = lang === 'en' ? name : es[i];
+
     const o = document.createElement('button');
     o.className = 'shadow-orb';
-    const dur = (2.4 + Math.random() * 1.2).toFixed(2);
-    const delay = (Math.random() * -2).toFixed(2);
+    o.style.opacity = '0';
+    // Individual vibration — random duration and delay so each word moves independently
+    const dur = (2.2 + Math.random() * 1.8).toFixed(2);
+    const delay = (Math.random() * -3).toFixed(2);
     o.style.animationDuration = dur + 's';
     o.style.animationDelay = delay + 's';
-    o.style.opacity = '1';
-    o.style.transition = 'opacity .28s ease, color .28s ease, border-color .28s ease, background .28s ease, transform .28s ease';
+    o.style.transition = 'opacity 1.2s ease, color .3s ease, border-color .3s ease, background .3s ease';
     o.textContent = displayName;
 
-    const go = (e) => {
-      if (e) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-      if (selected || !isCurrentActivity(token)) return;
-      selected = true;
-      if (audioCtx) playTap();
-      decStateName = name;
-      decStateNameES = es[i];
+    setTimeout(() => { if (activityToken === _tok) o.style.opacity = '1'; }, 80 * i + 200);
 
+    const go = () => {
+      if (audioCtx) playTap();
+      decStateName = name; decStateNameES = es[i];
       grid.querySelectorAll('.shadow-orb').forEach(el => {
-        el.style.pointerEvents = 'none';
+        el.style.transition = 'opacity 0.5s ease, color 0.5s ease, border-color 0.5s ease';
+        el.style.opacity = el === o ? '1' : '0.06';
         if (el === o) {
-          el.style.opacity = '1';
-          el.style.transform = 'scale(1.02)';
           el.style.color = 'rgba(240,204,136,1)';
           el.style.borderColor = 'rgba(201,169,110,.85)';
           el.style.background = 'rgba(201,169,110,.10)';
-        } else {
-          el.style.opacity = '0.08';
-          el.style.transform = 'scale(0.985)';
         }
       });
-
-      activityTimeout(token, () => showDecBodyMap(), 260);
+      setTimeout(() => showDecBodyMap(), 700);
     };
-
-    o.addEventListener('click', go, { passive: false });
-    o.addEventListener('touchend', go, { passive: false });
+    o.addEventListener('click', go);
+    o.addEventListener('touchend', e => { e.preventDefault(); go(); });
     grid.appendChild(o);
   });
-
-  activityFrame(token, () => {
-    if (!isCurrentActivity(token)) return;
-    grid.style.opacity = '1';
-    grid.style.transform = 'translateY(0)';
-  });
 }
-
 
 // ══════════════════════════════════════
 // SHARED BODY MAP — used by both Decohere and Collapse
@@ -3916,7 +3652,6 @@ function buildShadowGrid(token = activityToken) {
 // payload: shadow state name (witness) | state object (collapse)
 // ══════════════════════════════════════
 function showBodyMap(mode, payload) {
-  const token = nextActivityToken();
   // For witness: replace shadow grid in s-decohere
   // For collapse: show s-bodymap screen
   const isDecohere = mode === 'witness';
@@ -3998,16 +3733,15 @@ function showBodyMap(mode, payload) {
     if (scr) { scr.style.paddingTop = '0'; scr.style.gap = '0'; }
     // Fade witness screen out, then inject body map
     if (scr) { scr.style.transition = 'opacity 0.5s ease'; scr.style.opacity = '0'; }
-    activityTimeout(token, () => {
-      if (!isCurrentActivity(token)) return;
-      grid.innerHTML = '<div id="bodymapWrap" style="position:fixed;inset:0;z-index:10;background:var(--bg);opacity:0;transition:opacity 0.45s ease;"></div>';
+    setTimeout(() => {
+      grid.innerHTML = '<div id="bodymapWrap" style="position:fixed;inset:0;z-index:10;background:var(--bg);opacity:0;transition:opacity 1.0s ease;"></div>';
       wrap = document.getElementById('bodymapWrap');
       if (scr) { scr.style.opacity = '1'; scr.style.transition = 'none'; }
       const mainCv = document.getElementById('cv');
       if (mainCv) mainCv.style.opacity = '0';
-      activityFrame(token, () => { if (wrap && isCurrentActivity(token)) wrap.style.opacity = '1'; });
+      setTimeout(() => { if (wrap) wrap.style.opacity = '1'; }, 60);
       buildDecohere();
-    }, 220);
+    }, 520);
   } else {
     // Collapse: use dedicated s-bodymap screen
     const screen = document.getElementById('s-bodymap');
@@ -4058,16 +3792,16 @@ function showBodyMap(mode, payload) {
     wrap.appendChild(fc);
     const fx = fc.getContext('2d');
 
-    // Figure layout — enlarged for iPhone Pro Max while keeping the lower prompt area clear
-    const FIG_TOP = 0.03, FIG_BOT = 0.86;
-    const FIG_L = 0.20, FIG_R = 0.80;
+    // Figure layout
+    const FIG_TOP = 0.08, FIG_BOT = 0.88;
+    const FIG_L = 0.28, FIG_R = 0.72;
     const figH = (FIG_BOT - FIG_TOP) * H;
     const figW = (FIG_R - FIG_L) * W;
     const figX = FIG_L * W, figY = FIG_TOP * H;
 
     // Shadow word watermark — very faint behind figure
     const watermarkEl = document.createElement('div');
-    watermarkEl.style.cssText = `position:absolute;left:50%;top:44%;
+    watermarkEl.style.cssText = `position:absolute;left:50%;top:46%;
       transform:translate(-50%,-50%);
       font-size:clamp(38px,11vw,72px);font-weight:300;
       font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;
@@ -4302,13 +4036,12 @@ function showBodyMap(mode, payload) {
         qEl.style.opacity = '0';
 
         // After 2.2s — figure dissolves, transition
-        activityTimeout(token, () => {
+        setTimeout(() => {
           ceremonyEl.style.transition = 'opacity 1.4s ease, color 1s ease, text-shadow 1s ease';
           ceremonyEl.style.opacity = '0';
           fc.style.opacity = '0'; // canvas fades = body-to-orb dissolve
 
-          activityTimeout(token, () => {
-            if (!isCurrentActivity(token)) return;
+          setTimeout(() => {
             cancelAnimationFrame(figRafId);
             decBodySpot = z.key;
             const mainCv = document.getElementById('cv');
@@ -4316,12 +4049,12 @@ function showBodyMap(mode, payload) {
 
             // Tone picker — pleasant / unpleasant / neutral
             showTonePicker(wrap, (toneKey) => {
-              if (!isCurrentActivity(token)) return;
               decSomaticTone = toneKey;
               decSomaticSpoken = ''; // reset for new session
+              // Log the somatic data
               logSession({ type: 'somatic', shadow: decStateName, zone: z.key, tone: toneKey, ts: Date.now() });
+              // Voice sensing layer — speak into the zone before chamber
               showVoiceSensingLayer(wrap, z.key, decStateName, toneKey, (spokenText) => {
-                if (!isCurrentActivity(token)) return;
                 if (spokenText) decSomaticSpoken = spokenText;
                 const apiKey = lsGet('field_api_key');
                 if (apiKey) { startDissolutionChamber(); } else { startDecAcknowledge(); }
@@ -5323,7 +5056,7 @@ Your first question should go deeper into what they already named — not restat
     // Animate dots
     let dotPhase = 0;
     const dotTexts = ['·  ·  ·', '·  ·   ', '·      ', '·  ·  ·'];
-    const dotInterval = setInterval(() => {
+    window._chamberDotInterval = setInterval(() => {
       dotPhase = (dotPhase + 1) % dotTexts.length;
       loadingDots.textContent = dotTexts[dotPhase];
     }, 500);
@@ -5332,7 +5065,8 @@ Your first question should go deeper into what they already named — not restat
     setTimeout(() => {
       chamberCallAI(() => {
         // Remove loading dots when AI responds
-        clearInterval(dotInterval);
+        clearInterval(window._chamberDotInterval);
+        window._chamberDotInterval = null;
         loadingDots.style.transition = 'opacity 0.4s ease';
         loadingDots.style.opacity = '0';
         setTimeout(() => { if (loadingDots.parentNode) loadingDots.remove(); }, 400);
@@ -5353,9 +5087,11 @@ Your first question should go deeper into what they already named — not restat
     }, 1200);
   });
 
-  // Skip always available
-  skipEl.addEventListener('click', exitChamber);
-  skipEl.addEventListener('touchend', e => { e.preventDefault(); exitChamber(); });
+  // Skip — clone to strip any accumulated listeners from previous chamber sessions
+  const freshSkip = skipEl.cloneNode(true);
+  skipEl.parentNode.replaceChild(freshSkip, skipEl);
+  freshSkip.addEventListener('click', exitChamber);
+  freshSkip.addEventListener('touchend', e => { e.preventDefault(); exitChamber(); });
 }
 
 function chamberSend() {
@@ -5512,6 +5248,7 @@ function startDecAcknowledge() {
 
       // Single 'breathe' prompt — appears at 4s, tap to begin
       let readyEl = document.createElement('div');
+      readyEl.id = 'dec-breathe-cta';
       readyEl.style.cssText = `position:fixed;bottom:clamp(70px,14vh,110px);left:50%;
         transform:translateX(-50%);font-size:clamp(13px,3.2vw,16px);letter-spacing:.28em;
         color:rgba(240,230,208,.32);font-weight:300;font-family:'Plus Jakarta Sans',sans-serif;
@@ -6176,968 +5913,3 @@ window.addEventListener('keydown', e => {
     if (active && active.id==='s-init') advanceStep();
   }
 });
-
-
-// === Witness rebuild v25: clean linear flow on working base ===
-(function(){
-  const WITNESS_ZONES = [
-    { key:'head',   label:{en:'head', es:'cabeza'},        y:0.105, h:0.12, w:0.28 },
-    { key:'neck',   label:{en:'neck', es:'cuello'},        y:0.215, h:0.08, w:0.20 },
-    { key:'chest',  label:{en:'chest', es:'pecho'},        y:0.335, h:0.15, w:0.44 },
-    { key:'solar',  label:{en:'solar plexus', es:'plexo solar'}, y:0.475, h:0.10, w:0.30 },
-    { key:'stomach',label:{en:'stomach', es:'estómago'},   y:0.58,  h:0.11, w:0.34 },
-    { key:'groin',  label:{en:'groin', es:'ingle'},        y:0.71,  h:0.10, w:0.28 }
-  ];
-
-  function cleanWitnessArtifacts(){
-    const ids = ['bodymapWrap','voice-sense-layer','chamber-loading'];
-    ids.forEach(id => {
-      const el = document.getElementById(id);
-      if (el && el.parentNode) el.parentNode.removeChild(el);
-    });
-    const tapHint = document.getElementById('decTapHint');
-    if (tapHint) tapHint.textContent = '';
-    const grid = document.getElementById('shadowGrid');
-    if (grid) grid.innerHTML = '';
-  }
-
-  function witnessZoneTone(zoneKey){
-    if (!audioCtx) return;
-    const freqs = { head:1056, neck:792, chest:528, solar:444, stomach:396, groin:264 };
-    const f = freqs[zoneKey] || 528;
-    const o = audioCtx.createOscillator();
-    const g = audioCtx.createGain();
-    o.type = 'sine';
-    o.frequency.value = f;
-    g.gain.setValueAtTime(0, audioCtx.currentTime);
-    g.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 0.08);
-    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.6);
-    o.connect(g); g.connect(audioCtx.destination);
-    o.start(); o.stop(audioCtx.currentTime + 1.8);
-  }
-
-  function launchWitnessNextStep(){
-    const apiKey = lsGet('field_api_key');
-    if (apiKey) startDissolutionChamber();
-    else startDecAcknowledge();
-  }
-
-  window.startDecohere = function startDecohere_rebuilt(){
-    const token = nextActivityToken();
-    if (navigator.vibrate) navigator.vibrate(16);
-    initAudio();
-    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{});
-    playDecohereSignature();
-    currentMode = 'witness';
-    showBackBtn();
-    const backBtn = document.getElementById('backBtn');
-    if (backBtn) backBtn.onclick = () => goHome();
-
-    clearGhosts();
-    cleanWitnessArtifacts();
-    applyDecoherePalette();
-    fadeDrone(true, 1.2);
-    spParticles = [];
-
-    const t = TRANSLATIONS[lang];
-    const scr = document.getElementById('s-witness');
-    const grid = document.getElementById('shadowGrid');
-    const arrLine = document.getElementById('decArrivalLine');
-    const arrSub = document.getElementById('decArrivalSub');
-    const tapHint = document.getElementById('decTapHint');
-
-    if (scr) {
-      scr.style.paddingTop = '';
-      scr.style.gap = '';
-    }
-    if (grid) {
-      grid.innerHTML = '';
-      grid.style.cssText = 'width:100%;flex:1;min-height:0;display:flex;flex-wrap:wrap;align-content:center;justify-content:center;gap:clamp(10px,2.8vw,18px);padding:0 clamp(16px,5vw,34px);opacity:0;transform:translateY(10px);transition:opacity .45s ease, transform .45s ease;';
-    }
-    if (arrLine) {
-      arrLine.textContent = t.decArrivalLine;
-      arrLine.style.opacity = '0';
-      arrLine.style.transform = 'translateY(8px)';
-      arrLine.style.transition = 'opacity .55s ease, transform .55s ease';
-    }
-    if (arrSub) {
-      arrSub.textContent = t.decArrivalSub;
-      arrSub.style.opacity = '0';
-      arrSub.style.transform = 'translateY(8px)';
-      arrSub.style.transition = 'opacity .55s ease, transform .55s ease';
-    }
-    if (tapHint) tapHint.textContent = '';
-
-    showScreen('s-witness', () => {
-      if (!isCurrentActivity(token)) return;
-      activityTimeout(token, () => {
-        initSpParticles(10);
-        spParticles.forEach(p => {
-          p.targetAlpha = 0.16 + Math.random() * 0.12;
-          p.targetClarity = 0;
-          p.phV *= 0.35;
-        });
-      }, 120);
-
-      activityFrame(token, () => {
-        if (arrLine) {
-          arrLine.style.opacity = '1';
-          arrLine.style.transform = 'translateY(0)';
-        }
-        if (arrSub) {
-          activityTimeout(token, () => {
-            arrSub.style.opacity = '1';
-            arrSub.style.transform = 'translateY(0)';
-          }, 90);
-        }
-        activityTimeout(token, () => buildShadowGrid(token), 220);
-      });
-    });
-  };
-
-  window.buildShadowGrid = function buildShadowGrid_rebuilt(token = activityToken){
-    const grid = document.getElementById('shadowGrid');
-    if (!grid) return;
-    const en = SHADOW_STATES.en;
-    const es = SHADOW_STATES.es;
-    let selected = false;
-
-    grid.innerHTML = '';
-    grid.style.opacity = '0';
-    grid.style.transform = 'translateY(10px)';
-
-    en.forEach((name, i) => {
-      const displayName = lang === 'en' ? name : es[i];
-      const btn = document.createElement('button');
-      btn.className = 'shadow-orb';
-      btn.type = 'button';
-      btn.textContent = displayName;
-      btn.style.opacity = '1';
-      btn.style.transition = 'opacity .28s ease, transform .28s ease, color .28s ease, border-color .28s ease, background .28s ease';
-      btn.style.animation = 'none';
-
-      const choose = (e) => {
-        if (e) { e.preventDefault(); e.stopPropagation(); }
-        if (selected || !isCurrentActivity(token)) return;
-        selected = true;
-        if (audioCtx) playTap();
-        decStateName = name;
-        decStateNameES = es[i];
-        grid.querySelectorAll('.shadow-orb').forEach(el => {
-          el.style.pointerEvents = 'none';
-          if (el === btn) {
-            el.style.opacity = '1';
-            el.style.transform = 'scale(1.03)';
-            el.style.color = 'rgba(240,204,136,1)';
-            el.style.borderColor = 'rgba(201,169,110,.85)';
-            el.style.background = 'rgba(201,169,110,.10)';
-          } else {
-            el.style.opacity = '0.08';
-            el.style.transform = 'scale(0.985)';
-          }
-        });
-        activityTimeout(token, () => showDecBodyMap(token), 180);
-      };
-      btn.addEventListener('pointerup', choose);
-      grid.appendChild(btn);
-    });
-
-    activityFrame(token, () => {
-      if (!isCurrentActivity(token)) return;
-      grid.style.opacity = '1';
-      grid.style.transform = 'translateY(0)';
-    });
-  };
-
-  window.showDecBodyMap = function showDecBodyMap_rebuilt(token = activityToken){
-    if (!isCurrentActivity(token)) return;
-    const line = document.getElementById('decArrivalLine');
-    const sub = document.getElementById('decArrivalSub');
-    const grid = document.getElementById('shadowGrid');
-    const tapHint = document.getElementById('decTapHint');
-    if (line) line.style.opacity = '0';
-    if (sub) sub.style.opacity = '0';
-    if (grid) {
-      grid.style.opacity = '0';
-      grid.style.transform = 'translateY(8px)';
-      grid.style.pointerEvents = 'none';
-    }
-
-    const old = document.getElementById('bodymapWrap');
-    if (old && old.parentNode) old.parentNode.removeChild(old);
-
-    const wrap = document.createElement('div');
-    wrap.id = 'bodymapWrap';
-    wrap.style.cssText = 'position:fixed;inset:0;z-index:10;background:var(--bg);opacity:0;transition:opacity .45s ease;overflow:hidden;';
-    document.body.appendChild(wrap);
-
-    const qEl = document.createElement('div');
-    qEl.style.cssText = 'position:absolute;left:50%;bottom:max(115px,14svh);transform:translateX(-50%);font-size:clamp(19px,5.2vw,26px);font-style:italic;text-align:center;color:rgba(240,230,208,.92);letter-spacing:.02em;line-height:1.45;z-index:5;padding:0 22px;transition:opacity .35s ease;';
-    qEl.textContent = lang === 'en' ? 'where does it live in you?' : '¿dónde vive en ti?';
-    wrap.appendChild(qEl);
-
-    const tapEl = document.createElement('div');
-    tapEl.id = 'bodymap-tap-hint';
-    tapEl.style.cssText = 'position:absolute;left:50%;bottom:max(78px,10svh);transform:translateX(-50%);font-size:clamp(11px,3vw,13px);letter-spacing:.2em;text-transform:uppercase;color:rgba(240,230,208,.52);z-index:5;transition:opacity .35s ease;text-align:center;';
-    tapEl.textContent = lang === 'en' ? 'tap the area you feel it most' : 'toca donde lo sientes más';
-    wrap.appendChild(tapEl);
-
-    const watermarkEl = document.createElement('div');
-    watermarkEl.style.cssText = 'position:absolute;left:50%;top:43%;transform:translate(-50%,-50%);font-size:clamp(40px,11vw,76px);font-weight:300;font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;color:rgba(180,160,210,.06);letter-spacing:.06em;pointer-events:none;z-index:0;white-space:nowrap;transition:opacity .45s ease;';
-    watermarkEl.textContent = lang === 'en' ? decStateName : (decStateNameES || decStateName);
-    wrap.appendChild(watermarkEl);
-
-    const ceremonyEl = document.createElement('div');
-    ceremonyEl.style.cssText = 'position:absolute;left:50%;transform:translate(-50%,-50%);font-size:clamp(26px,7vw,42px);font-weight:300;font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;color:rgba(220,200,240,0);letter-spacing:.06em;text-shadow:0 0 0 rgba(180,160,200,0);pointer-events:none;z-index:6;white-space:nowrap;transition:color .4s ease,text-shadow .4s ease,opacity .6s ease;';
-    ceremonyEl.textContent = lang === 'en' ? decStateName : (decStateNameES || decStateName);
-    wrap.appendChild(ceremonyEl);
-
-    const c = document.createElement('canvas');
-    const dpr = Math.max(1, window.devicePixelRatio || 1);
-    const W = window.innerWidth, H = window.innerHeight;
-    c.width = Math.floor(W * dpr);
-    c.height = Math.floor(H * dpr);
-    c.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;transition:opacity .45s ease;';
-    wrap.appendChild(c);
-    const ctx = c.getContext('2d');
-    ctx.scale(dpr, dpr);
-
-    const FIG_TOP = 0.03, FIG_BOT = 0.86, FIG_L = 0.20, FIG_R = 0.80;
-    const figH = (FIG_BOT - FIG_TOP) * H;
-    const figW = (FIG_R - FIG_L) * W;
-    const figX = FIG_L * W;
-    const figY = FIG_TOP * H;
-    const cx = figX + figW * 0.5;
-    let activeZone = null;
-    let done = false;
-    let glowPhase = 0;
-    let breathPhase = 0;
-    let rafId = null;
-
-    function zoneRect(z){
-      const w = figW * z.w;
-      const h = figH * z.h;
-      return { x: cx - w/2, y: figY + figH * z.y - h/2, w, h };
-    }
-
-    function roundedRectPath(x,y,w,h,r){
-      const rr = Math.min(r, w/2, h/2);
-      ctx.beginPath();
-      ctx.moveTo(x+rr,y);
-      ctx.arcTo(x+w,y,x+w,y+h,rr);
-      ctx.arcTo(x+w,y+h,x,y+h,rr);
-      ctx.arcTo(x,y+h,x,y,rr);
-      ctx.arcTo(x,y,x+w,y,rr);
-      ctx.closePath();
-    }
-
-    function drawFigure(){
-      if (currentMode !== 'witness') return;
-      ctx.clearRect(0,0,W,H);
-      glowPhase += 0.02;
-      breathPhase += 0.01;
-      const pulse = 0.5 + 0.5 * Math.sin(breathPhase);
-      const zonePulse = 0.5 + 0.5 * Math.sin(glowPhase*2.2);
-      const lineAlpha = 0.56 + pulse * 0.14;
-      const glowAlpha = 0.10 + pulse * 0.08;
-      const scale = 1 + pulse * 0.012;
-
-      ctx.save();
-      ctx.translate(cx, figY + figH * 0.5);
-      ctx.scale(scale, scale);
-      ctx.translate(-cx, -(figY + figH * 0.5));
-
-      if (activeZone) {
-        const zr = zoneRect(activeZone);
-        const grad = ctx.createRadialGradient(cx, zr.y + zr.h/2, 0, cx, zr.y + zr.h/2, Math.max(zr.h*1.2, zr.w));
-        grad.addColorStop(0, 'rgba(210,185,235,' + (0.18 + zonePulse*0.12).toFixed(3) + ')');
-        grad.addColorStop(1, 'rgba(210,185,235,0)');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0,0,W,H);
-      }
-
-      ctx.lineJoin = 'round';
-      ctx.lineCap = 'round';
-
-      function strokePath(builder, active){
-        ctx.save();
-        ctx.strokeStyle = 'rgba(210,185,235,1)';
-        ctx.lineWidth = active ? 5.0 : 3.0;
-        ctx.filter = 'blur(' + (active ? 6 : 3) + 'px)';
-        ctx.globalAlpha = active ? (0.22 + zonePulse*0.14) : glowAlpha;
-        builder();
-        ctx.stroke();
-        ctx.restore();
-
-        ctx.save();
-        ctx.strokeStyle = 'rgba(230,215,245,1)';
-        ctx.lineWidth = active ? 2.2 : 1.55;
-        ctx.globalAlpha = active ? (0.86 + zonePulse*0.10) : lineAlpha;
-        builder();
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      strokePath(() => { ctx.beginPath(); ctx.ellipse(cx, figY + figH*0.09, figW*0.10, figH*0.085, 0, 0, Math.PI*2); }, activeZone && activeZone.key === 'head');
-      strokePath(() => { ctx.beginPath(); ctx.moveTo(cx - figW*0.05, figY + figH*0.165); ctx.lineTo(cx - figW*0.05, figY + figH*0.205); ctx.lineTo(cx + figW*0.05, figY + figH*0.205); ctx.lineTo(cx + figW*0.05, figY + figH*0.165); }, activeZone && activeZone.key === 'neck');
-      strokePath(() => {
-        ctx.beginPath();
-        ctx.moveTo(cx - figW*0.05, figY + figH*0.195);
-        ctx.bezierCurveTo(cx - figW*0.24, figY + figH*0.20, cx - figW*0.34, figY + figH*0.27, cx - figW*0.33, figY + figH*0.37);
-        ctx.bezierCurveTo(cx - figW*0.31, figY + figH*0.51, cx - figW*0.23, figY + figH*0.63, cx - figW*0.18, figY + figH*0.72);
-        ctx.bezierCurveTo(cx - figW*0.17, figY + figH*0.81, cx - figW*0.14, figY + figH*0.89, cx - figW*0.11, figY + figH*0.93);
-        ctx.lineTo(cx - figW*0.06, figY + figH*0.93);
-        ctx.bezierCurveTo(cx - figW*0.05, figY + figH*0.84, cx - figW*0.03, figY + figH*0.72, cx, figY + figH*0.63);
-        ctx.bezierCurveTo(cx + figW*0.03, figY + figH*0.72, cx + figW*0.05, figY + figH*0.84, cx + figW*0.06, figY + figH*0.93);
-        ctx.lineTo(cx + figW*0.11, figY + figH*0.93);
-        ctx.bezierCurveTo(cx + figW*0.14, figY + figH*0.89, cx + figW*0.17, figY + figH*0.81, cx + figW*0.18, figY + figH*0.72);
-        ctx.bezierCurveTo(cx + figW*0.23, figY + figH*0.63, cx + figW*0.31, figY + figH*0.51, cx + figW*0.33, figY + figH*0.37);
-        ctx.bezierCurveTo(cx + figW*0.34, figY + figH*0.27, cx + figW*0.24, figY + figH*0.20, cx + figW*0.05, figY + figH*0.195);
-      }, activeZone && (activeZone.key === 'chest' || activeZone.key === 'solar' || activeZone.key === 'stomach' || activeZone.key === 'groin'));
-      strokePath(() => {
-        ctx.beginPath();
-        ctx.moveTo(cx - figW*0.22, figY + figH*0.22);
-        ctx.bezierCurveTo(cx - figW*0.33, figY + figH*0.29, cx - figW*0.38, figY + figH*0.43, cx - figW*0.40, figY + figH*0.56);
-        ctx.bezierCurveTo(cx - figW*0.38, figY + figH*0.60, cx - figW*0.34, figY + figH*0.60, cx - figW*0.31, figY + figH*0.55);
-        ctx.bezierCurveTo(cx - figW*0.28, figY + figH*0.48, cx - figW*0.25, figY + figH*0.38, cx - figW*0.20, figY + figH*0.28);
-      }, false);
-      strokePath(() => {
-        ctx.beginPath();
-        ctx.moveTo(cx + figW*0.22, figY + figH*0.22);
-        ctx.bezierCurveTo(cx + figW*0.33, figY + figH*0.29, cx + figW*0.38, figY + figH*0.43, cx + figW*0.40, figY + figH*0.56);
-        ctx.bezierCurveTo(cx + figW*0.38, figY + figH*0.60, cx + figW*0.34, figY + figH*0.60, cx + figW*0.31, figY + figH*0.55);
-        ctx.bezierCurveTo(cx + figW*0.28, figY + figH*0.48, cx + figW*0.25, figY + figH*0.38, cx + figW*0.20, figY + figH*0.28);
-      }, false);
-
-      if (activeZone) {
-        const zr = zoneRect(activeZone);
-        ctx.save();
-        roundedRectPath(zr.x, zr.y, zr.w, zr.h, Math.min(zr.w, zr.h)*0.45);
-        ctx.fillStyle = 'rgba(220,200,240,' + (0.06 + zonePulse*0.07).toFixed(3) + ')';
-        ctx.fill();
-        ctx.restore();
-      }
-
-      ctx.restore();
-      rafId = requestAnimationFrame(drawFigure);
-    }
-
-    drawFigure();
-
-    let zoneChosen = false;
-    WITNESS_ZONES.forEach((zone) => {
-      const zr = zoneRect(zone);
-      const hit = document.createElement('button');
-      hit.type = 'button';
-      hit.style.cssText = 'position:absolute;left:' + zr.x + 'px;top:' + zr.y + 'px;width:' + zr.w + 'px;height:' + zr.h + 'px;background:none;border:none;cursor:pointer;z-index:3;-webkit-tap-highlight-color:transparent;';
-      hit.addEventListener('pointerup', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (zoneChosen || !isCurrentActivity(token)) return;
-        zoneChosen = true;
-        activeZone = zone;
-        decBodySpot = zone.label[lang] || zone.label.en;
-        decSomaticTone = '';
-        decSomaticSpoken = '';
-        witnessZoneTone(zone.key);
-        if (tapEl) tapEl.style.opacity = '0';
-        if (qEl) qEl.style.opacity = '0';
-        watermarkEl.style.opacity = '0';
-        ceremonyEl.style.top = (zr.y + zr.h/2) + 'px';
-        ceremonyEl.style.opacity = '1';
-        ceremonyEl.style.color = 'rgba(220,200,240,0.92)';
-        ceremonyEl.style.textShadow = '0 0 40px rgba(180,160,200,0.55)';
-        Array.from(wrap.querySelectorAll('button')).forEach(b => { b.style.pointerEvents = 'none'; });
-        logSession({ type: 'somatic', shadow: decStateName, zone: decBodySpot, ts: Date.now() });
-        activityTimeout(token, () => {
-          if (!isCurrentActivity(token)) return;
-          wrap.style.opacity = '0';
-          if (c) c.style.opacity = '0';
-          ceremonyEl.style.opacity = '0';
-          activityTimeout(token, () => {
-            if (rafId) cancelAnimationFrame(rafId);
-            if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
-            launchWitnessNextStep();
-          }, 420);
-        }, 760);
-      });
-      wrap.appendChild(hit);
-    });
-
-    requestAnimationFrame(() => { wrap.style.opacity = '1'; });
-  };
-
-  const originalStartDissolutionChamber = window.startDissolutionChamber;
-  window.startDissolutionChamber = function startDissolutionChamber_rebuilt(){
-    originalStartDissolutionChamber();
-    const backBtn = document.getElementById('backBtn');
-    if (backBtn) backBtn.onclick = () => goHome();
-  };
-
-  const originalStartDecAcknowledge = window.startDecAcknowledge;
-  window.startDecAcknowledge = function startDecAcknowledge_rebuilt(){
-    originalStartDecAcknowledge();
-    const backBtn = document.getElementById('backBtn');
-    if (backBtn) backBtn.onclick = () => goHome();
-  };
-
-  const originalExitChamber = window.exitChamber;
-  window.exitChamber = function exitChamber_rebuilt(){
-    if (typeof originalExitChamber === 'function') originalExitChamber();
-    const backBtn = document.getElementById('backBtn');
-    if (backBtn) backBtn.onclick = () => goHome();
-  };
-})();
-
-
-// === Witness rebuild v26: end-to-end smoother chamber + breath ===
-(function(){
-  const WZ = [
-    { key:'head',   label:{en:'head', es:'cabeza'},              y:0.105, h:0.13, w:0.30 },
-    { key:'neck',   label:{en:'neck', es:'cuello'},              y:0.215, h:0.08, w:0.20 },
-    { key:'chest',  label:{en:'chest', es:'pecho'},              y:0.335, h:0.15, w:0.46 },
-    { key:'solar',  label:{en:'solar plexus', es:'plexo solar'}, y:0.472, h:0.10, w:0.31 },
-    { key:'stomach',label:{en:'stomach', es:'estómago'},         y:0.58,  h:0.11, w:0.35 },
-    { key:'groin',  label:{en:'groin', es:'ingle'},              y:0.71,  h:0.10, w:0.28 }
-  ];
-
-  function rwCleanup(){
-    ['bodymapWrap','voice-sense-layer','chamber-loading','witness-breathe-cta'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el && el.parentNode) el.parentNode.removeChild(el);
-    });
-    const grid = document.getElementById('shadowGrid');
-    if (grid) {
-      grid.innerHTML = '';
-      grid.style.opacity = '0';
-      grid.style.pointerEvents = 'none';
-    }
-    const arrLine = document.getElementById('decArrivalLine');
-    const arrSub = document.getElementById('decArrivalSub');
-    const tapHint = document.getElementById('decTapHint');
-    if (arrLine) arrLine.style.opacity = '0';
-    if (arrSub) arrSub.style.opacity = '0';
-    if (tapHint) tapHint.textContent = '';
-  }
-
-  function rwPlayZoneTone(zoneKey){
-    if (!audioCtx) return;
-    const freqs = { head:1056, neck:792, chest:528, solar:444, stomach:396, groin:264 };
-    const f = freqs[zoneKey] || 528;
-    const o = audioCtx.createOscillator();
-    const g = audioCtx.createGain();
-    o.type = 'sine';
-    o.frequency.value = f;
-    g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.05, audioCtx.currentTime + 0.08);
-    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.3);
-    o.connect(g); g.connect(audioCtx.destination);
-    o.start(); o.stop(audioCtx.currentTime + 1.35);
-  }
-
-  function rwMirrorFallback(){
-    const word = (lang === 'en' ? decStateName : (decStateNameES || decStateName) || '').toLowerCase();
-    const zone = decBodySpot || (lang === 'en' ? 'body' : 'cuerpo');
-    return lang === 'en'
-      ? `You’re noticing ${word} in the ${zone}. Stay with the shape of it, not the story.`
-      : `Estás notando ${word} en el/la ${zone}. Quédate con su forma, no con la historia.`;
-  }
-
-  async function rwFetchMirror(){
-    const apiKey = lsGet('field_api_key');
-    if (!apiKey) return rwMirrorFallback();
-    const word = lang === 'en' ? decStateName : (decStateNameES || decStateName);
-    const zone = decBodySpot || (lang === 'en' ? 'body' : 'cuerpo');
-    const system = `You are a quiet witness mirror inside a contemplative app. Reply with exactly one short reflective sentence. No advice. No explanation. No analysis. No questions unless essential. Max 20 words.`;
-    const user = lang === 'en'
-      ? `State: ${word}. Body location: ${zone}. Reflect one gentle sentence back.`
-      : `Estado: ${word}. Lugar del cuerpo: ${zone}. Devuelve una sola frase suave de reflejo.`;
-    try {
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [{ role:'system', content: system }, { role:'user', content: user }],
-          temperature: 0.7,
-          max_tokens: 60
-        })
-      });
-      if (!res.ok) return rwMirrorFallback();
-      const data = await res.json();
-      const txt = data?.choices?.[0]?.message?.content?.trim();
-      return txt || rwMirrorFallback();
-    } catch (e) {
-      return rwMirrorFallback();
-    }
-  }
-
-  function rwStartBreath(){
-    const token = nextActivityToken();
-    currentMode = 'witness';
-    const displayName = lang === 'en' ? decStateName : (decStateNameES || decStateName);
-    rwCleanup();
-    showBackBtn();
-    const backBtn = document.getElementById('backBtn');
-    if (backBtn) backBtn.onclick = () => goHome();
-
-    const ackLayer = document.getElementById('dec-ack-layer');
-    const breathLayer = document.getElementById('dec-breath-layer');
-    const wordEl = document.getElementById('dec-word');
-    const btext = document.getElementById('dec-btext');
-    const bp = document.getElementById('dec-bp');
-    const wordOrb = document.getElementById('dec-word-orb');
-    const bdots = document.getElementById('dec-bdots');
-
-    clearAllDec();
-    [ackLayer, breathLayer, wordEl, btext, bp, wordOrb, bdots].forEach(el => {
-      if (el) {
-        el.style.transition = 'none';
-        el.style.opacity = '0';
-        el.style.pointerEvents = 'none';
-      }
-    });
-    if (wordEl) {
-      wordEl.textContent = displayName;
-      wordEl.style.textShadow = '0 0 36px rgba(240,220,180,.24)';
-    }
-    if (bp) {
-      bp.style.display = 'none';
-      bp.style.transform = 'scale(1)';
-      bp.style.filter = '';
-    }
-    if (wordOrb) {
-      wordOrb.style.display = 'none';
-      wordOrb.textContent = '';
-    }
-
-    showScreen('s-dec-breath', () => {
-      if (!isCurrentActivity(token)) return;
-      if (ackLayer) {
-        ackLayer.style.transition = 'opacity .7s ease';
-        ackLayer.style.opacity = '1';
-        ackLayer.style.pointerEvents = 'all';
-      }
-      if (wordEl) {
-        wordEl.style.transition = 'opacity .9s ease, transform .9s ease';
-        wordEl.style.opacity = '1';
-        wordEl.style.transform = 'translate(-50%,-50%) scale(1)';
-      }
-      const cta = document.createElement('button');
-      cta.id = 'witness-breathe-cta';
-      cta.type = 'button';
-      cta.style.cssText = 'position:fixed;left:50%;bottom:max(68px,8svh);transform:translateX(-50%);z-index:60;background:none;border:none;color:rgba(240,230,208,.58);font-size:clamp(13px,3.4vw,16px);letter-spacing:.24em;text-transform:lowercase;font-family:"Plus Jakarta Sans",sans-serif;padding:12px 24px;opacity:0;transition:opacity .55s ease;-webkit-tap-highlight-color:transparent;';
-      cta.textContent = lang === 'en' ? 'breathe' : 'respira';
-      document.body.appendChild(cta);
-      activityTimeout(token, () => { cta.style.opacity = '1'; }, 900);
-      let begun = false;
-      const begin = (e) => {
-        if (e) { e.preventDefault(); e.stopPropagation(); }
-        if (begun || !isCurrentActivity(token)) return;
-        begun = true;
-        cta.style.opacity = '0';
-        activityTimeout(token, () => {
-          if (cta.parentNode) cta.parentNode.removeChild(cta);
-          if (typeof startDecBreath === 'function') startDecBreath(displayName);
-        }, 260);
-      };
-      cta.addEventListener('pointerup', begin);
-      activityTimeout(token, begin, 4200);
-    });
-  }
-
-  window.startDissolutionChamber = function witnessMirrorRebuilt(){
-    const token = nextActivityToken();
-    currentMode = 'chamber';
-    rwCleanup();
-    applyDecoherePalette();
-    showBackBtn();
-    const backBtn = document.getElementById('backBtn');
-    if (backBtn) backBtn.onclick = () => goHome();
-
-    const contextEl = document.getElementById('chamber-context');
-    const msgsEl = document.getElementById('chamber-messages');
-    const inputWrap = document.getElementById('chamber-input-wrap');
-    const skipEl = document.getElementById('chamber-skip');
-    const inputEl = document.getElementById('chamber-input');
-    const micBtn = document.getElementById('chamber-mic');
-    const sendBtn = document.getElementById('chamber-send');
-    const shadowName = (lang === 'en' ? decStateName : (decStateNameES || decStateName) || '').toLowerCase();
-    const zoneName = decBodySpot || (lang === 'en' ? 'body' : 'cuerpo');
-
-    msgsEl.innerHTML = '';
-    contextEl.textContent = `${shadowName} · ${zoneName}`;
-    contextEl.style.opacity = '0';
-    inputWrap.style.display = 'none';
-    inputWrap.style.opacity = '0';
-    inputWrap.style.pointerEvents = 'none';
-    if (inputEl) inputEl.value = '';
-    if (micBtn) micBtn.style.display = 'none';
-    if (sendBtn) sendBtn.style.display = 'none';
-    skipEl.textContent = lang === 'en' ? 'breathe' : 'respira';
-    skipEl.style.opacity = '0';
-    skipEl.style.fontSize = 'clamp(22px,6vw,30px)';
-    skipEl.style.fontFamily = '"Cormorant Garamond", Georgia, serif';
-    skipEl.style.fontStyle = 'italic';
-    skipEl.style.letterSpacing = '.04em';
-    skipEl.style.color = 'rgba(240,230,208,.92)';
-    skipEl.onclick = () => rwStartBreath();
-
-    showScreen('s-chamber', async () => {
-      if (!isCurrentActivity(token)) return;
-      activityTimeout(token, () => { contextEl.style.opacity = '1'; }, 160);
-      const loading = document.createElement('div');
-      loading.id = 'chamber-loading';
-      loading.className = 'chamber-msg ai';
-      loading.textContent = '…';
-      loading.style.opacity = '0';
-      loading.style.transition = 'opacity .45s ease';
-      msgsEl.appendChild(loading);
-      activityTimeout(token, () => { loading.style.opacity = '1'; }, 180);
-      const mirror = await rwFetchMirror();
-      if (!isCurrentActivity(token)) return;
-      if (loading.parentNode) loading.parentNode.removeChild(loading);
-      const div = document.createElement('div');
-      div.className = 'chamber-msg ai';
-      div.textContent = mirror;
-      div.style.opacity = '0';
-      div.style.transform = 'translateY(8px)';
-      div.style.transition = 'opacity .55s ease, transform .55s ease';
-      msgsEl.appendChild(div);
-      activityFrame(token, () => {
-        div.style.opacity = '1';
-        div.style.transform = 'translateY(0)';
-      });
-      activityTimeout(token, () => { skipEl.style.opacity = '1'; }, 700);
-    });
-  };
-
-  window.exitChamber = function exitChamberRebuilt(){
-    rwStartBreath();
-  };
-
-  window.startDecAcknowledge = function startDecAcknowledgeRebuilt(){
-    rwStartBreath();
-  };
-
-  window.startDecohere = function startDecohereRebuiltV26(){
-    const token = nextActivityToken();
-    if (navigator.vibrate) navigator.vibrate(16);
-    initAudio();
-    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{});
-    playDecohereSignature();
-    currentMode = 'witness';
-    showBackBtn();
-    const backBtn = document.getElementById('backBtn');
-    if (backBtn) backBtn.onclick = () => goHome();
-
-    clearGhosts();
-    rwCleanup();
-    applyDecoherePalette();
-    fadeDrone(true, 1.2);
-    spParticles = [];
-
-    const t = TRANSLATIONS[lang];
-    const scr = document.getElementById('s-witness');
-    const grid = document.getElementById('shadowGrid');
-    const arrLine = document.getElementById('decArrivalLine');
-    const arrSub = document.getElementById('decArrivalSub');
-    const tapHint = document.getElementById('decTapHint');
-
-    if (scr) {
-      scr.style.paddingTop = '';
-      scr.style.gap = '';
-    }
-    if (grid) {
-      grid.innerHTML = '';
-      grid.style.cssText = 'width:100%;flex:1;min-height:0;display:flex;flex-wrap:wrap;align-content:center;justify-content:center;gap:clamp(10px,2.8vw,18px);padding:0 clamp(16px,5vw,34px);opacity:0;transform:translateY(8px);transition:opacity .38s ease, transform .38s ease;';
-    }
-    if (arrLine) {
-      arrLine.textContent = t.decArrivalLine;
-      arrLine.style.opacity = '0';
-      arrLine.style.transform = 'translateY(8px)';
-      arrLine.style.transition = 'opacity .5s ease, transform .5s ease';
-    }
-    if (arrSub) {
-      arrSub.textContent = t.decArrivalSub;
-      arrSub.style.opacity = '0';
-      arrSub.style.transform = 'translateY(8px)';
-      arrSub.style.transition = 'opacity .5s ease, transform .5s ease';
-    }
-    if (tapHint) tapHint.textContent = '';
-
-    showScreen('s-witness', () => {
-      if (!isCurrentActivity(token)) return;
-      activityTimeout(token, () => {
-        initSpParticles(10);
-        spParticles.forEach(p => {
-          p.targetAlpha = 0.14 + Math.random() * 0.10;
-          p.targetClarity = 0;
-          p.phV *= 0.35;
-        });
-      }, 110);
-      activityFrame(token, () => {
-        if (arrLine) { arrLine.style.opacity = '1'; arrLine.style.transform = 'translateY(0)'; }
-        activityTimeout(token, () => { if (arrSub) { arrSub.style.opacity = '1'; arrSub.style.transform = 'translateY(0)'; } }, 80);
-        activityTimeout(token, () => window.buildShadowGrid(token), 190);
-      });
-    });
-  };
-
-  window.buildShadowGrid = function buildShadowGridRebuiltV26(token = activityToken){
-    const grid = document.getElementById('shadowGrid');
-    if (!grid) return;
-    const en = SHADOW_STATES.en;
-    const es = SHADOW_STATES.es;
-    let selected = false;
-    grid.innerHTML = '';
-    grid.style.opacity = '0';
-    grid.style.transform = 'translateY(8px)';
-    en.forEach((name, i) => {
-      const display = lang === 'en' ? name : es[i];
-      const btn = document.createElement('button');
-      btn.className = 'shadow-orb';
-      btn.type = 'button';
-      btn.textContent = display;
-      btn.style.opacity = '1';
-      btn.style.transition = 'opacity .22s ease, transform .22s ease, color .22s ease, border-color .22s ease, background .22s ease';
-      const choose = (e) => {
-        if (e) { e.preventDefault(); e.stopPropagation(); }
-        if (selected || !isCurrentActivity(token)) return;
-        selected = true;
-        if (audioCtx) playTap();
-        decStateName = name;
-        decStateNameES = es[i];
-        grid.querySelectorAll('.shadow-orb').forEach(el => {
-          el.style.pointerEvents = 'none';
-          if (el === btn) {
-            el.style.transform = 'scale(1.03)';
-            el.style.color = 'rgba(240,204,136,1)';
-            el.style.borderColor = 'rgba(201,169,110,.85)';
-            el.style.background = 'rgba(201,169,110,.10)';
-          } else {
-            el.style.opacity = '0.08';
-            el.style.transform = 'scale(0.985)';
-          }
-        });
-        activityTimeout(token, () => window.showDecBodyMap(token), 150);
-      };
-      btn.addEventListener('pointerup', choose);
-      grid.appendChild(btn);
-    });
-    activityFrame(token, () => {
-      if (!isCurrentActivity(token)) return;
-      grid.style.opacity = '1';
-      grid.style.transform = 'translateY(0)';
-    });
-  };
-
-  window.showDecBodyMap = function showDecBodyMapRebuiltV26(token = activityToken){
-    if (!isCurrentActivity(token)) return;
-    const line = document.getElementById('decArrivalLine');
-    const sub = document.getElementById('decArrivalSub');
-    const grid = document.getElementById('shadowGrid');
-    const tapHint = document.getElementById('decTapHint');
-    if (line) line.style.opacity = '0';
-    if (sub) sub.style.opacity = '0';
-    if (grid) {
-      grid.style.opacity = '0';
-      grid.style.transform = 'translateY(8px)';
-      grid.style.pointerEvents = 'none';
-    }
-    if (tapHint) tapHint.textContent = '';
-
-    const old = document.getElementById('bodymapWrap');
-    if (old && old.parentNode) old.parentNode.removeChild(old);
-
-    const wrap = document.createElement('div');
-    wrap.id = 'bodymapWrap';
-    wrap.style.cssText = 'position:fixed;inset:0;z-index:10;background:var(--bg);opacity:0;transition:opacity .42s ease;overflow:hidden;';
-    document.body.appendChild(wrap);
-
-    const qEl = document.createElement('div');
-    qEl.style.cssText = 'position:absolute;left:50%;bottom:max(72px,8svh);transform:translateX(-50%);font-size:clamp(19px,5.2vw,26px);font-style:italic;text-align:center;color:rgba(240,230,208,.92);letter-spacing:.02em;line-height:1.45;z-index:5;padding:0 22px;transition:opacity .32s ease;';
-    qEl.textContent = lang === 'en' ? 'where does it live in you?' : '¿dónde vive en ti?';
-    wrap.appendChild(qEl);
-
-    const tapEl = document.createElement('div');
-    tapEl.id = 'bodymap-tap-hint';
-    tapEl.style.cssText = 'position:absolute;left:50%;bottom:max(34px,4.5svh);transform:translateX(-50%);font-size:clamp(11px,3vw,13px);letter-spacing:.2em;text-transform:uppercase;color:rgba(240,230,208,.52);z-index:5;transition:opacity .32s ease;text-align:center;';
-    tapEl.textContent = lang === 'en' ? 'tap the area you feel it most' : 'toca donde lo sientes más';
-    wrap.appendChild(tapEl);
-
-    const watermarkEl = document.createElement('div');
-    watermarkEl.style.cssText = 'position:absolute;left:50%;top:41%;transform:translate(-50%,-50%);font-size:clamp(40px,11vw,76px);font-weight:300;font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;color:rgba(180,160,210,.06);letter-spacing:.06em;pointer-events:none;z-index:0;white-space:nowrap;transition:opacity .42s ease;';
-    watermarkEl.textContent = lang === 'en' ? decStateName : (decStateNameES || decStateName);
-    wrap.appendChild(watermarkEl);
-
-    const ceremonyEl = document.createElement('div');
-    ceremonyEl.style.cssText = 'position:absolute;left:50%;transform:translate(-50%,-50%);font-size:clamp(26px,7vw,42px);font-weight:300;font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;color:rgba(220,200,240,0);letter-spacing:.06em;text-shadow:0 0 0 rgba(180,160,200,0);pointer-events:none;z-index:6;white-space:nowrap;transition:color .4s ease,text-shadow .4s ease,opacity .6s ease;';
-    ceremonyEl.textContent = lang === 'en' ? decStateName : (decStateNameES || decStateName);
-    wrap.appendChild(ceremonyEl);
-
-    const c = document.createElement('canvas');
-    const dpr = Math.max(1, window.devicePixelRatio || 1);
-    const W = window.innerWidth, H = window.innerHeight;
-    c.width = Math.floor(W * dpr);
-    c.height = Math.floor(H * dpr);
-    c.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;transition:opacity .42s ease;';
-    wrap.appendChild(c);
-    const ctx = c.getContext('2d');
-    ctx.scale(dpr, dpr);
-
-    const FIG_TOP = 0.015, FIG_BOT = 0.845, FIG_L = 0.20, FIG_R = 0.80;
-    const figH = (FIG_BOT - FIG_TOP) * H;
-    const figW = (FIG_R - FIG_L) * W;
-    const figX = FIG_L * W;
-    const figY = FIG_TOP * H;
-    const centerX = figX + figW * 0.5;
-    let activeZone = null;
-    let glowPhase = 0;
-    let breathPhase = 0;
-    let rafId = null;
-
-    function zoneRect(z){
-      const w = figW * z.w;
-      const h = figH * z.h;
-      return { x: centerX - w/2, y: figY + figH * z.y - h/2, w, h };
-    }
-
-    function roundedRectPath(x,y,w,h,r){
-      const rr = Math.min(r, w/2, h/2);
-      ctx.beginPath();
-      ctx.moveTo(x+rr,y);
-      ctx.arcTo(x+w,y,x+w,y+h,rr);
-      ctx.arcTo(x+w,y+h,x,y+h,rr);
-      ctx.arcTo(x,y+h,x,y,rr);
-      ctx.arcTo(x,y,x+w,y,rr);
-      ctx.closePath();
-    }
-
-    function strokePath(builder, active, blur = 3, baseWidth = 1.55){
-      ctx.save();
-      ctx.strokeStyle = 'rgba(210,185,235,1)';
-      ctx.lineWidth = active ? 5.0 : 3.0;
-      ctx.filter = 'blur(' + (active ? 6 : blur) + 'px)';
-      ctx.globalAlpha = active ? (0.22 + (0.5 + 0.5*Math.sin(glowPhase*2.2))*0.14) : (0.10 + (0.5 + 0.5*Math.sin(breathPhase))*0.08);
-      builder();
-      ctx.stroke();
-      ctx.restore();
-      ctx.save();
-      ctx.strokeStyle = 'rgba(230,215,245,1)';
-      ctx.lineWidth = active ? 2.2 : baseWidth;
-      ctx.globalAlpha = active ? (0.86 + (0.5 + 0.5*Math.sin(glowPhase*2.2))*0.10) : (0.56 + (0.5 + 0.5*Math.sin(breathPhase))*0.14);
-      builder();
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    function drawFigure(){
-      if (!isCurrentActivity(token) || currentMode !== 'witness') return;
-      ctx.clearRect(0,0,W,H);
-      glowPhase += 0.02;
-      breathPhase += 0.01;
-      const pulse = 0.5 + 0.5*Math.sin(breathPhase);
-      const scale = 1 + pulse * 0.012;
-      ctx.save();
-      ctx.translate(centerX, figY + figH * 0.49);
-      ctx.scale(scale, scale);
-      ctx.translate(-centerX, -(figY + figH * 0.49));
-
-      if (activeZone) {
-        const zr = zoneRect(activeZone);
-        const grad = ctx.createRadialGradient(centerX, zr.y + zr.h/2, 0, centerX, zr.y + zr.h/2, Math.max(zr.h*1.2, zr.w));
-        grad.addColorStop(0, 'rgba(210,185,235,0.24)');
-        grad.addColorStop(1, 'rgba(210,185,235,0)');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0,0,W,H);
-      }
-
-      ctx.lineJoin = 'round';
-      ctx.lineCap = 'round';
-      strokePath(() => { ctx.beginPath(); ctx.ellipse(centerX, figY + figH*0.09, figW*0.105, figH*0.09, 0, 0, Math.PI*2); }, activeZone && activeZone.key === 'head');
-      strokePath(() => { ctx.beginPath(); ctx.moveTo(centerX - figW*0.05, figY + figH*0.165); ctx.lineTo(centerX - figW*0.05, figY + figH*0.205); ctx.lineTo(centerX + figW*0.05, figY + figH*0.205); ctx.lineTo(centerX + figW*0.05, figY + figH*0.165); }, activeZone && activeZone.key === 'neck');
-      strokePath(() => {
-        ctx.beginPath();
-        ctx.moveTo(centerX - figW*0.05, figY + figH*0.195);
-        ctx.bezierCurveTo(centerX - figW*0.24, figY + figH*0.20, centerX - figW*0.34, figY + figH*0.27, centerX - figW*0.33, figY + figH*0.37);
-        ctx.bezierCurveTo(centerX - figW*0.31, figY + figH*0.51, centerX - figW*0.23, figY + figH*0.63, centerX - figW*0.18, figY + figH*0.72);
-        ctx.bezierCurveTo(centerX - figW*0.17, figY + figH*0.81, centerX - figW*0.14, figY + figH*0.89, centerX - figW*0.11, figY + figH*0.93);
-        ctx.lineTo(centerX - figW*0.06, figY + figH*0.93);
-        ctx.bezierCurveTo(centerX - figW*0.05, figY + figH*0.84, centerX - figW*0.03, figY + figH*0.72, centerX, figY + figH*0.63);
-        ctx.bezierCurveTo(centerX + figW*0.03, figY + figH*0.72, centerX + figW*0.05, figY + figH*0.84, centerX + figW*0.06, figY + figH*0.93);
-        ctx.lineTo(centerX + figW*0.11, figY + figH*0.93);
-        ctx.bezierCurveTo(centerX + figW*0.14, figY + figH*0.89, centerX + figW*0.17, figY + figH*0.81, centerX + figW*0.18, figY + figH*0.72);
-        ctx.bezierCurveTo(centerX + figW*0.23, figY + figH*0.63, centerX + figW*0.31, figY + figH*0.51, centerX + figW*0.33, figY + figH*0.37);
-        ctx.bezierCurveTo(centerX + figW*0.34, figY + figH*0.27, centerX + figW*0.24, figY + figH*0.20, centerX + figW*0.05, figY + figH*0.195);
-      }, activeZone && ['chest','solar','stomach','groin'].includes(activeZone.key));
-      strokePath(() => {
-        ctx.beginPath();
-        ctx.moveTo(centerX - figW*0.22, figY + figH*0.22);
-        ctx.bezierCurveTo(centerX - figW*0.33, figY + figH*0.29, centerX - figW*0.38, figY + figH*0.43, centerX - figW*0.40, figY + figH*0.56);
-        ctx.bezierCurveTo(centerX - figW*0.38, figY + figH*0.60, centerX - figW*0.34, figY + figH*0.60, centerX - figW*0.31, figY + figH*0.55);
-        ctx.bezierCurveTo(centerX - figW*0.28, figY + figH*0.48, centerX - figW*0.25, figY + figH*0.38, centerX - figW*0.20, figY + figH*0.28);
-      }, false);
-      strokePath(() => {
-        ctx.beginPath();
-        ctx.moveTo(centerX + figW*0.22, figY + figH*0.22);
-        ctx.bezierCurveTo(centerX + figW*0.33, figY + figH*0.29, centerX + figW*0.38, figY + figH*0.43, centerX + figW*0.40, figY + figH*0.56);
-        ctx.bezierCurveTo(centerX + figW*0.38, figY + figH*0.60, centerX + figW*0.34, figY + figH*0.60, centerX + figW*0.31, figY + figH*0.55);
-        ctx.bezierCurveTo(centerX + figW*0.28, figY + figH*0.48, centerX + figW*0.25, figY + figH*0.38, centerX + figW*0.20, figY + figH*0.28);
-      }, false);
-      if (activeZone) {
-        const zr = zoneRect(activeZone);
-        ctx.save();
-        roundedRectPath(zr.x, zr.y, zr.w, zr.h, Math.min(zr.w, zr.h)*0.45);
-        ctx.fillStyle = 'rgba(220,200,240,0.10)';
-        ctx.fill();
-        ctx.restore();
-      }
-      ctx.restore();
-      rafId = requestAnimationFrame(drawFigure);
-    }
-    drawFigure();
-
-    let zoneChosen = false;
-    WZ.forEach(zone => {
-      const zr = zoneRect(zone);
-      const hit = document.createElement('button');
-      hit.type = 'button';
-      hit.style.cssText = 'position:absolute;left:' + zr.x + 'px;top:' + zr.y + 'px;width:' + zr.w + 'px;height:' + zr.h + 'px;background:none;border:none;cursor:pointer;z-index:3;-webkit-tap-highlight-color:transparent;';
-      hit.addEventListener('pointerup', (e) => {
-        e.preventDefault(); e.stopPropagation();
-        if (zoneChosen || !isCurrentActivity(token)) return;
-        zoneChosen = true;
-        activeZone = zone;
-        decBodySpot = zone.label[lang] || zone.label.en;
-        decSomaticTone = '';
-        decSomaticSpoken = '';
-        rwPlayZoneTone(zone.key);
-        qEl.style.opacity = '0';
-        tapEl.style.opacity = '0';
-        watermarkEl.style.opacity = '0';
-        ceremonyEl.style.top = (zr.y + zr.h/2) + 'px';
-        ceremonyEl.style.opacity = '1';
-        ceremonyEl.style.color = 'rgba(220,200,240,0.92)';
-        ceremonyEl.style.textShadow = '0 0 40px rgba(180,160,200,0.55)';
-        Array.from(wrap.querySelectorAll('button')).forEach(b => { b.style.pointerEvents = 'none'; });
-        logSession({ type: 'somatic', shadow: decStateName, zone: decBodySpot, ts: Date.now() });
-        activityTimeout(token, () => {
-          wrap.style.opacity = '0';
-          c.style.opacity = '0';
-          ceremonyEl.style.opacity = '0';
-          activityTimeout(token, () => {
-            if (rafId) cancelAnimationFrame(rafId);
-            if (wrap.parentNode) wrap.parentNode.removeChild(wrap);
-            const apiKey = lsGet('field_api_key');
-            if (apiKey) window.startDissolutionChamber();
-            else rwStartBreath();
-          }, 360);
-        }, 680);
-      });
-      wrap.appendChild(hit);
-    });
-
-    requestAnimationFrame(() => { wrap.style.opacity = '1'; });
-  };
-})();

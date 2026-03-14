@@ -1,5 +1,5 @@
 // Cache-first — app works fully offline after first load
-const CACHE = 'field-v26-witness-full-rebuild';
+const CACHE = 'field-v7-final';
 const PRECACHE = [
   './',
   './index.html',
